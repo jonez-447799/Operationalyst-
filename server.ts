@@ -28,7 +28,7 @@ async function bootstrap() {
   }
 
   app.listen(PORT, '0.0.0.0', () => {
-    console.log(`NeuralSync 40 Full-Stack Server running on http://0.0.0.0:${PORT}`);
+    console.log(`Manufacturing Command Center Server running on http://0.0.0.0:${PORT}`);
   });
 }
 
