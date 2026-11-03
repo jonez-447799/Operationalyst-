@@ -348,7 +348,7 @@ export const MasterExecutiveDashboard: React.FC<MasterExecutiveDashboardProps> =
       rank: 1,
       headline: `${formatCompactINR(ceoMetrics.cashStuck)} Dead Stock Locked`,
       owner: 'Inventory Manager',
-      pillar: 'P1 • Cash Recovery',
+      pillar: 'Dead Stock Recovery',
       engine: 'p1' as const,
       badge: '🔴 Critical',
     },
@@ -356,7 +356,7 @@ export const MasterExecutiveDashboard: React.FC<MasterExecutiveDashboardProps> =
       rank: 2,
       headline: ceoMetrics.worstCustomerLabel,
       owner: 'Dispatch Head',
-      pillar: 'P2 • Revenue Protection',
+      pillar: 'Dispatch Performance (OTIF)',
       engine: 'p2' as const,
       badge: ceoMetrics.otifPct < 85 ? '🔴 Critical' : '🟡 Monitor',
     },
@@ -364,7 +364,7 @@ export const MasterExecutiveDashboard: React.FC<MasterExecutiveDashboardProps> =
       rank: 3,
       headline: `${ceoMetrics.topLeakCarrierName} — ${formatCompactINR(ceoMetrics.topLeakCarrierWaste)} Leakage`,
       owner: 'Logistics Head',
-      pillar: 'P3 • Profit Protection',
+      pillar: 'Margin Protection',
       engine: 'p3' as const,
       badge: '🟡 Monitor',
     },
@@ -372,7 +372,7 @@ export const MasterExecutiveDashboard: React.FC<MasterExecutiveDashboardProps> =
       rank: 4,
       headline: `${ceoMetrics.mismatchBins} High-Variance Bins (${formatCompactINR(ceoMetrics.varianceImpactRupees)} Impact)`,
       owner: 'Warehouse Head',
-      pillar: 'P4 • Inventory Trust',
+      pillar: 'Warehouse Accuracy',
       engine: 'p4' as const,
       badge: ceoMetrics.stockAccuracyPct >= 95 ? '🟢 Healthy' : '🟡 Monitor',
     },
@@ -380,7 +380,7 @@ export const MasterExecutiveDashboard: React.FC<MasterExecutiveDashboardProps> =
       rank: 5,
       headline: `${formatCompactINR(ceoMetrics.unpaidBills)} Overdue Customer Bills`,
       owner: 'Finance Head',
-      pillar: 'P5 • Control Tower',
+      pillar: 'CEO Weekly Dashboard',
       engine: 'p5' as const,
       badge: '🟡 Monitor',
     },
@@ -398,21 +398,21 @@ export const MasterExecutiveDashboard: React.FC<MasterExecutiveDashboardProps> =
         <div className="space-y-1">
           <div className="flex flex-wrap items-center gap-2">
             <span className="px-2.5 py-0.5 rounded-full bg-indigo-500/20 border border-indigo-400/40 text-indigo-300 text-[10px] font-mono uppercase font-bold">
-              Master Executive Layer • 2-Minute Monday Check
+              Executive Overview • Spot Losses Before Monthly Reviews
             </span>
             <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-[10px] font-mono font-bold">
-              P1 Cash · P2 Revenue · P3 Profit · P4 Trust · P5 Decisions
+              Dead Stock · Dispatch OTIF · Margin Protection · Warehouse Accuracy · Weekly Actions
             </span>
           </div>
           <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight">
             {viewMode === 'ceo_dashboard'
-              ? 'Master Executive Dashboard & Factory Health Score'
+              ? 'Executive Profit Recovery Overview & Factory Health Score'
               : viewMode === 'excel_6sheets'
               ? '6-Sheet Excel Command Center, KPI Formulas & Phase 3 RAG Engine'
               : 'Product Manager Backlog (P0–P3) & 3-Phase Implementation Roadmap'}
           </h1>
           <p className="text-xs text-slate-400">
-            Factory Health Score = <strong>30% Inventory (P1)</strong> + <strong>25% OTIF (P2)</strong> + <strong>25% Freight (P3)</strong> + <strong>20% Warehouse Accuracy (P4)</strong>.
+            Factory Health Score = <strong>30% Dead Stock Recovery</strong> + <strong>25% Dispatch Performance (OTIF: On-Time &amp; Full Qty)</strong> + <strong>25% Margin Protection</strong> + <strong>20% Warehouse Accuracy</strong>.
           </p>
         </div>
 
@@ -517,22 +517,25 @@ export const MasterExecutiveDashboard: React.FC<MasterExecutiveDashboardProps> =
               </div>
 
               <div className="grid grid-cols-4 gap-1.5 pt-3 border-t border-slate-800 text-center font-mono text-[10px]">
-                <div className="p-1.5 rounded bg-slate-950 border border-slate-800">
-                  <div className="text-slate-400">30% Inv</div>
-                  <div className="text-amber-300 font-bold text-xs">{ceoMetrics.inventoryScore}</div>
-                </div>
-                <div className="p-1.5 rounded bg-slate-950 border border-slate-800">
-                  <div className="text-slate-400">25% OTIF</div>
-                  <div className="text-emerald-300 font-bold text-xs">{ceoMetrics.otifScore}</div>
-                </div>
-                <div className="p-1.5 rounded bg-slate-950 border border-slate-800">
-                  <div className="text-slate-400">25% Frt</div>
-                  <div className="text-cyan-300 font-bold text-xs">{ceoMetrics.freightScore}</div>
-                </div>
-                <div className="p-1.5 rounded bg-slate-950 border border-slate-800">
-                  <div className="text-slate-400">20% Bin</div>
-                  <div className="text-fuchsia-300 font-bold text-xs">{ceoMetrics.warehouseScore}</div>
-                </div>
+                {[
+                  { label: '30% Cash', score: ceoMetrics.inventoryScore },
+                  { label: '25% OTIF', score: ceoMetrics.otifScore },
+                  { label: '25% Margin', score: ceoMetrics.freightScore },
+                  { label: '20% Stock', score: ceoMetrics.warehouseScore },
+                ].map((sub) => {
+                  const scoreColor =
+                    sub.score >= 80
+                      ? 'text-emerald-400'
+                      : sub.score >= 60
+                      ? 'text-amber-400'
+                      : 'text-rose-400';
+                  return (
+                    <div key={sub.label} className="p-1.5 rounded bg-slate-950 border border-slate-800">
+                      <div className="text-slate-400">{sub.label}</div>
+                      <div className={`${scoreColor} font-bold text-xs`}>{sub.score}</div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
 
@@ -541,14 +544,14 @@ export const MasterExecutiveDashboard: React.FC<MasterExecutiveDashboardProps> =
               {/* SECTION 2: Financial Impact */}
               <div className="rounded-2xl bg-slate-900 border border-slate-800 p-4 space-y-3">
                 <div className="text-[10px] font-mono uppercase font-bold text-emerald-400">
-                  Section 2 · Financial Impact Across P1–P4
+                  Section 2 · Visible Financial Impact Across Core Systems
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                   <div
                     onClick={() => onNavigateEngine('p1')}
                     className="p-3 rounded-xl bg-slate-950 border border-amber-500/30 cursor-pointer hover:border-amber-400 transition"
                   >
-                    <div className="text-[10px] font-mono text-amber-300 uppercase">Cash Stuck (P1)</div>
+                    <div className="text-[10px] font-mono text-amber-300 uppercase">Dead Stock Cash</div>
                     <div className="text-xl font-black font-mono text-white mt-1">
                       {formatCompactINR(ceoMetrics.cashStuck)}
                     </div>
@@ -557,7 +560,7 @@ export const MasterExecutiveDashboard: React.FC<MasterExecutiveDashboardProps> =
                     onClick={() => onNavigateEngine('p2')}
                     className="p-3 rounded-xl bg-slate-950 border border-emerald-500/30 cursor-pointer hover:border-emerald-400 transition"
                   >
-                    <div className="text-[10px] font-mono text-emerald-300 uppercase">Rev At Risk (P2)</div>
+                    <div className="text-[10px] font-mono text-emerald-300 uppercase">Delayed Dispatch Risk</div>
                     <div className="text-xl font-black font-mono text-white mt-1">
                       {formatCompactINR(ceoMetrics.revenueAtRisk)}
                     </div>
@@ -566,7 +569,7 @@ export const MasterExecutiveDashboard: React.FC<MasterExecutiveDashboardProps> =
                     onClick={() => onNavigateEngine('p3')}
                     className="p-3 rounded-xl bg-slate-950 border border-cyan-500/30 cursor-pointer hover:border-cyan-400 transition"
                   >
-                    <div className="text-[10px] font-mono text-cyan-300 uppercase">Freight Leak (P3)</div>
+                    <div className="text-[10px] font-mono text-cyan-300 uppercase">Margin / Freight Leak</div>
                     <div className="text-xl font-black font-mono text-white mt-1">
                       {formatCompactINR(ceoMetrics.freightLeakage)}
                     </div>
@@ -575,7 +578,7 @@ export const MasterExecutiveDashboard: React.FC<MasterExecutiveDashboardProps> =
                     onClick={() => onNavigateEngine('p4')}
                     className="p-3 rounded-xl bg-slate-950 border border-fuchsia-500/30 cursor-pointer hover:border-fuchsia-400 transition"
                   >
-                    <div className="text-[10px] font-mono text-fuchsia-300 uppercase">Variance Impact (P4)</div>
+                    <div className="text-[10px] font-mono text-fuchsia-300 uppercase">Stock Mismatch Risk</div>
                     <div className="text-xl font-black font-mono text-white mt-1">
                       {formatCompactINR(ceoMetrics.varianceImpactRupees)}
                     </div>
@@ -591,22 +594,22 @@ export const MasterExecutiveDashboard: React.FC<MasterExecutiveDashboardProps> =
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs font-mono">
                   {[
                     {
-                      label: 'Dead Inventory',
+                      label: 'Dead Stock Recovery',
                       light: ceoMetrics.cashStuck > 200000 ? '🔴 Critical' : '🟡 Monitor',
                       eng: 'p1' as const,
                     },
                     {
-                      label: 'OTIF Delivery',
+                      label: 'Dispatch Performance',
                       light: ceoMetrics.otifPct >= 90 ? '🟢 Good' : ceoMetrics.otifPct >= 80 ? '🟡 Monitor' : '🔴 Critical',
                       eng: 'p2' as const,
                     },
                     {
-                      label: 'Freight Audit',
+                      label: 'Margin Protection',
                       light: ceoMetrics.freightLeakage <= 10000 ? '🟢 Good' : '🟡 Monitor',
                       eng: 'p3' as const,
                     },
                     {
-                      label: 'Stock Accuracy',
+                      label: 'Warehouse Accuracy',
                       light: ceoMetrics.stockAccuracyPct >= 93 ? '🟢 Good' : '🟡 Monitor',
                       eng: 'p4' as const,
                     },
@@ -633,7 +636,7 @@ export const MasterExecutiveDashboard: React.FC<MasterExecutiveDashboardProps> =
                 <span className="text-[10px] font-mono uppercase font-bold text-rose-400">
                   Section 4 · Top 5 Monday Priorities
                 </span>
-                <span className="text-[10px] font-mono text-slate-400">Accountable Owners Assigned</span>
+                <span className="text-[10px] font-mono text-slate-400">Click Any Priority to Open Module</span>
               </div>
               <div className="space-y-2.5">
                 {top5Priorities.map((p) => (
@@ -700,7 +703,7 @@ export const MasterExecutiveDashboard: React.FC<MasterExecutiveDashboardProps> =
                     onClick={() => onNavigateEngine('p5')}
                     className="text-xs font-mono text-amber-400 hover:underline mt-1 cursor-pointer flex items-center gap-1"
                   >
-                    <span>Manage Owners &amp; Due Dates in P5</span>
+                    <span>Manage Owners &amp; Due Dates in Weekly CEO Dashboard</span>
                     <ArrowRight className="w-3.5 h-3.5" />
                   </button>
                 </div>
@@ -761,19 +764,21 @@ export const MasterExecutiveDashboard: React.FC<MasterExecutiveDashboardProps> =
                 <div key={chart.title} className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-2.5">
                   <div className="text-xs font-bold text-white">{chart.title}</div>
                   <div className="grid grid-cols-6 gap-1.5 items-end h-28 pt-3">
-                    {chart.series.map((pt) => (
-                      <div key={pt.m} className="flex flex-col items-center justify-end h-full gap-1">
-                        <span className="text-[9px] font-mono text-slate-300">
-                          {pt.v}
-                          {chart.unit}
-                        </span>
-                        <div
-                          className={`w-full rounded-t ${chart.barCls}`}
-                          style={{ height: `${Math.max(14, Math.min(100, (pt.v / chart.max) * 100))}%` }}
-                        />
-                        <span className="text-[9px] font-mono text-slate-500">{pt.m}</span>
-                      </div>
-                    ))}
+                    {chart.series
+                      .filter((pt) => Number.isFinite(pt.v) && pt.v > 0)
+                      .map((pt) => (
+                        <div key={pt.m} className="flex flex-col items-center justify-end h-full gap-1">
+                          <span className="text-[9px] font-mono text-slate-300">
+                            {pt.v}
+                            {chart.unit}
+                          </span>
+                          <div
+                            className={`w-full rounded-t ${chart.barCls}`}
+                            style={{ height: `${Math.max(14, Math.min(100, (pt.v / chart.max) * 100))}%` }}
+                          />
+                          <span className="text-[9px] font-mono text-slate-500">{pt.m}</span>
+                        </div>
+                      ))}
                   </div>
                 </div>
               ))}

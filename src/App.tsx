@@ -34,8 +34,10 @@ import { CustomBundleCombinator } from './components/CustomBundleCombinator';
 import { SmartTallyMapperModal, TargetEngineType } from './components/SmartTallyMapperModal';
 import { MultiDeviceSyncModal, SYNC_KEYS } from './components/MultiDeviceSyncModal';
 import { MasterExecutiveDashboard } from './components/MasterExecutiveDashboard';
+import { OperationalystLandingPage } from './components/OperationalystLandingPage';
 
 type ArchitectureVersion =
+  | 'landing'
   | 'ceo_master'
   | 'standalone_p1'
   | 'standalone_p2'
@@ -73,22 +75,25 @@ function parseRequestedArchitecture(): ArchitectureVersion | null {
       hashRaw
     ).toLowerCase();
 
+    if (target === 'home' || target === 'landing') {
+      return 'landing';
+    }
     if (target === 'p2' || target === 'otif' || target === 'dispatch' || target === 'standalone_p2') {
       return 'standalone_p2';
     }
-    if (target === 'p1' || target === 'cash' || target === 'inventory' || target === 'standalone_p1') {
+    if (target === 'p1' || target === 'cash' || target === 'deadstock' || target === 'inventory' || target === 'standalone_p1') {
       return 'standalone_p1';
     }
-    if (target === 'p3' || target === 'freight' || target === 'profit' || target === 'standalone_p3') {
+    if (target === 'p3' || target === 'freight' || target === 'margin' || target === 'profit' || target === 'standalone_p3') {
       return 'standalone_p3';
     }
-    if (target === 'p4' || target === 'binaudit' || target === 'warehouse' || target === 'standalone_p4') {
+    if (target === 'p4' || target === 'binaudit' || target === 'accuracy' || target === 'warehouse' || target === 'standalone_p4') {
       return 'standalone_p4';
     }
     if (target === 'p5' || target === 'tower' || target === 'controltower' || target === 'standalone_p5') {
       return 'standalone_p5';
     }
-    if (target === 'ceo' || target === 'master' || target === 'ceo_master') {
+    if (target === 'ceo' || target === 'master' || target === 'demo' || target === 'ceo_master') {
       return 'ceo_master';
     }
   } catch {}
@@ -99,13 +104,13 @@ export default function App() {
   const [versionMode, setVersionMode] = useState<ArchitectureVersion>(() => {
     const fromUrl = parseRequestedArchitecture();
     if (fromUrl) return fromUrl;
-    // Default directly to Project 2 (Dispatch OTIF) as requested
-    return 'standalone_p2';
+    // Default first-time visitors to the Commercial SaaS Landing Page before dashboards
+    return 'landing';
   });
 
-  // Commercial Rebranding Mode (P1-P5 Codes vs Manufacturing Control Tower Commercial Names)
+  // Outcome-First Branding ON by default (Dead Stock Recovery, Dispatch Performance, Margin Protection, Warehouse Accuracy, CEO Dashboard)
   const [useCommercialNames, setUseCommercialNames] = useState<boolean>(() => {
-    return localStorage.getItem('suite_commercial_names_v1') === 'true';
+    return localStorage.getItem('suite_commercial_names_v1') !== 'false';
   });
 
   // Client Presentation Lock (Hides top multi-project switcher bar during live client screen-share)
@@ -293,29 +298,34 @@ export default function App() {
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-950 text-slate-100">
-      {/* Top Architecture & Commercial Controls Bar (Compact App Bar on Mobile, Full Strip on Desktop) */}
-      {!isClientLocked ? (
+      {/* Top Architecture & Commercial Controls Bar (Hidden on the public SaaS Landing Page) */}
+      {versionMode !== 'landing' && (!isClientLocked ? (
         <div className="bg-slate-950/95 backdrop-blur-md border-b border-indigo-500/30 px-3 sm:px-4 py-1.5 sticky top-0 z-50 no-print shadow-md">
           {/* MOBILE COMPACT TOP BAR (< md) — Prevents vertical screen crowding on phones */}
           <div className="flex md:hidden items-center justify-between gap-2 h-10">
             <div className="flex items-center gap-2 min-w-0">
-              <Gauge className="w-4 h-4 text-emerald-400 shrink-0" />
+              <button
+                onClick={() => setVersionMode('landing')}
+                className="px-2 py-1 rounded bg-slate-900 border border-slate-700 text-[10px] font-bold text-emerald-400 shrink-0"
+              >
+                ← Home
+              </button>
               <span className="text-xs font-black text-white truncate">
                 {versionMode === 'ceo_master'
-                  ? 'CEO Command Center'
+                  ? 'Executive Overview'
                   : versionMode === 'standalone_p1'
-                  ? 'P1 Cash Recovery'
+                  ? 'Dead Stock Recovery'
                   : versionMode === 'standalone_p2'
-                  ? 'P2 Promise OTIF'
+                  ? 'Dispatch Performance'
                   : versionMode === 'standalone_p3'
-                  ? 'P3 Profit Protection'
+                  ? 'Margin Protection'
                   : versionMode === 'standalone_p4'
-                  ? 'P4 Warehouse Bins'
+                  ? 'Warehouse Accuracy'
                   : versionMode === 'standalone_p5'
-                  ? 'P5 CEO Briefing'
+                  ? 'CEO Dashboard'
                   : versionMode === 'custom_combos'
                   ? 'Modular Bundles'
-                  : '5-Engine Suite'}
+                  : 'All 5 Systems'}
               </span>
             </div>
 
@@ -370,6 +380,16 @@ export default function App() {
                 </button>
               </div>
 
+              <button
+                onClick={() => {
+                  setVersionMode('landing');
+                  setShowMobileMenu(false);
+                }}
+                className="w-full py-2 px-3 rounded-lg bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 font-bold text-xs flex items-center justify-center gap-1.5"
+              >
+                <span>← Return to Operationalyst Homepage &amp; Free Audit</span>
+              </button>
+
               <div className="grid grid-cols-2 gap-1.5">
                 <button
                   onClick={() => {
@@ -412,8 +432,16 @@ export default function App() {
 
           {/* DESKTOP FULL BAR (md and up) */}
           <div className="hidden md:flex max-w-7xl mx-auto flex-wrap items-center justify-between gap-2 text-xs">
-            {/* Left: Mode Switcher Buttons */}
+            {/* Left: Outcome-Driven Switcher Buttons */}
             <div className="flex flex-wrap items-center gap-1 bg-slate-900 p-1 rounded-lg border border-slate-800">
+              <button
+                onClick={() => setVersionMode('landing')}
+                className="px-2.5 py-1 rounded-md font-bold transition cursor-pointer flex items-center gap-1 text-[11px] bg-slate-950 text-emerald-400 hover:bg-slate-800 border border-emerald-500/30"
+                title="Return to Operationalyst Homepage, ROI Calculator & Free Factory Audit"
+              >
+                <span>← Operationalyst Home</span>
+              </button>
+
               <button
                 onClick={() => setVersionMode('ceo_master')}
                 className={`px-2.5 py-1 rounded-md font-semibold transition cursor-pointer flex items-center gap-1.5 text-[11px] ${
@@ -421,10 +449,10 @@ export default function App() {
                     ? 'bg-gradient-to-r from-emerald-500 to-cyan-500 text-slate-950 shadow-sm font-black'
                     : 'text-emerald-300 hover:text-white hover:bg-slate-800 border border-emerald-500/30'
                 }`}
-                title="2-Minute CEO Master Executive Dashboard (Factory Health Score) + PM Backlog (P0-P3) & 3-Phase Roadmap"
+                title="Identify operational losses before monthly review meetings"
               >
                 <Gauge className="w-3.5 h-3.5" />
-                <span>{useCommercialNames ? 'Factory Health & Roadmap' : 'CEO Master & Roadmap'}</span>
+                <span>{useCommercialNames ? 'Executive Overview' : 'CEO Master'}</span>
               </button>
 
               <button
@@ -434,10 +462,10 @@ export default function App() {
                     ? 'bg-amber-500 text-slate-950 shadow-sm font-bold'
                     : 'text-slate-400 hover:text-white hover:bg-slate-800'
                 }`}
-                title="Project 1: Cash Recovery Engine (Recovers Cash Locked in Dead Inventory Only)"
+                title="Dead Stock Recovery: Identify idle inventory and recover tied-up working capital"
               >
                 <Package className="w-3.5 h-3.5" />
-                <span>{useCommercialNames ? 'Cash Recovery Engine' : 'P1 (Cash Recovery)'}</span>
+                <span>{useCommercialNames ? 'Dead Stock Recovery' : 'P1 (Dead Stock)'}</span>
               </button>
 
               <button
@@ -447,10 +475,10 @@ export default function App() {
                     ? 'bg-emerald-500 text-slate-950 shadow-sm font-bold'
                     : 'text-slate-400 hover:text-white hover:bg-slate-800'
                 }`}
-                title="Project 2: Customer Promise Reliability Engine (Protects Customer Service & Revenue via Strict OTIF)"
+                title="Dispatch Performance: Monitor On-Time In-Full (OTIF) customer deliveries"
               >
                 <Truck className="w-3.5 h-3.5" />
-                <span>{useCommercialNames ? 'Customer Promise Engine' : 'P2 (Promise OTIF)'}</span>
+                <span>{useCommercialNames ? 'Dispatch Performance' : 'P2 (Dispatch)'}</span>
               </button>
 
               <button
@@ -460,10 +488,10 @@ export default function App() {
                     ? 'bg-cyan-500 text-slate-950 shadow-sm font-bold'
                     : 'text-slate-400 hover:text-white hover:bg-slate-800'
                 }`}
-                title="Project 3: Profit Protection Engine (Protects Profit Margin from Freight Leaks)"
+                title="Margin Protection: Detect freight overbilling and operational profit leaks"
               >
                 <Scale className="w-3.5 h-3.5" />
-                <span>{useCommercialNames ? 'Profit Protection Engine' : 'P3 (Profit Protection)'}</span>
+                <span>{useCommercialNames ? 'Margin Protection' : 'P3 (Margin)'}</span>
               </button>
 
               <button
@@ -473,10 +501,10 @@ export default function App() {
                     ? 'bg-fuchsia-500 text-slate-950 shadow-sm font-bold'
                     : 'text-slate-400 hover:text-white hover:bg-slate-800'
                 }`}
-                title="Project 4: Warehouse Reliability Engine (Protects Inventory Integrity & Bin Accuracy)"
+                title="Warehouse Accuracy: Match physical shelf stock against book balances"
               >
                 <ScanBarcode className="w-3.5 h-3.5" />
-                <span>{useCommercialNames ? 'Warehouse Reliability Engine' : 'P4 (Warehouse Trust)'}</span>
+                <span>{useCommercialNames ? 'Warehouse Accuracy' : 'P4 (Warehouse)'}</span>
               </button>
 
               <button
@@ -486,10 +514,10 @@ export default function App() {
                     ? 'bg-rose-500 text-white shadow-sm font-bold'
                     : 'text-slate-400 hover:text-white hover:bg-slate-800'
                 }`}
-                title="Project 5: CEO Monday Briefing Engine (Executive Operations Control Tower — Tells Leadership What To Do Next)"
+                title="CEO Dashboard: Weekly priorities, owners, and financial exposure in one place"
               >
                 <Radio className="w-3.5 h-3.5" />
-                <span>{useCommercialNames ? 'CEO Monday Briefing' : 'P5 (CEO Briefing)'}</span>
+                <span>{useCommercialNames ? 'CEO Dashboard' : 'P5 (CEO)'}</span>
               </button>
 
               <button
@@ -597,10 +625,19 @@ export default function App() {
           <Unlock className="w-3 h-3" />
           <span>Exit Client Presentation Lock</span>
         </button>
-      )}
+      ))}
 
-      {/* Render Selected Version (pb-20 on mobile reserves space for the thumb-friendly bottom nav bar) */}
-      <div className="flex-1 pb-20 md:pb-0" key={`${activeClientId}-${syncRefreshKey}`}>
+      {/* Render Selected Version (pb-20 on mobile reserves space for the thumb-friendly bottom nav bar when inside the app) */}
+      <div className={versionMode === 'landing' ? 'flex-1' : 'flex-1 pb-20 md:pb-0'} key={`${activeClientId}-${syncRefreshKey}`}>
+        {versionMode === 'landing' && (
+          <OperationalystLandingPage
+            onLaunchModule={(target) => {
+              setVersionMode(target);
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            onOpenSmartMapper={() => openMapperForEngine('p1')}
+          />
+        )}
         {versionMode === 'ceo_master' && (
           <MasterExecutiveDashboard
             onNavigateEngine={(eng) => {
@@ -643,19 +680,19 @@ export default function App() {
         )}
       </div>
 
-      {/* MOBILE THUMB-FRIENDLY FIXED BOTTOM NAVIGATION BAR (< md) */}
-      {!isClientLocked && (
+      {/* MOBILE THUMB-FRIENDLY FIXED BOTTOM NAVIGATION BAR (< md, hidden on public landing page) */}
+      {versionMode !== 'landing' && !isClientLocked && (
         <nav
-          aria-label="Mobile Engine Switcher"
+          aria-label="Mobile System Switcher"
           className="fixed bottom-0 inset-x-0 z-50 md:hidden bg-slate-950/95 backdrop-blur-md border-t border-slate-800 px-1 pt-1 pb-[max(0.35rem,env(safe-area-inset-bottom))] grid grid-cols-6 gap-0.5 no-print shadow-2xl"
         >
           {[
-            { id: 'ceo_master' as const, label: 'CEO', icon: Gauge, activeCls: 'text-emerald-400 bg-emerald-500/15' },
-            { id: 'standalone_p1' as const, label: 'P1 Cash', icon: Package, activeCls: 'text-amber-400 bg-amber-500/15' },
-            { id: 'standalone_p2' as const, label: 'P2 OTIF', icon: Truck, activeCls: 'text-emerald-400 bg-emerald-500/15' },
-            { id: 'standalone_p3' as const, label: 'P3 Frt', icon: Scale, activeCls: 'text-cyan-400 bg-cyan-500/15' },
-            { id: 'standalone_p4' as const, label: 'P4 Bins', icon: ScanBarcode, activeCls: 'text-fuchsia-400 bg-fuchsia-500/15' },
-            { id: 'standalone_p5' as const, label: 'P5 Brief', icon: Radio, activeCls: 'text-rose-400 bg-rose-500/15' },
+            { id: 'ceo_master' as const, label: 'Overview', icon: Gauge, activeCls: 'text-emerald-400 bg-emerald-500/15' },
+            { id: 'standalone_p1' as const, label: 'Dead Stock', icon: Package, activeCls: 'text-amber-400 bg-amber-500/15' },
+            { id: 'standalone_p2' as const, label: 'Dispatch', icon: Truck, activeCls: 'text-emerald-400 bg-emerald-500/15' },
+            { id: 'standalone_p3' as const, label: 'Margin', icon: Scale, activeCls: 'text-cyan-400 bg-cyan-500/15' },
+            { id: 'standalone_p4' as const, label: 'Accuracy', icon: ScanBarcode, activeCls: 'text-fuchsia-400 bg-fuchsia-500/15' },
+            { id: 'standalone_p5' as const, label: 'CEO', icon: Radio, activeCls: 'text-rose-400 bg-rose-500/15' },
           ].map((tab) => {
             const Icon = tab.icon;
             const active = versionMode === tab.id;

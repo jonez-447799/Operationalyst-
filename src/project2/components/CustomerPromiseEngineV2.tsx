@@ -26,15 +26,16 @@ interface CustomerPromiseEngineV2Props {
 
 // Strategic Customer Priority Tiers (Annual Business Value in ₹ Lakhs)
 const CUSTOMER_PRIORITY_MAP: Record<string, { tier: 'Tier-1 OEM (Strategic)' | 'Tier-2 Key Account' | 'Tier-3 Trader'; annualRevLakhs: number }> = {
-  'TVS Motor': { tier: 'Tier-1 OEM (Strategic)', annualRevLakhs: 520 },
+  'TVS': { tier: 'Tier-1 OEM (Strategic)', annualRevLakhs: 520 },
   'Ashok Leyland': { tier: 'Tier-1 OEM (Strategic)', annualRevLakhs: 480 },
+  'Daimler': { tier: 'Tier-1 OEM (Strategic)', annualRevLakhs: 440 },
   'Royal Enfield': { tier: 'Tier-1 OEM (Strategic)', annualRevLakhs: 410 },
-  'Hyundai Mobis': { tier: 'Tier-1 OEM (Strategic)', annualRevLakhs: 390 },
-  'Caterpillar India': { tier: 'Tier-1 OEM (Strategic)', annualRevLakhs: 350 },
-  'TAFE Tractors': { tier: 'Tier-2 Key Account', annualRevLakhs: 180 },
-  'Daimler India': { tier: 'Tier-1 OEM (Strategic)', annualRevLakhs: 440 },
+  'Hyundai': { tier: 'Tier-1 OEM (Strategic)', annualRevLakhs: 390 },
+  'Caterpillar': { tier: 'Tier-1 OEM (Strategic)', annualRevLakhs: 350 },
+  'TAFE': { tier: 'Tier-2 Key Account', annualRevLakhs: 180 },
   'Brakes India': { tier: 'Tier-2 Key Account', annualRevLakhs: 150 },
-  'Sundaram Fasteners': { tier: 'Tier-2 Key Account', annualRevLakhs: 125 },
+  'Sundaram': { tier: 'Tier-2 Key Account', annualRevLakhs: 125 },
+  'Apex': { tier: 'Tier-2 Key Account', annualRevLakhs: 165 },
 };
 
 function getCustomerTier(customer: string) {
@@ -57,6 +58,7 @@ export const CustomerPromiseEngineV2: React.FC<CustomerPromiseEngineV2Props> = (
   const [activeSubView, setActiveSubView] = useState<
     'severity_revenue' | 'customer_heatmap' | 'predictive_risk' | 'transporter_pareto'
   >('severity_revenue');
+  const [customerSortMode, setCustomerSortMode] = useState<'revenue' | 'worst_otif'>('worst_otif');
 
   // Enrich dispatches with V2.0 analytics (Delay Severity, Order Value, 6-Category Root Cause, Transporter)
   const v2Analytics = useMemo(() => {
@@ -89,8 +91,8 @@ export const CustomerPromiseEngineV2: React.FC<CustomerPromiseEngineV2Props> = (
       if (rawReason.includes('material') || rawReason.includes('sub-vendor')) v2Category = 'Material Shortage';
       else if (rawReason.includes('lorry') || rawReason.includes('transport') || rawReason.includes('vehicle')) v2Category = 'Transport Delay';
       else if (rawReason.includes('pack') || rawReason.includes('plan')) v2Category = 'Planning Error';
-      else if (rawReason.includes('customer') || rawReason.includes('hold') && !rawReason.includes('qc')) v2Category = 'Customer Hold';
-      else if (rawReason.includes('invoice') || rawReason.includes('doc') || rawReason.includes('eway')) v2Category = 'Documentation Issue';
+      else if (rawReason.includes('customer') || (rawReason.includes('hold') && !rawReason.includes('qc'))) v2Category = 'Customer Hold';
+      else if (rawReason.includes('paperwork') || rawReason.includes('invoice') || rawReason.includes('doc') || rawReason.includes('eway')) v2Category = 'Documentation Issue';
       else v2Category = 'Production Delay';
 
       // Assign transporter carrier based on vehicle prefix or index
@@ -492,7 +494,7 @@ export const CustomerPromiseEngineV2: React.FC<CustomerPromiseEngineV2Props> = (
                       <div className="w-full h-2 rounded-full bg-slate-900 overflow-hidden">
                         <div
                           className="h-full bg-emerald-500 rounded-full"
-                          style={{ width: `${Math.max(4, pct)}%` }}
+                          style={{ width: `${count > 0 ? Math.max(6, pct) : 0}%` }}
                         />
                       </div>
                     </div>
@@ -503,12 +505,33 @@ export const CustomerPromiseEngineV2: React.FC<CustomerPromiseEngineV2Props> = (
 
           {/* Lost Revenue Estimator & Priority-Weighted Customer Impact */}
           <div className="lg:col-span-6 bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-4">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <h3 className="text-sm font-bold text-white flex items-center gap-2">
                 <IndianRupee className="w-4 h-4 text-amber-400" />
                 <span>Lost Revenue Estimator &amp; Customer Priority Ranking</span>
               </h3>
-              <span className="text-[10px] font-mono text-amber-400">Weighted by Annual Account Value</span>
+              <div className="inline-flex rounded-lg bg-slate-900 p-0.5 border border-slate-800 text-[10px] font-mono">
+                <button
+                  onClick={() => setCustomerSortMode('worst_otif')}
+                  className={`px-2 py-1 rounded cursor-pointer transition ${
+                    customerSortMode === 'worst_otif'
+                      ? 'bg-emerald-500 text-slate-950 font-bold'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  Sort: Worst Gate %
+                </button>
+                <button
+                  onClick={() => setCustomerSortMode('revenue')}
+                  className={`px-2 py-1 rounded cursor-pointer transition ${
+                    customerSortMode === 'revenue'
+                      ? 'bg-amber-500 text-slate-950 font-bold'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  Sort: Revenue (₹)
+                </button>
+              </div>
             </div>
 
             <div className="grid grid-cols-3 gap-2 text-center text-xs">
@@ -543,7 +566,13 @@ export const CustomerPromiseEngineV2: React.FC<CustomerPromiseEngineV2Props> = (
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800/70">
-                  {v2Analytics.customerList.map((c) => (
+                  {[...v2Analytics.customerList]
+                    .sort((a, b) =>
+                      customerSortMode === 'worst_otif'
+                        ? a.otif - b.otif || b.annualRevLakhs - a.annualRevLakhs
+                        : b.annualRevLakhs - a.annualRevLakhs
+                    )
+                    .map((c) => (
                     <tr
                       key={c.customer}
                       onClick={() => onFilterCustomer && onFilterCustomer(c.customer)}
