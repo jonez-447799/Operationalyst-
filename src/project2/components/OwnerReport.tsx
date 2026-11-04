@@ -26,7 +26,8 @@ import {
   SlidersHorizontal,
   Award,
   FlaskConical,
-  Calendar
+  Calendar,
+  MessageSquare
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
@@ -1536,7 +1537,7 @@ Action: Fix material shortage first. Gate measurement excludes transit/highway d
       {/* Two Column Section: Customers & Failure Causes */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Left Column: Customer Performance Table */}
-        <div className="lg:col-span-7 industrial-card rounded-xl p-5 space-y-4">
+        <div id="p2-customer-scorecard" className="lg:col-span-7 industrial-card rounded-xl p-5 space-y-4">
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
@@ -1567,6 +1568,7 @@ Action: Fix material shortage first. Gate measurement excludes transit/highway d
                   <th className="py-2.5 px-3 text-center">On-Time</th>
                   <th className="py-2.5 px-3 text-center">In-Full</th>
                   <th className="py-2.5 px-3 text-right">Priority</th>
+                  <th className="py-2.5 px-2 text-center">WhatsApp</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-850 font-sans">
@@ -1614,6 +1616,19 @@ Action: Fix material shortage first. Gate measurement excludes transit/highway d
                         ) : (
                           <span className="text-slate-400">Stable</span>
                         )}
+                      </td>
+                      <td className="py-3 px-2 text-center" onClick={(e) => e.stopPropagation()}>
+                        <button
+                          onClick={() => {
+                            const msg = `Alert [Dispatch Head]: ${c.customer} OTIF is at ${c.otifPercent}% (${c.passes}/${c.dispatches} loads). Primary cause: Material short (3 loads). Action required before Monday 9 AM review.`;
+                            navigator.clipboard.writeText(msg);
+                            alert(`WhatsApp Alert Copied for ${c.customer}!\nPre-formatted for CEO Monday review.`);
+                          }}
+                          className="p-1 rounded bg-emerald-500/15 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/30 transition cursor-pointer"
+                          title="Copy pre-formatted WhatsApp alert for CEO review"
+                        >
+                          <MessageSquare className="w-3.5 h-3.5" />
+                        </button>
                       </td>
                     </tr>
                   );

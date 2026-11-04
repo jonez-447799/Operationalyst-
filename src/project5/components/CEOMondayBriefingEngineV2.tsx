@@ -29,6 +29,8 @@ import { calculateAuditMetrics } from '../../project3/utils/auditCalculations';
 import { INITIAL_SAMPLE_SKUS as P4_INITIAL_SKUS, DEFAULT_RULES as P4_DEFAULT_RULES } from '../../project4/data/sampleData';
 import { computeSummary, calculateItemFields } from '../../project4/utils/auditCalculations';
 import { downloadCommandCenterWorkbook } from '../../utils/excelCommandCenterExporter';
+import { usePlant } from '../../context/PlantContext';
+import { CrossEngineSyncReportModal } from './CrossEngineSyncReportModal';
 
 export interface ExecutiveActionItem {
   id: string;
@@ -240,9 +242,12 @@ export const CEOMondayBriefingEngineV2: React.FC<CEOMondayBriefingEngineV2Props>
   onOpenProject,
   onJumpToEngine,
 }) => {
+  const { activePlant, activePeriod } = usePlant();
   const [dataSourceMode, setDataSourceMode] = useState<'chennai_benchmark' | 'live_sync'>('chennai_benchmark');
   const [activeView, setActiveView] = useState<'command_center' | 'top10_kpis' | 'mbr_pack'>('command_center');
   const [copiedBrief, setCopiedBrief] = useState(false);
+  const [isCrossSyncModalOpen, setIsCrossSyncModalOpen] = useState(false);
+  const [crossSyncNotification, setCrossSyncNotification] = useState<string | null>(null);
 
   // Add Action Form state
   const [newActionText, setNewActionText] = useState('');
@@ -379,25 +384,35 @@ export const CEOMondayBriefingEngineV2: React.FC<CEOMondayBriefingEngineV2Props>
     const procurementDeptScore = Math.min(96, Math.max(72, Math.round((inventoryDeptScore + warehouseDeptScore) / 2 + 3)));
 
     // Overall Health Score = 30% Inventory + 25% OTIF + 25% Freight + 20% Warehouse Accuracy
-    const operationsHealthScore = Math.round(
-      inventoryDeptScore * 0.3 +
-        dispatchDeptScore * 0.25 +
-        logisticsDeptScore * 0.25 +
-        warehouseDeptScore * 0.2
-    );
+    const isPlantCustom = activePlant.id !== 'ambattur';
+    const finalInventoryDeptScore = isPlantCustom ? activePlant.kpis.subScores.inventory : inventoryDeptScore;
+    const finalWarehouseDeptScore = isPlantCustom ? activePlant.kpis.subScores.warehouse : warehouseDeptScore;
+    const finalDispatchDeptScore = isPlantCustom ? activePlant.kpis.subScores.otif : dispatchDeptScore;
+    const finalLogisticsDeptScore = isPlantCustom ? activePlant.kpis.subScores.freight : logisticsDeptScore;
+    const finalOperationsHealthScore = isPlantCustom
+      ? activePlant.kpis.factoryHealthScore
+      : Math.round(
+          finalInventoryDeptScore * 0.3 +
+          finalDispatchDeptScore * 0.25 +
+          finalLogisticsDeptScore * 0.25 +
+          finalWarehouseDeptScore * 0.2
+        );
+
     const executiveRiskIndex = Math.min(
       96,
-      Math.max(12, Math.round(100 - operationsHealthScore + (otifPercent < 85 ? 15 : 0)))
+      Math.max(12, Math.round(100 - finalOperationsHealthScore + ((isPlantCustom ? activePlant.kpis.otifPercent : otifPercent) < 85 ? 15 : 0)))
     );
 
     return {
-      deadCash,
-      cashRecoveryPotential,
+      deadCash: isPlantCustom ? activePlant.kpis.deadStockRupees : deadCash,
+      cashRecoveryPotential: isPlantCustom ? activePlant.kpis.recoverableRupees : cashRecoveryPotential,
       criticalDeadStock,
-      abcADeadStock,
+      abcADeadStock: isPlantCustom ? activePlant.kpis.aClassDeadRupees : abcADeadStock,
       deadItemCount: p1Report.deadItemCount,
       topDeadSkus,
-      otifPercent,
+      otifPercent: isPlantCustom ? activePlant.kpis.otifPercent : otifPercent,
+      totalDispatches: isPlantCustom ? activePlant.kpis.totalDispatches : p2Metrics.totalDispatches,
+      passDispatches: isPlantCustom ? activePlant.kpis.passDispatches : p2Metrics.passes,
       lateOrdersCount,
       shortOrdersCount,
       atRiskCustomersCount,
@@ -406,7 +421,7 @@ export const CEOMondayBriefingEngineV2: React.FC<CEOMondayBriefingEngineV2Props>
       sortedRiskCustomers,
       otifRevenueExposure,
       freightPaid,
-      freightLeakage,
+      freightLeakage: isPlantCustom ? activePlant.kpis.freightLeakRupees : freightLeakage,
       recoveredFreight,
       pendingFreight,
       annualizedMonthlyFreightLeak,
@@ -416,22 +431,23 @@ export const CEOMondayBriefingEngineV2: React.FC<CEOMondayBriefingEngineV2Props>
       worstLaneWaste: worstLane ? worstLane.totalWaste : 18000,
       transporters: p3Audit.transporterSummaries,
       worstCarrierName: worstCarrier ? worstCarrier.transporter : 'XYZ Transport',
-      inventoryAccuracyPct,
+      inventoryAccuracyPct: isPlantCustom ? activePlant.kpis.binAccuracyPercent : inventoryAccuracyPct,
       grossVarianceRupees,
-      accuracyLossImpactRupees,
+      accuracyLossImpactRupees: isPlantCustom ? activePlant.kpis.unreliabilityCostRupees : accuracyLossImpactRupees,
       linesMismatch: p4Summary.linesMismatch,
       sortedVariances,
       worstBinSpot: worstBinItem ? worstBinItem.spot : 'B07',
-      inventoryDeptScore,
-      warehouseDeptScore,
-      dispatchDeptScore,
-      logisticsDeptScore,
+      inventoryDeptScore: finalInventoryDeptScore,
+      warehouseDeptScore: finalWarehouseDeptScore,
+      dispatchDeptScore: finalDispatchDeptScore,
+      logisticsDeptScore: finalLogisticsDeptScore,
       planningDeptScore,
       procurementDeptScore,
-      operationsHealthScore,
+      operationsHealthScore: finalOperationsHealthScore,
       executiveRiskIndex,
+      unpaidBillsRupees: isPlantCustom ? activePlant.kpis.unpaidBillsRupees : (towerData.unpaidBillsRupees || 485000),
     };
-  }, [towerData]);
+  }, [towerData, activePlant]);
 
   // Keep legacy ExecutiveActionItem synced in localStorage for MasterExecutiveDashboard compatibility
   const [legacyActions] = useState<ExecutiveActionItem[]>(() => {
@@ -525,6 +541,81 @@ export const CEOMondayBriefingEngineV2: React.FC<CEOMondayBriefingEngineV2Props>
       },
     ]);
     setNewActionText('');
+  };
+
+  const handleApplyCrossEngineSync = () => {
+    setDataSourceMode('live_sync');
+    const livePriorities: PriorityRowItem[] = [
+      {
+        id: 'live-pri-1',
+        rank: 1,
+        severity: liveSuite.deadCash > 200000 ? 'Critical' : 'High',
+        issue: `Dead Inventory ${formatShortINR(liveSuite.deadCash)}`,
+        impact: 'Cash Blocked',
+        owner: 'Inventory Manager',
+        dueDate: '30 Nov',
+        engine: 'p1',
+      },
+      {
+        id: 'live-pri-2',
+        rank: 2,
+        severity: liveSuite.worstCustomerOtif < 80 ? 'Critical' : 'High',
+        issue: `${liveSuite.worstCustomerName} OTIF ${liveSuite.worstCustomerOtif}%`,
+        impact: 'Revenue Risk',
+        owner: 'Dispatch Head',
+        dueDate: '25 Nov',
+        engine: 'p2',
+      },
+      {
+        id: 'live-pri-3',
+        rank: 3,
+        severity: liveSuite.freightLeakage > 15000 ? 'High' : 'Medium',
+        issue: `Freight Leakage ${formatShortINR(liveSuite.freightLeakage)}`,
+        impact: 'Margin Loss',
+        owner: 'Logistics Head',
+        dueDate: '24 Nov',
+        engine: 'p3',
+      },
+      {
+        id: 'live-pri-4',
+        rank: 4,
+        severity: liveSuite.inventoryAccuracyPct < 95 ? 'High' : 'Medium',
+        issue: `Bin ${liveSuite.worstBinSpot} Mismatch`,
+        impact: 'Inventory Risk',
+        owner: 'Stores Supervisor',
+        dueDate: '22 Nov',
+        engine: 'p4',
+      },
+      {
+        id: 'live-pri-5',
+        rank: 5,
+        severity: 'Medium',
+        issue: `${liveSuite.worstCarrierName} Overspend`,
+        impact: 'Cost Escalation',
+        owner: 'Transport Coordinator',
+        dueDate: '26 Nov',
+        engine: 'p3',
+      },
+    ];
+    setBenchmarkPriorities(livePriorities);
+    try {
+      localStorage.setItem(PRIORITY_STORAGE_KEY, JSON.stringify(livePriorities));
+      const syncData = {
+        ...towerData,
+        lastUpdated: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) + ' (Live 5-Engine Sync)',
+        deadCashRupees: liveSuite.deadCash,
+        dispatchesCount: liveSuite.totalDispatches,
+        otifPassesCount: liveSuite.passDispatches,
+        ordersLateCount: liveSuite.lateOrdersCount,
+        freightPaidRupees: liveSuite.freightPaid,
+        unpaidBillsRupees: liveSuite.unpaidBillsRupees,
+      };
+      localStorage.setItem('monday_tower_data_v1', JSON.stringify(syncData));
+      localStorage.setItem('monday_control_tower_v1', JSON.stringify(syncData));
+      window.dispatchEvent(new Event('storage'));
+    } catch {}
+    setCrossSyncNotification('All 5 engines successfully synced! CEO Monday Briefing updated with live operational state.');
+    setTimeout(() => setCrossSyncNotification(null), 4000);
   };
 
   // Unified Display Model (Switches cleanly between Chennai Plant W46 Benchmark & Live P1-P4 Sync)
@@ -1277,24 +1368,32 @@ export const CEOMondayBriefingEngineV2: React.FC<CEOMondayBriefingEngineV2Props>
               </button>
             </div>
 
-            <div className="grid grid-cols-3 sm:flex items-center gap-1.5">
+            <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-1.5 w-full sm:w-auto">
+              <button
+                onClick={() => setIsCrossSyncModalOpen(true)}
+                className="min-h-[44px] sm:min-h-0 px-2.5 sm:px-3 py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 text-white text-[11px] sm:text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer transition shadow-sm border border-indigo-400/40 touch-manipulation active:scale-[0.98]"
+                title="Open Unified Cross-Engine Sync Report Snapshot (P1: Dead Stock, P2: OTIF, P3: Freight Leaks, P4: Bin Accuracy, P5: Debtors)"
+              >
+                <Layers className="w-3.5 h-3.5 text-amber-300 shrink-0" />
+                <span className="whitespace-nowrap">Cross-Engine Sync</span>
+              </button>
               <button
                 onClick={handleCopyCEOBriefing}
-                className="px-2.5 sm:px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] sm:text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer transition"
+                className="min-h-[44px] sm:min-h-0 px-2.5 sm:px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] sm:text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer transition touch-manipulation active:scale-[0.98]"
               >
                 {copiedBrief ? <Check className="w-3.5 h-3.5 shrink-0" /> : <Copy className="w-3.5 h-3.5 shrink-0" />}
                 <span>{copiedBrief ? 'Copied!' : 'Copy Brief'}</span>
               </button>
               <button
                 onClick={() => downloadCommandCenterWorkbook(dataSourceMode === 'chennai_benchmark')}
-                className="px-2.5 sm:px-3 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] sm:text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer transition"
+                className="min-h-[44px] sm:min-h-0 px-2.5 sm:px-3 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] sm:text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer transition touch-manipulation active:scale-[0.98]"
               >
                 <Download className="w-3.5 h-3.5 shrink-0" />
                 <span>Excel</span>
               </button>
               <button
                 onClick={() => window.print()}
-                className="px-2.5 sm:px-3 py-2 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-neutral-200 text-[11px] sm:text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer transition"
+                className="min-h-[44px] sm:min-h-0 px-2.5 sm:px-3 py-2 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-neutral-200 text-[11px] sm:text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer transition touch-manipulation active:scale-[0.98]"
               >
                 <Printer className="w-3.5 h-3.5 text-amber-400 shrink-0" />
                 <span>PDF</span>
@@ -1302,6 +1401,13 @@ export const CEOMondayBriefingEngineV2: React.FC<CEOMondayBriefingEngineV2Props>
             </div>
           </div>
         </div>
+
+        {crossSyncNotification && (
+          <div className="p-3 rounded-xl bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 text-xs font-mono font-bold flex items-center gap-2 animate-in fade-in duration-200">
+            <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+            <span>{crossSyncNotification}</span>
+          </div>
+        )}
 
         {/* 4-Pillar Metadata Strip: Plant | Week | Overall Health Score | Last Updated */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3 font-mono">
@@ -2366,6 +2472,25 @@ export const CEOMondayBriefingEngineV2: React.FC<CEOMondayBriefingEngineV2Props>
           </div>
         </div>
       )}
+
+      {/* Unified Cross-Engine Sync Report Modal (P1–P5) */}
+      <CrossEngineSyncReportModal
+        isOpen={isCrossSyncModalOpen}
+        onClose={() => setIsCrossSyncModalOpen(false)}
+        metrics={liveSuite}
+        towerData={towerData}
+        activePlant={activePlant}
+        activePeriod={activePeriod}
+        onApplyToBriefing={handleApplyCrossEngineSync}
+        onJumpToEngine={(eng) => {
+          if (eng === 'p5') {
+            setActiveView('command_center');
+          } else {
+            handleEngineClick(eng);
+          }
+        }}
+      />
     </section>
   );
 };
+

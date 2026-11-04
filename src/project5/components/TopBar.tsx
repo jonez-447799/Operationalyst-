@@ -51,6 +51,7 @@ export const TopBar: React.FC<TopBarProps> = ({
 
   const navItems = [
     { id: 'tower', label: 'Control Tower' },
+    { id: 'huddle', label: 'Daily Huddle', isHighlight: true },
     { id: 'sheet', label: 'Inputs Sheet' },
     { id: 'fleet', label: 'Fleet Radar' },
     { id: 'chat', label: 'Dispatcher Chat' },
@@ -106,7 +107,14 @@ export const TopBar: React.FC<TopBarProps> = ({
                       : 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100/50'
                 }`}
               >
-                {item.label}
+                <span className="flex items-center gap-1.5">
+                  <span>{item.label}</span>
+                  {item.id === 'huddle' && (
+                    <span className="px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-400 text-[10px] font-mono font-bold">
+                      Top 3
+                    </span>
+                  )}
+                </span>
               </button>
             );
           })}

@@ -9,15 +9,19 @@ import {
   IndianRupee,
   CheckCircle2,
   UserCheck,
-  CalendarClock
+  CalendarClock,
+  Smartphone,
+  Sliders
 } from 'lucide-react';
 import { AuditItem, AuditRules, AuditSummary } from '../types/audit';
+import { MorningShutterCheckModal } from './MorningShutterCheckModal';
 
 interface WarehouseReliabilityEngineV2Props {
   items: AuditItem[];
   rules: AuditRules;
   summary: AuditSummary;
   onSelectSKU?: (code: string) => void;
+  onUpdateItem?: (id: string, updates: Partial<AuditItem>, note: string) => void;
 }
 
 type VarianceRootCause =
@@ -46,10 +50,13 @@ export const WarehouseReliabilityEngineV2: React.FC<WarehouseReliabilityEngineV2
   rules,
   summary,
   onSelectSKU,
+  onUpdateItem,
 }) => {
   const [activeSubView, setActiveSubView] = useState<
     'health_cost' | 'abc_root_cause' | 'zone_heatmap' | 'cycle_auditor'
   >('health_cost');
+
+  const [isMorningCheckModalOpen, setIsMorningCheckModalOpen] = useState(false);
 
   // Persisted Root Cause tags per SKU so managers turn variances into process improvements
   const [rootCauses, setRootCauses] = useState<Record<string, VarianceRootCause>>(() => {
@@ -60,12 +67,21 @@ export const WarehouseReliabilityEngineV2: React.FC<WarehouseReliabilityEngineV2
     return {};
   });
 
+  // Configurable Machine-Hour Rate & Downtime simulation for Production Delay
+  const [machineHourlyRate, setMachineHourlyRate] = useState<number>(8500);
+  const [downtimeHours, setDowntimeHours] = useState<number>(10.0);
+
   // Interactive Variance Cost Calculator state (Allows live simulation + factory-scale preset: ₹4L Missing + ₹80k Emergency + ₹1.5L Delay = ₹6.3L)
   const [simMissingCost, setSimMissingCost] = useState<number>(() => summary.shelfShortRupees || 400000);
   const [simEmergencyBuy, setSimEmergencyBuy] = useState<number>(() =>
     Math.round((summary.shelfShortRupees || 400000) * 0.25) + summary.linesMismatch * 1800
   );
   const [simProdDelay, setSimProdDelay] = useState<number>(() => 85000);
+
+  // Auto-calculate production delay whenever rate or hours change
+  useEffect(() => {
+    setSimProdDelay(Math.round(machineHourlyRate * downtimeHours));
+  }, [machineHourlyRate, downtimeHours]);
 
   useEffect(() => {
     setSimMissingCost(summary.shelfShortRupees);
@@ -305,6 +321,13 @@ export const WarehouseReliabilityEngineV2: React.FC<WarehouseReliabilityEngineV2
           >
             4. Cycle Count &amp; Auditor KPI
           </button>
+          <button
+            onClick={() => setIsMorningCheckModalOpen(true)}
+            className="px-3 py-1.5 rounded-lg text-xs font-bold cursor-pointer transition bg-emerald-600 hover:bg-emerald-500 text-white flex items-center gap-1.5 shadow-sm"
+          >
+            <Smartphone className="w-3.5 h-3.5" />
+            <span>Morning Shutter Gate-Check (8:30 AM)</span>
+          </button>
         </div>
       </div>
 
@@ -372,6 +395,8 @@ export const WarehouseReliabilityEngineV2: React.FC<WarehouseReliabilityEngineV2
                 onClick={() => {
                   setSimMissingCost(400000);
                   setSimEmergencyBuy(80000);
+                  setMachineHourlyRate(10000);
+                  setDowntimeHours(15.0);
                   setSimProdDelay(150000);
                 }}
                 className="px-2.5 py-1 rounded bg-fuchsia-500/20 hover:bg-fuchsia-500/30 border border-fuchsia-500/40 text-fuchsia-300 text-[10px] font-mono font-bold cursor-pointer transition"
@@ -414,10 +439,68 @@ export const WarehouseReliabilityEngineV2: React.FC<WarehouseReliabilityEngineV2
                   className="w-full mt-1 bg-slate-950 border border-slate-700 rounded px-2 py-1 text-base font-black text-indigo-400"
                 />
                 <div className="text-[10px] text-slate-500 font-sans mt-1">
-                  Unexpected line / service bay stoppage
+                  {formatINR(machineHourlyRate)}/hr × {downtimeHours}h downtime
                 </div>
               </div>
             </div>
+
+            {/* Configurable Machine-Hour Rate & Downtime Hours Sliders */}
+            <div className="p-3.5 rounded-xl bg-slate-900/90 border border-indigo-500/30 space-y-3">
+              <div className="flex flex-wrap items-center justify-between text-xs font-mono gap-2">
+                <span className="text-indigo-300 font-bold flex items-center gap-1.5">
+                  <Sliders className="w-3.5 h-3.5 text-indigo-400" />
+                  <span>Configurable Machine-Hour Rate &amp; Line Stoppage Formula</span>
+                </span>
+                <span className="text-slate-300 text-[11px]">
+                  Stoppage Cost: <strong className="text-indigo-400 font-bold">{formatINR(machineHourlyRate)}/hr</strong> × <strong className="text-white font-bold">{downtimeHours} hrs</strong> = <strong className="text-emerald-400 font-bold">{formatINR(simProdDelay)}</strong>
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs font-mono">
+                <div>
+                  <div className="flex justify-between text-[11px] text-slate-300">
+                    <span>Line Stoppage Cost / Hour (₹)</span>
+                    <strong className="text-amber-400">{formatINR(machineHourlyRate)}/hr</strong>
+                  </div>
+                  <input
+                    type="range"
+                    min="2000"
+                    max="25000"
+                    step="500"
+                    value={machineHourlyRate}
+                    onChange={(e) => setMachineHourlyRate(Number(e.target.value))}
+                    className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-400 mt-1"
+                  />
+                  <div className="flex justify-between text-[9px] text-slate-500 mt-0.5">
+                    <span>₹2,000 (Sub-assembly)</span>
+                    <span>₹8,500 (Press/Machining)</span>
+                    <span>₹25,000 (Main Assembly)</span>
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex justify-between text-[11px] text-slate-300">
+                    <span>Line Downtime Duration (Hours)</span>
+                    <strong className="text-rose-400">{downtimeHours} Hours</strong>
+                  </div>
+                  <input
+                    type="range"
+                    min="1"
+                    max="30"
+                    step="0.5"
+                    value={downtimeHours}
+                    onChange={(e) => setDowntimeHours(Number(e.target.value))}
+                    className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-rose-400 mt-1"
+                  />
+                  <div className="flex justify-between text-[9px] text-slate-500 mt-0.5">
+                    <span>1.0 hr (Quick Swap)</span>
+                    <span>10.0 hrs (Shift Stop)</span>
+                    <span>30.0 hrs (Catastrophic)</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <div className="p-3.5 rounded-xl bg-rose-950/30 border border-rose-500/40 flex items-center justify-between">
               <span className="text-xs font-bold text-white">
                 Total Inventory Unreliability Impact (`Missing + Emergency + Stoppage`):
@@ -724,6 +807,19 @@ export const WarehouseReliabilityEngineV2: React.FC<WarehouseReliabilityEngineV2
           </div>
         </div>
       )}
+
+      {/* Morning Shutter Gate-Check Modal (8:30 AM Tablet Checklist) */}
+      <MorningShutterCheckModal
+        isOpen={isMorningCheckModalOpen}
+        onClose={() => setIsMorningCheckModalOpen(false)}
+        items={items}
+        rules={rules}
+        onUpdateItem={(id, updates, note) => {
+          if (onUpdateItem) {
+            onUpdateItem(id, updates, note);
+          }
+        }}
+      />
     </div>
   );
 };

@@ -27,6 +27,7 @@ import {
   FlaskConical
 } from 'lucide-react';
 import { OTIFMetrics, RulesConfig, UserRole } from '../types/otif';
+import { usePlant } from '../../context/PlantContext';
 
 interface HeaderProps {
   currentTab: 'report' | 'sheet' | 'gate' | 'drill' | 'register' | 'rules' | 'guide' | 'rnd';
@@ -77,6 +78,7 @@ export const Header: React.FC<HeaderProps> = ({
   isPinLockEnabled = false,
   onLockNow,
 }) => {
+  const { activePlant } = usePlant();
   const [isToolsMenuOpen, setIsToolsMenuOpen] = useState(false);
   const toolsMenuRef = useRef<HTMLDivElement>(null);
 
@@ -84,9 +86,9 @@ export const Header: React.FC<HeaderProps> = ({
   const isCriticalAlertActive = metrics.otifPercent < alertThreshold;
 
   const factoryProfile = rules?.factoryProfile;
-  const companyName = factoryProfile?.companyName || 'Apex Precision Automotive Ltd';
-  const plantName = factoryProfile?.plantName || 'Unit 1 Operations';
-  const clusterLocation = factoryProfile?.clusterLocation || 'Sriperumbudur Industrial Corridor';
+  const companyName = activePlant ? activePlant.name : (factoryProfile?.companyName || 'Apex Precision Automotive Ltd');
+  const plantName = activePlant ? activePlant.division : (factoryProfile?.plantName || 'Unit 1 Operations');
+  const clusterLocation = activePlant ? activePlant.cluster : (factoryProfile?.clusterLocation || 'Sriperumbudur Industrial Corridor');
   const planTier = factoryProfile?.planTier || 'Pro Industrial';
 
   // Close tools dropdown on outside click

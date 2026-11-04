@@ -121,7 +121,10 @@ export const RecoveryActionDocsGenerator: React.FC = () => {
     const clientName = liveData.p5Tower.clientName || liveData.p1Rules.clientName || 'Ambattur Fabrication Pvt Ltd';
 
     if (activeDoc === 'p3_debit_note') {
-      const topTransporter = liveData.p3Audit.topLeakingTransporter?.transporter || 'Primary Fleet Carrier';
+      const topTransporter =
+        (liveData.p3Audit as any).topLeakingTransporter?.transporter ||
+        liveData.p3Audit.transporterSummaries?.[0]?.transporter ||
+        'Primary Fleet Carrier';
       const totalClaim = liveData.p3Audit.totals.totalLeak;
       const tripLines = liveData.p3LeakingTrips
         .slice(0, 6)
@@ -144,7 +147,7 @@ Dear Logistics & Accounts Payable Team,
 
 Following our 60-day Lorry Receipt (LR) forensic audit across ${liveData.p3Audit.totals.totalTrips} trips (Total Freight Paid: ${formatCurrency(liveData.p3Audit.totals.freightPaid, 'INR')}), we have identified ${formatCurrency(totalClaim, 'INR')} in excess rate billing and unapproved detention charges:
 • Rate Variance Leak above P25 Corridor Benchmark: ${formatCurrency(liveData.p3Audit.totals.rateLeak, 'INR')}
-• Gate Waiting / Halting Detention Leak: ${formatCurrency(liveData.p3Audit.totals.detentionLeak, 'INR')}
+• Gate Waiting / Halting Detention Leak: ${formatCurrency(liveData.p3Audit.totals.detention ?? (liveData.p3Audit.totals as any).detentionLeak ?? 0, 'INR')}
 
 ITEMIZED FLAGGED LORRY BILLS FOR IMMEDIATE CREDIT / DEDUCTION:
 ${tripLines || 'No leaking trips currently flagged.'}
@@ -241,7 +244,10 @@ Operations & Stores Audit — ${clientName}`,
     }
 
     if (activeDoc === 'p2_gate_directive') {
-      const topReason = liveData.p2Summary.topKillers[0]?.reason || 'Final QC Hold';
+      const topReason =
+        (liveData.p2Summary as any).topKillers?.[0]?.reason ||
+        (liveData.p2Summary as any).topReasons?.[0]?.reason ||
+        'Final QC Hold';
       const failedCount = liveData.p2Summary.totalDispatches - liveData.p2Summary.passes;
       const failLines = liveData.p2Fails
         .slice(0, 6)

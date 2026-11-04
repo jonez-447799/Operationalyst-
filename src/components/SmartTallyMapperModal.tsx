@@ -337,17 +337,22 @@ export const SmartTallyMapperModal: React.FC<SmartTallyMapperModalProps> = ({
         const existing: Trip[] = importMode === 'append'
           ? JSON.parse(localStorage.getItem('freight_audit_trips_v1') || '[]')
           : [];
-        const newTrips: Trip[] = parsedTable.rows.map((row, idx) => ({
-          id: getCell(row, 'id') || `LR-${Date.now().toString().slice(-4)}-${idx}`,
-          date: normalizeMessyDate(getCell(row, 'date')),
-          lane: getCell(row, 'lane') || 'Chennai-Hosur',
-          transporter: getCell(row, 'transporter') || 'Regional Carrier',
-          vehicleType: (getCell(row, 'vehicleType') as any) || '19ft Open',
-          tonnes: cleanNumber(getCell(row, 'tonnes')) || 9.0,
-          bill: cleanNumber(getCell(row, 'bill')) || 18000,
-          waitHours: cleanNumber(getCell(row, 'waitHours')) || 1.5,
-          status: 'Flagged',
-        }));
+        const newTrips: Trip[] = parsedTable.rows.map((row, idx) => {
+          const tonnes = cleanNumber(getCell(row, 'tonnes')) || 9.0;
+          return {
+            id: getCell(row, 'id') || `LR-${Date.now().toString().slice(-4)}-${idx}`,
+            date: normalizeMessyDate(getCell(row, 'date')),
+            lane: getCell(row, 'lane') || 'Chennai-Hosur',
+            km: cleanNumber(getCell(row, 'km')) || 320,
+            transporter: getCell(row, 'transporter') || 'Regional Carrier',
+            weightKg: cleanNumber(getCell(row, 'weightKg')) || Math.round(tonnes * 1000),
+            bill: cleanNumber(getCell(row, 'bill')) || 18000,
+            waitHours: cleanNumber(getCell(row, 'waitHours')) || 1.5,
+            split: (getCell(row, 'split') as any) === 'Yes' ? 'Yes' : 'No',
+            emptyReturn: (getCell(row, 'emptyReturn') as any) === 'Yes' ? 'Yes' : 'No',
+            notes: getCell(row, 'notes') || 'Imported via Smart Tally Mapper',
+          };
+        });
         localStorage.setItem('freight_audit_trips_v1', JSON.stringify([...newTrips, ...existing]));
         // Auto-expand P3 date rules so all imported dates are visible
         const savedRules = JSON.parse(localStorage.getItem('freight_audit_rules_v1') || 'null');

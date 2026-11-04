@@ -8,8 +8,6 @@ import {
   Pause,
   FileSpreadsheet,
   Upload,
-  ShieldCheck,
-  TrendingUp,
   IndianRupee,
   Package,
   Truck,
@@ -19,16 +17,10 @@ import {
   ChevronDown,
   Building2,
   Mail,
-  Linkedin,
   Printer,
-  Sparkles,
-  Clock,
   AlertTriangle,
   Menu,
   X,
-  Check,
-  Award,
-  FileText,
 } from 'lucide-react';
 
 export type OutcomeModuleTarget =
@@ -285,8 +277,9 @@ export const OperationalystLandingPage: React.FC<OperationalystLandingPageProps>
     const reader = new FileReader();
     reader.onload = (evt) => {
       try {
-        const data = evt.target?.result;
-        const workbook = XLSX.read(data, { type: 'binary' });
+        const buffer = evt.target?.result as ArrayBuffer;
+        const data = new Uint8Array(buffer);
+        const workbook = XLSX.read(data, { type: 'array' });
         const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
         const rows = XLSX.utils.sheet_to_json<Record<string, any>>(firstSheet, { defval: '' });
 
@@ -364,10 +357,10 @@ export const OperationalystLandingPage: React.FC<OperationalystLandingPageProps>
         setUploadError('Could not read file format. Please upload a standard .xlsx, .xls, or .csv inventory export.');
       }
     };
-    reader.readAsBinaryString(file);
+    reader.readAsArrayBuffer(file);
   };
 
-  const handleBookingSubmit = (e: React.FormEvent) => {
+  const handleBookingSubmit = (e: React.SyntheticEvent) => {
     e.preventDefault();
     if (!leadName.trim() || !leadCompany.trim()) return;
     setLeadSubmitted(true);
@@ -1500,7 +1493,9 @@ export const OperationalystLandingPage: React.FC<OperationalystLandingPageProps>
                   rel="noreferrer"
                   className="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-xs font-semibold text-slate-200 flex items-center gap-1.5"
                 >
-                  <Linkedin className="w-3.5 h-3.5 text-sky-400" />
+                  <svg className="w-3.5 h-3.5 text-sky-400 fill-current" viewBox="0 0 24 24">
+                    <path d="M19 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14m-.5 15.5v-5.3a3.26 3.26 0 0 0-3.26-3.26c-.85 0-1.84.52-2.28 1.3v-1.11h-2.79v8.37h2.79v-4.93c0-.77.62-1.4 1.39-1.4a1.4 1.4 0 0 1 1.4 1.4v4.93h2.75M6.88 8.56a1.68 1.68 0 0 0 1.68-1.68c0-.93-.75-1.69-1.68-1.69a1.69 1.69 0 0 0-1.69 1.69c0 .93.76 1.68 1.69 1.68m1.39 9.94v-8.37H5.5v8.37h2.77z" />
+                  </svg>
                   <span>LinkedIn</span>
                 </a>
                 <a

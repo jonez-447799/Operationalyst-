@@ -22,7 +22,9 @@ import {
   Gauge,
   Menu,
   X,
-  Smartphone
+  Smartphone,
+  CalendarClock,
+  Home
 } from 'lucide-react';
 import Project1App from './project1/Project1App';
 import Project2App from './project2/Project2App';
@@ -34,10 +36,15 @@ import { CustomBundleCombinator } from './components/CustomBundleCombinator';
 import { SmartTallyMapperModal, TargetEngineType } from './components/SmartTallyMapperModal';
 import { MultiDeviceSyncModal, SYNC_KEYS } from './components/MultiDeviceSyncModal';
 import { MasterExecutiveDashboard } from './components/MasterExecutiveDashboard';
-import { OperationalystLandingPage } from './components/OperationalystLandingPage';
+import { CommercialLandingPage } from './commercial/CommercialLandingPage';
+import { FactoryAuditPage } from './commercial/FactoryAuditPage';
+import { AdToDemoFunnelModal } from './commercial/AdToDemoFunnelModal';
+import { usePlant, PlantId, PeriodId } from './context/PlantContext';
 
 type ArchitectureVersion =
-  | 'landing'
+  | 'commercial_home'
+  | 'factory_audit'
+  | 'ad_funnel'
   | 'ceo_master'
   | 'standalone_p1'
   | 'standalone_p2'
@@ -60,57 +67,83 @@ const STORAGE_KEY_ACTIVE_CLIENT = 'suite_active_client_id_v1';
 function parseRequestedArchitecture(): ArchitectureVersion | null {
   try {
     const searchParams = new URLSearchParams(window.location.search);
-    const hashRaw = window.location.hash.startsWith('#')
-      ? window.location.hash.slice(1)
-      : window.location.hash;
-    const hashParams = new URLSearchParams(hashRaw);
-
-    const target = (
+    const explicitParam = (
       searchParams.get('project') ||
       searchParams.get('p') ||
       searchParams.get('engine') ||
-      hashParams.get('project') ||
-      hashParams.get('p') ||
-      hashParams.get('engine') ||
-      hashRaw
-    ).toLowerCase();
+      searchParams.get('view') ||
+      searchParams.get('page')
+    )?.toLowerCase();
 
-    if (target === 'home' || target === 'landing') {
-      return 'landing';
-    }
-    if (target === 'p2' || target === 'otif' || target === 'dispatch' || target === 'standalone_p2') {
-      return 'standalone_p2';
-    }
-    if (target === 'p1' || target === 'cash' || target === 'deadstock' || target === 'inventory' || target === 'standalone_p1') {
-      return 'standalone_p1';
-    }
-    if (target === 'p3' || target === 'freight' || target === 'margin' || target === 'profit' || target === 'standalone_p3') {
-      return 'standalone_p3';
-    }
-    if (target === 'p4' || target === 'binaudit' || target === 'accuracy' || target === 'warehouse' || target === 'standalone_p4') {
-      return 'standalone_p4';
-    }
-    if (target === 'p5' || target === 'tower' || target === 'controltower' || target === 'standalone_p5') {
-      return 'standalone_p5';
-    }
-    if (target === 'ceo' || target === 'master' || target === 'demo' || target === 'ceo_master') {
+    // Check for /platform in pathname or explicit platform query parameter
+    if (window.location.pathname.toLowerCase().includes('/platform')) {
       return 'ceo_master';
+    }
+
+    if (explicitParam) {
+      if (explicitParam === 'home' || explicitParam === 'landing' || explicitParam === 'commercial' || explicitParam === 'commercial_home') {
+        return 'commercial_home';
+      }
+      if (explicitParam === 'platform' || explicitParam === 'app' || explicitParam === 'dashboard') {
+        return 'ceo_master';
+      }
+      if (explicitParam === 'audit' || explicitParam === 'factory_audit' || explicitParam === 'free_audit') {
+        return 'factory_audit';
+      }
+      if (explicitParam === 'funnel' || explicitParam === 'ad_funnel') {
+        return 'ad_funnel';
+      }
+      if (explicitParam === 'p1' || explicitParam === 'cash' || explicitParam === 'inventory' || explicitParam === 'standalone_p1') {
+        return 'standalone_p1';
+      }
+      if (explicitParam === 'p2' || explicitParam === 'otif' || explicitParam === 'dispatch' || explicitParam === 'standalone_p2') {
+        return 'standalone_p2';
+      }
+      if (explicitParam === 'p3' || explicitParam === 'freight' || explicitParam === 'profit' || explicitParam === 'standalone_p3') {
+        return 'standalone_p3';
+      }
+      if (explicitParam === 'p4' || explicitParam === 'binaudit' || explicitParam === 'warehouse' || explicitParam === 'standalone_p4') {
+        return 'standalone_p4';
+      }
+      if (explicitParam === 'p5' || explicitParam === 'tower' || explicitParam === 'controltower' || explicitParam === 'standalone_p5') {
+        return 'standalone_p5';
+      }
+      if (explicitParam === 'ceo' || explicitParam === 'master' || explicitParam === 'ceo_master') {
+        return 'ceo_master';
+      }
+      if (explicitParam === 'suite' || explicitParam === 'merged' || explicitParam === 'merged_suite') {
+        return 'merged_suite';
+      }
+      if (explicitParam === 'combos' || explicitParam === 'custom_combos') {
+        return 'custom_combos';
+      }
     }
   } catch {}
   return null;
 }
 
 export default function App() {
+  const {
+    activePlantId,
+    setActivePlantId,
+    activePlant,
+    activePeriodId,
+    setActivePeriodId,
+    activePeriod,
+    allPlants,
+    allPeriods,
+  } = usePlant();
+
   const [versionMode, setVersionMode] = useState<ArchitectureVersion>(() => {
     const fromUrl = parseRequestedArchitecture();
     if (fromUrl) return fromUrl;
-    // Default first-time visitors to the Commercial SaaS Landing Page before dashboards
-    return 'landing';
+    // Default to Commercial Landing Page for first-time visitors
+    return 'commercial_home';
   });
 
-  // Outcome-First Branding ON by default (Dead Stock Recovery, Dispatch Performance, Margin Protection, Warehouse Accuracy, CEO Dashboard)
+  // Commercial Rebranding Mode (P1-P5 Codes vs Manufacturing Control Tower Commercial Names)
   const [useCommercialNames, setUseCommercialNames] = useState<boolean>(() => {
-    return localStorage.getItem('suite_commercial_names_v1') !== 'false';
+    return localStorage.getItem('suite_commercial_names_v1') === 'true';
   });
 
   // Client Presentation Lock (Hides top multi-project switcher bar during live client screen-share)
@@ -296,40 +329,126 @@ export default function App() {
     setShowSmartMapper(true);
   };
 
+  if (versionMode === 'commercial_home') {
+    return (
+      <div className="min-h-screen bg-slate-950 text-slate-100 selection:bg-amber-500/20 selection:text-amber-200">
+        <CommercialLandingPage
+          onLaunchEngine={(eng) => {
+            setVersionMode(eng);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
+          onOpenSmartMapper={() => openMapperForEngine()}
+          onOpenAuditPage={() => {
+            setVersionMode('factory_audit');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
+        />
+
+        {/* Universal Dirty Tally / Excel Smart Column-Mapper Modal */}
+        <SmartTallyMapperModal
+          isOpen={showSmartMapper}
+          onClose={() => setShowSmartMapper(false)}
+          defaultEngine={mapperDefaultEngine}
+          onImportSuccess={() => {
+            setSyncRefreshKey((k) => k + 1);
+          }}
+        />
+      </div>
+    );
+  }
+
+  if (versionMode === 'factory_audit') {
+    return (
+      <div className="min-h-screen bg-slate-950 text-slate-100 selection:bg-emerald-500/20 selection:text-emerald-300">
+        <FactoryAuditPage
+          onBackToHome={() => {
+            setVersionMode('commercial_home');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
+          onLaunchLiveDemo={(eng) => {
+            setVersionMode((eng as any) || 'ceo_master');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
+          onOpenSmartMapper={() => openMapperForEngine()}
+        />
+
+        {/* Universal Dirty Tally / Excel Smart Column-Mapper Modal */}
+        <SmartTallyMapperModal
+          isOpen={showSmartMapper}
+          onClose={() => setShowSmartMapper(false)}
+          defaultEngine={mapperDefaultEngine}
+          onImportSuccess={() => {
+            setSyncRefreshKey((k) => k + 1);
+          }}
+        />
+      </div>
+    );
+  }
+
+  if (versionMode === 'ad_funnel') {
+    return (
+      <div className="min-h-screen bg-slate-950 text-slate-100">
+        <CommercialLandingPage
+          onLaunchEngine={(eng) => {
+            setVersionMode(eng);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
+          onOpenSmartMapper={() => openMapperForEngine()}
+          onOpenAuditPage={() => {
+            setVersionMode('factory_audit');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
+        />
+        <AdToDemoFunnelModal
+          isOpen={true}
+          onClose={() => setVersionMode('commercial_home')}
+          onOpenAuditPage={() => setVersionMode('factory_audit')}
+          onLaunchLiveDemo={(eng) => setVersionMode((eng as any) || 'ceo_master')}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex flex-col bg-slate-950 text-slate-100">
-      {/* Top Architecture & Commercial Controls Bar (Hidden on the public SaaS Landing Page) */}
-      {versionMode !== 'landing' && (!isClientLocked ? (
+      {/* Top Architecture & Commercial Controls Bar (Compact App Bar on Mobile, Full Strip on Desktop) */}
+      {!isClientLocked ? (
         <div className="bg-slate-950/95 backdrop-blur-md border-b border-indigo-500/30 px-3 sm:px-4 py-1.5 sticky top-0 z-50 no-print shadow-md">
           {/* MOBILE COMPACT TOP BAR (< md) — Prevents vertical screen crowding on phones */}
           <div className="flex md:hidden items-center justify-between gap-2 h-10">
             <div className="flex items-center gap-2 min-w-0">
-              <button
-                onClick={() => setVersionMode('landing')}
-                className="px-2 py-1 rounded bg-slate-900 border border-slate-700 text-[10px] font-bold text-emerald-400 shrink-0"
-              >
-                ← Home
-              </button>
+              <Gauge className="w-4 h-4 text-emerald-400 shrink-0" />
               <span className="text-xs font-black text-white truncate">
                 {versionMode === 'ceo_master'
-                  ? 'Executive Overview'
+                  ? 'CEO Command Center'
                   : versionMode === 'standalone_p1'
-                  ? 'Dead Stock Recovery'
+                  ? 'P1 Cash Recovery'
                   : versionMode === 'standalone_p2'
-                  ? 'Dispatch Performance'
+                  ? 'P2 Promise OTIF'
                   : versionMode === 'standalone_p3'
-                  ? 'Margin Protection'
+                  ? 'P3 Profit Protection'
                   : versionMode === 'standalone_p4'
-                  ? 'Warehouse Accuracy'
+                  ? 'P4 Warehouse Bins'
                   : versionMode === 'standalone_p5'
-                  ? 'CEO Dashboard'
+                  ? 'P5 CEO Briefing'
                   : versionMode === 'custom_combos'
                   ? 'Modular Bundles'
-                  : 'All 5 Systems'}
+                  : '5-Engine Suite'}
               </span>
             </div>
 
             <div className="flex items-center gap-1.5 shrink-0">
+              <button
+                onClick={() => {
+                  setVersionMode('commercial_home');
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
+                className="px-2 py-1.5 rounded-md bg-amber-500/15 text-amber-300 border border-amber-500/30 font-bold text-[11px] flex items-center gap-1 cursor-pointer"
+                title="Commercial Overview"
+              >
+                <Home className="w-3.5 h-3.5" />
+                <span>Home</span>
+              </button>
               <button
                 onClick={() => openMapperForEngine()}
                 className="px-2 py-1.5 rounded-md bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 font-bold text-[11px] flex items-center gap-1"
@@ -346,57 +465,168 @@ export default function App() {
               </button>
               <button
                 onClick={() => setShowMobileMenu((v) => !v)}
-                className="p-1.5 rounded-md bg-slate-900 border border-slate-700 text-slate-200"
+                className="min-h-[44px] min-w-[44px] p-2 rounded-lg bg-slate-900 border border-slate-750 text-slate-200 flex items-center justify-center cursor-pointer touch-manipulation"
                 aria-label="Toggle Mobile Suite Menu"
               >
-                {showMobileMenu ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
+                {showMobileMenu ? <X className="w-5 h-5 text-amber-400" /> : <Menu className="w-5 h-5" />}
               </button>
             </div>
           </div>
 
           {/* MOBILE SLIDE-DOWN DRAWER (< md) */}
           {showMobileMenu && (
-            <div className="md:hidden pt-2.5 pb-2 mt-1.5 border-t border-slate-800 space-y-2.5 text-xs">
-              <div className="flex items-center justify-between gap-2 bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5">
-                <div className="flex items-center gap-1.5 min-w-0 flex-1">
-                  <Building2 className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+            <div className="md:hidden pt-2.5 pb-2 mt-1.5 border-t border-slate-800 space-y-2.5 text-xs animate-in fade-in duration-150">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <div className="flex items-center gap-1.5 bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-2">
+                  <Building2 className="w-4 h-4 text-amber-400 shrink-0" />
                   <select
-                    value={activeClientId}
-                    onChange={(e) => handleSwitchClientSlot(e.target.value)}
-                    className="bg-transparent text-xs font-semibold text-white focus:outline-none w-full"
+                    value={activePlantId}
+                    onChange={(e) => setActivePlantId(e.target.value as PlantId)}
+                    className="bg-transparent text-xs font-bold text-white focus:outline-none w-full cursor-pointer py-1"
+                    title="Select Factory Unit"
                   >
-                    {clientSlots.map((c) => (
-                      <option key={c.id} value={c.id} className="bg-slate-900 text-white">
-                        {c.name}
+                    {allPlants.map((p) => (
+                      <option key={p.id} value={p.id} className="bg-slate-900 text-white">
+                        {p.name}
                       </option>
                     ))}
                   </select>
                 </div>
+                <div className="flex items-center gap-1.5 bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-2">
+                  <CalendarClock className="w-4 h-4 text-cyan-400 shrink-0" />
+                  <select
+                    value={activePeriodId}
+                    onChange={(e) => setActivePeriodId(e.target.value as PeriodId)}
+                    className="bg-transparent text-xs font-bold text-cyan-200 focus:outline-none w-full cursor-pointer py-1"
+                    title="Select Audit Period Window"
+                  >
+                    {allPeriods.map((per) => (
+                      <option key={per.id} value={per.id} className="bg-slate-900 text-cyan-200">
+                        {per.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* All Individual Engines Switchers (Mobile Full Access) */}
+              <div className="grid grid-cols-2 gap-1.5 pt-0.5">
                 <button
-                  onClick={handleAddNewClientSlot}
-                  className="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 font-bold text-[11px]"
+                  onClick={() => {
+                    setVersionMode('commercial_home');
+                    setShowMobileMenu(false);
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                  className="min-h-[44px] py-2 px-2.5 rounded-lg border font-bold text-[11px] flex items-center justify-center gap-1.5 cursor-pointer touch-manipulation active:scale-[0.98] bg-amber-500/15 border-amber-500/40 text-amber-300 col-span-2"
                 >
-                  + Client
+                  <Home className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Overview &amp; Solution</span>
+                </button>
+                <button
+                  onClick={() => {
+                    setVersionMode('factory_audit');
+                    setShowMobileMenu(false);
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                  className="min-h-[44px] py-2 px-2.5 rounded-lg border font-bold text-[11px] flex items-center justify-center gap-1.5 cursor-pointer touch-manipulation active:scale-[0.98] bg-emerald-500/20 border-emerald-500/50 text-emerald-300 col-span-2"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>Free Factory Audit (Ad Landing)</span>
+                </button>
+                <button
+                  onClick={() => {
+                    setVersionMode('ceo_master');
+                    setShowMobileMenu(false);
+                  }}
+                  className={`min-h-[44px] py-2 px-2.5 rounded-lg border font-bold text-[11px] flex items-center justify-center gap-1.5 cursor-pointer touch-manipulation active:scale-[0.98] ${
+                    versionMode === 'ceo_master'
+                      ? 'bg-gradient-to-r from-emerald-500 to-cyan-500 text-slate-950 border-emerald-400'
+                      : 'bg-slate-900 border-slate-750 text-slate-200 hover:text-white'
+                  }`}
+                >
+                  <Gauge className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>CEO Master</span>
+                </button>
+                <button
+                  onClick={() => {
+                    setVersionMode('standalone_p1');
+                    setShowMobileMenu(false);
+                  }}
+                  className={`min-h-[44px] py-2 px-2.5 rounded-lg border font-bold text-[11px] flex items-center justify-center gap-1.5 cursor-pointer touch-manipulation active:scale-[0.98] ${
+                    versionMode === 'standalone_p1'
+                      ? 'bg-emerald-600 text-white border-emerald-400'
+                      : 'bg-slate-900 border-slate-750 text-slate-200 hover:text-white'
+                  }`}
+                >
+                  <Package className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>P1 Cash</span>
+                </button>
+                <button
+                  onClick={() => {
+                    setVersionMode('standalone_p2');
+                    setShowMobileMenu(false);
+                  }}
+                  className={`min-h-[44px] py-2 px-2.5 rounded-lg border font-bold text-[11px] flex items-center justify-center gap-1.5 cursor-pointer touch-manipulation active:scale-[0.98] ${
+                    versionMode === 'standalone_p2'
+                      ? 'bg-amber-600 text-white border-amber-400'
+                      : 'bg-slate-900 border-slate-750 text-slate-200 hover:text-white'
+                  }`}
+                >
+                  <Truck className="w-3.5 h-3.5 text-amber-400" />
+                  <span>P2 OTIF</span>
+                </button>
+                <button
+                  onClick={() => {
+                    setVersionMode('standalone_p3');
+                    setShowMobileMenu(false);
+                  }}
+                  className={`min-h-[44px] py-2 px-2.5 rounded-lg border font-bold text-[11px] flex items-center justify-center gap-1.5 cursor-pointer touch-manipulation active:scale-[0.98] ${
+                    versionMode === 'standalone_p3'
+                      ? 'bg-cyan-600 text-white border-cyan-400'
+                      : 'bg-slate-900 border-slate-750 text-slate-200 hover:text-white'
+                  }`}
+                >
+                  <Scale className="w-3.5 h-3.5 text-cyan-400" />
+                  <span>P3 Freight</span>
+                </button>
+                <button
+                  onClick={() => {
+                    setVersionMode('standalone_p4');
+                    setShowMobileMenu(false);
+                  }}
+                  className={`min-h-[44px] py-2 px-2.5 rounded-lg border font-bold text-[11px] flex items-center justify-center gap-1.5 cursor-pointer touch-manipulation active:scale-[0.98] ${
+                    versionMode === 'standalone_p4'
+                      ? 'bg-fuchsia-600 text-white border-fuchsia-400'
+                      : 'bg-slate-900 border-slate-750 text-slate-200 hover:text-white'
+                  }`}
+                >
+                  <ScanBarcode className="w-3.5 h-3.5 text-fuchsia-400" />
+                  <span>P4 Warehouse</span>
+                </button>
+                <button
+                  onClick={() => {
+                    setVersionMode('standalone_p5');
+                    setShowMobileMenu(false);
+                  }}
+                  className={`min-h-[44px] py-2 px-2.5 rounded-lg border font-bold text-[11px] flex items-center justify-center gap-1.5 cursor-pointer touch-manipulation active:scale-[0.98] ${
+                    versionMode === 'standalone_p5'
+                      ? 'bg-rose-600 text-white border-rose-400'
+                      : 'bg-slate-900 border-slate-750 text-slate-200 hover:text-white'
+                  }`}
+                >
+                  <Radio className="w-3.5 h-3.5 text-rose-400" />
+                  <span>P5 Briefing</span>
                 </button>
               </div>
 
-              <button
-                onClick={() => {
-                  setVersionMode('landing');
-                  setShowMobileMenu(false);
-                }}
-                className="w-full py-2 px-3 rounded-lg bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 font-bold text-xs flex items-center justify-center gap-1.5"
-              >
-                <span>← Return to Operationalyst Homepage &amp; Free Audit</span>
-              </button>
-
-              <div className="grid grid-cols-2 gap-1.5">
+              {/* Combo Suites and Utilities */}
+              <div className="grid grid-cols-2 gap-1.5 pt-0.5">
                 <button
                   onClick={() => {
                     setVersionMode('custom_combos');
                     setShowMobileMenu(false);
                   }}
-                  className="py-2 px-2.5 rounded-lg bg-slate-900 border border-amber-500/30 text-amber-300 font-bold text-[11px] flex items-center justify-center gap-1"
+                  className="min-h-[44px] py-2 px-2.5 rounded-lg bg-slate-900 border border-amber-500/30 text-amber-300 font-bold text-[11px] flex items-center justify-center gap-1 cursor-pointer touch-manipulation active:scale-[0.98]"
                 >
                   <Sparkles className="w-3.5 h-3.5" />
                   <span>Modular Bundles</span>
@@ -406,14 +636,14 @@ export default function App() {
                     setVersionMode('merged_suite');
                     setShowMobileMenu(false);
                   }}
-                  className="py-2 px-2.5 rounded-lg bg-slate-900 border border-indigo-500/30 text-indigo-300 font-bold text-[11px] flex items-center justify-center gap-1"
+                  className="min-h-[44px] py-2 px-2.5 rounded-lg bg-slate-900 border border-indigo-500/30 text-indigo-300 font-bold text-[11px] flex items-center justify-center gap-1 cursor-pointer touch-manipulation active:scale-[0.98]"
                 >
                   <Layers className="w-3.5 h-3.5" />
                   <span>Full 5-Engine Suite</span>
                 </button>
                 <button
                   onClick={() => setUseCommercialNames((prev) => !prev)}
-                  className="py-2 px-2.5 rounded-lg bg-slate-900 border border-slate-700 text-slate-200 font-semibold text-[11px]"
+                  className="min-h-[44px] py-2 px-2.5 rounded-lg bg-slate-900 border border-slate-700 text-slate-200 font-semibold text-[11px] cursor-pointer touch-manipulation active:scale-[0.98]"
                 >
                   {useCommercialNames ? 'Brand Names: ON' : 'P1–P5 Codes: ON'}
                 </button>
@@ -422,7 +652,7 @@ export default function App() {
                     setIsClientLocked(true);
                     setShowMobileMenu(false);
                   }}
-                  className="py-2 px-2.5 rounded-lg bg-slate-900 border border-rose-500/30 text-rose-300 font-semibold text-[11px]"
+                  className="min-h-[44px] py-2 px-2.5 rounded-lg bg-slate-900 border border-rose-500/30 text-rose-300 font-semibold text-[11px] cursor-pointer touch-manipulation active:scale-[0.98]"
                 >
                   Client Screen Lock
                 </button>
@@ -432,27 +662,53 @@ export default function App() {
 
           {/* DESKTOP FULL BAR (md and up) */}
           <div className="hidden md:flex max-w-7xl mx-auto flex-wrap items-center justify-between gap-2 text-xs">
-            {/* Left: Outcome-Driven Switcher Buttons */}
+            {/* Left: Mode Switcher Buttons */}
             <div className="flex flex-wrap items-center gap-1 bg-slate-900 p-1 rounded-lg border border-slate-800">
               <button
-                onClick={() => setVersionMode('landing')}
-                className="px-2.5 py-1 rounded-md font-bold transition cursor-pointer flex items-center gap-1 text-[11px] bg-slate-950 text-emerald-400 hover:bg-slate-800 border border-emerald-500/30"
-                title="Return to Operationalyst Homepage, ROI Calculator & Free Factory Audit"
+                onClick={() => {
+                  setVersionMode('commercial_home');
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
+                className={`px-2.5 py-1 rounded-md font-semibold transition cursor-pointer flex items-center gap-1.5 text-[11px] ${
+                  (versionMode as string) === 'commercial_home'
+                    ? 'bg-amber-500 text-slate-950 font-black shadow-sm'
+                    : 'text-amber-300 hover:text-white hover:bg-slate-800 border border-amber-500/40 bg-amber-500/10'
+                }`}
+                title="Return to Operationalyst Commercial Landing Page & Solution Overview"
               >
-                <span>← Operationalyst Home</span>
+                <Home className="w-3.5 h-3.5" />
+                <span>Overview</span>
               </button>
 
               <button
-                onClick={() => setVersionMode('ceo_master')}
+                onClick={() => {
+                  setVersionMode('factory_audit');
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
+                className={`px-2.5 py-1 rounded-md font-semibold transition cursor-pointer flex items-center gap-1.5 text-[11px] ${
+                  (versionMode as string) === 'factory_audit'
+                    ? 'bg-emerald-500 text-slate-950 font-black shadow-sm'
+                    : 'text-emerald-300 hover:text-white hover:bg-slate-800 border border-emerald-500/40 bg-emerald-500/10'
+                }`}
+                title="Free Executive-Level Factory Audit (Ad Landing Page)"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>Free Audit</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  setVersionMode('ceo_master');
+                }}
                 className={`px-2.5 py-1 rounded-md font-semibold transition cursor-pointer flex items-center gap-1.5 text-[11px] ${
                   versionMode === 'ceo_master'
                     ? 'bg-gradient-to-r from-emerald-500 to-cyan-500 text-slate-950 shadow-sm font-black'
                     : 'text-emerald-300 hover:text-white hover:bg-slate-800 border border-emerald-500/30'
                 }`}
-                title="Identify operational losses before monthly review meetings"
+                title="2-Minute CEO Master Executive Dashboard (Factory Health Score) + PM Backlog (P0-P3) & 3-Phase Roadmap"
               >
                 <Gauge className="w-3.5 h-3.5" />
-                <span>{useCommercialNames ? 'Executive Overview' : 'CEO Master'}</span>
+                <span>{useCommercialNames ? 'Factory Health & Roadmap' : 'CEO Master'}</span>
               </button>
 
               <button
@@ -462,7 +718,7 @@ export default function App() {
                     ? 'bg-amber-500 text-slate-950 shadow-sm font-bold'
                     : 'text-slate-400 hover:text-white hover:bg-slate-800'
                 }`}
-                title="Dead Stock Recovery: Identify idle inventory and recover tied-up working capital"
+                title="Dead Stock Recovery (Recovers Cash Locked in Dead Inventory Only)"
               >
                 <Package className="w-3.5 h-3.5" />
                 <span>{useCommercialNames ? 'Dead Stock Recovery' : 'P1 (Dead Stock)'}</span>
@@ -475,10 +731,10 @@ export default function App() {
                     ? 'bg-emerald-500 text-slate-950 shadow-sm font-bold'
                     : 'text-slate-400 hover:text-white hover:bg-slate-800'
                 }`}
-                title="Dispatch Performance: Monitor On-Time In-Full (OTIF) customer deliveries"
+                title="Dispatch Performance & Delivery Protection (Protects Customer Service & Revenue via Strict OTIF)"
               >
                 <Truck className="w-3.5 h-3.5" />
-                <span>{useCommercialNames ? 'Dispatch Performance' : 'P2 (Dispatch)'}</span>
+                <span>{useCommercialNames ? 'Dispatch Performance' : 'P2 (Promise OTIF)'}</span>
               </button>
 
               <button
@@ -488,10 +744,10 @@ export default function App() {
                     ? 'bg-cyan-500 text-slate-950 shadow-sm font-bold'
                     : 'text-slate-400 hover:text-white hover:bg-slate-800'
                 }`}
-                title="Margin Protection: Detect freight overbilling and operational profit leaks"
+                title="Margin Protection & Freight Audit (Protects Profit Margin from Freight Leaks)"
               >
                 <Scale className="w-3.5 h-3.5" />
-                <span>{useCommercialNames ? 'Margin Protection' : 'P3 (Margin)'}</span>
+                <span>{useCommercialNames ? 'Margin Protection' : 'P3 (Profit Protection)'}</span>
               </button>
 
               <button
@@ -501,10 +757,10 @@ export default function App() {
                     ? 'bg-fuchsia-500 text-slate-950 shadow-sm font-bold'
                     : 'text-slate-400 hover:text-white hover:bg-slate-800'
                 }`}
-                title="Warehouse Accuracy: Match physical shelf stock against book balances"
+                title="Warehouse Accuracy & Trust (Protects Inventory Integrity & Bin Accuracy)"
               >
                 <ScanBarcode className="w-3.5 h-3.5" />
-                <span>{useCommercialNames ? 'Warehouse Accuracy' : 'P4 (Warehouse)'}</span>
+                <span>{useCommercialNames ? 'Warehouse Accuracy' : 'P4 (Warehouse Trust)'}</span>
               </button>
 
               <button
@@ -514,10 +770,10 @@ export default function App() {
                     ? 'bg-rose-500 text-white shadow-sm font-bold'
                     : 'text-slate-400 hover:text-white hover:bg-slate-800'
                 }`}
-                title="CEO Dashboard: Weekly priorities, owners, and financial exposure in one place"
+                title="CEO Dashboard & Monday Briefing (Executive Operations Control Tower)"
               >
                 <Radio className="w-3.5 h-3.5" />
-                <span>{useCommercialNames ? 'CEO Dashboard' : 'P5 (CEO)'}</span>
+                <span>{useCommercialNames ? 'CEO Dashboard' : 'P5 (CEO Briefing)'}</span>
               </button>
 
               <button
@@ -547,30 +803,40 @@ export default function App() {
               </button>
             </div>
 
-            {/* Right: Multi-Client Switcher & Commercial Utilities */}
+            {/* Right: Multi-Plant & Time-Window Switchers + Commercial Utilities */}
             <div className="flex flex-wrap items-center gap-1.5">
-              {/* Multi-Client Workspace Switcher */}
-              <div className="flex items-center bg-slate-900 border border-slate-700 rounded-md px-2 py-0.5 gap-1">
-                <Building2 className="w-3 h-3 text-amber-400 shrink-0" />
+              {/* Global Plant Selector */}
+              <div className="flex items-center bg-slate-900 border border-slate-750 rounded-md px-2 py-0.5 gap-1.5 shadow-sm">
+                <Building2 className="w-3.5 h-3.5 text-amber-400 shrink-0" />
                 <select
-                  value={activeClientId}
-                  onChange={(e) => handleSwitchClientSlot(e.target.value)}
-                  className="bg-transparent text-[11px] font-semibold text-slate-200 focus:outline-none max-w-[145px] cursor-pointer"
-                  title="Switch isolated Client Factory Workspace without overwriting other clients"
+                  value={activePlantId}
+                  onChange={(e) => setActivePlantId(e.target.value as PlantId)}
+                  className="bg-transparent text-[11px] font-bold text-white focus:outline-none cursor-pointer max-w-[170px]"
+                  title="Global Multi-Plant Selector (Syncs across P1–P5)"
                 >
-                  {clientSlots.map((c) => (
-                    <option key={c.id} value={c.id} className="bg-slate-900 text-white">
-                      {c.name}
+                  {allPlants.map((p) => (
+                    <option key={p.id} value={p.id} className="bg-slate-900 text-white">
+                      {p.name}
                     </option>
                   ))}
                 </select>
-                <button
-                  onClick={handleAddNewClientSlot}
-                  className="p-0.5 rounded hover:bg-slate-800 text-amber-300 cursor-pointer"
-                  title="Create isolated workspace for a new factory client"
+              </div>
+
+              {/* Global Period Selector */}
+              <div className="flex items-center bg-slate-900 border border-slate-750 rounded-md px-2 py-0.5 gap-1.5 shadow-sm">
+                <CalendarClock className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                <select
+                  value={activePeriodId}
+                  onChange={(e) => setActivePeriodId(e.target.value as PeriodId)}
+                  className="bg-transparent text-[11px] font-bold text-cyan-200 focus:outline-none cursor-pointer max-w-[160px]"
+                  title="Global Audit Window (Syncs calendar period across P1–P5)"
                 >
-                  <Plus className="w-3 h-3" />
-                </button>
+                  {allPeriods.map((per) => (
+                    <option key={per.id} value={per.id} className="bg-slate-900 text-cyan-200">
+                      {per.label}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <button
@@ -625,19 +891,38 @@ export default function App() {
           <Unlock className="w-3 h-3" />
           <span>Exit Client Presentation Lock</span>
         </button>
-      ))}
+      )}
 
-      {/* Render Selected Version (pb-20 on mobile reserves space for the thumb-friendly bottom nav bar when inside the app) */}
-      <div className={versionMode === 'landing' ? 'flex-1' : 'flex-1 pb-20 md:pb-0'} key={`${activeClientId}-${syncRefreshKey}`}>
-        {versionMode === 'landing' && (
-          <OperationalystLandingPage
-            onLaunchModule={(target) => {
-              setVersionMode(target);
-              window.scrollTo({ top: 0, behavior: 'smooth' });
-            }}
-            onOpenSmartMapper={() => openMapperForEngine('p1')}
-          />
-        )}
+      {/* Universal Multi-Plant & Time Window Synchronization Bar */}
+      <div className="bg-slate-900/90 border-b border-indigo-500/20 px-4 py-1.5 text-xs flex flex-wrap items-center justify-between gap-2 text-slate-300 no-print shadow-sm">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span className="font-bold text-white tracking-wide">{activePlant.name}</span>
+          <span className="text-slate-600">·</span>
+          <span className="text-slate-400">{activePlant.division}</span>
+          <span className="text-slate-500 text-[11px]">({activePlant.cluster})</span>
+        </div>
+        <div className="flex flex-wrap items-center gap-2.5 font-mono text-[11px]">
+          <span className="px-2 py-0.5 rounded bg-cyan-950/60 text-cyan-300 border border-cyan-800/60 font-semibold">
+            📅 Window: {activePeriod.dateRange}
+          </span>
+          <span className="text-amber-300 font-bold">
+            Dead Stock: {activePlant.kpis.deadStockDisplay}
+          </span>
+          <span className="text-emerald-300 font-bold">
+            OTIF: {activePlant.kpis.otifPercent}%
+          </span>
+          <span className="text-cyan-300 font-bold">
+            Freight Leak: {activePlant.kpis.freightLeakDisplay}
+          </span>
+          <span className="text-fuchsia-300 font-bold">
+            Bin Match: {activePlant.kpis.binAccuracyPercent}%
+          </span>
+        </div>
+      </div>
+
+      {/* Render Selected Version (pb-20 on mobile reserves space for the thumb-friendly bottom nav bar) */}
+      <div className="flex-1 pb-20 md:pb-0" key={`${activePlantId}-${activePeriodId}-${syncRefreshKey}`}>
         {versionMode === 'ceo_master' && (
           <MasterExecutiveDashboard
             onNavigateEngine={(eng) => {
@@ -680,19 +965,19 @@ export default function App() {
         )}
       </div>
 
-      {/* MOBILE THUMB-FRIENDLY FIXED BOTTOM NAVIGATION BAR (< md, hidden on public landing page) */}
-      {versionMode !== 'landing' && !isClientLocked && (
+      {/* MOBILE THUMB-FRIENDLY FIXED BOTTOM NAVIGATION BAR (< md) */}
+      {!isClientLocked && (
         <nav
-          aria-label="Mobile System Switcher"
+          aria-label="Mobile Engine Switcher"
           className="fixed bottom-0 inset-x-0 z-50 md:hidden bg-slate-950/95 backdrop-blur-md border-t border-slate-800 px-1 pt-1 pb-[max(0.35rem,env(safe-area-inset-bottom))] grid grid-cols-6 gap-0.5 no-print shadow-2xl"
         >
           {[
-            { id: 'ceo_master' as const, label: 'Overview', icon: Gauge, activeCls: 'text-emerald-400 bg-emerald-500/15' },
-            { id: 'standalone_p1' as const, label: 'Dead Stock', icon: Package, activeCls: 'text-amber-400 bg-amber-500/15' },
-            { id: 'standalone_p2' as const, label: 'Dispatch', icon: Truck, activeCls: 'text-emerald-400 bg-emerald-500/15' },
-            { id: 'standalone_p3' as const, label: 'Margin', icon: Scale, activeCls: 'text-cyan-400 bg-cyan-500/15' },
-            { id: 'standalone_p4' as const, label: 'Accuracy', icon: ScanBarcode, activeCls: 'text-fuchsia-400 bg-fuchsia-500/15' },
-            { id: 'standalone_p5' as const, label: 'CEO', icon: Radio, activeCls: 'text-rose-400 bg-rose-500/15' },
+            { id: 'ceo_master' as const, label: 'CEO', icon: Gauge, activeCls: 'text-emerald-400 bg-emerald-500/15' },
+            { id: 'standalone_p1' as const, label: 'P1 Cash', icon: Package, activeCls: 'text-amber-400 bg-amber-500/15' },
+            { id: 'standalone_p2' as const, label: 'P2 OTIF', icon: Truck, activeCls: 'text-emerald-400 bg-emerald-500/15' },
+            { id: 'standalone_p3' as const, label: 'P3 Frt', icon: Scale, activeCls: 'text-cyan-400 bg-cyan-500/15' },
+            { id: 'standalone_p4' as const, label: 'P4 Bins', icon: ScanBarcode, activeCls: 'text-fuchsia-400 bg-fuchsia-500/15' },
+            { id: 'standalone_p5' as const, label: 'P5 Brief', icon: Radio, activeCls: 'text-rose-400 bg-rose-500/15' },
           ].map((tab) => {
             const Icon = tab.icon;
             const active = versionMode === tab.id;

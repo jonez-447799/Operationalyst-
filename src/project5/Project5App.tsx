@@ -20,8 +20,9 @@ import { ERPSyncModal } from './components/ERPSyncModal';
 import { QuarterlyAnalytics } from './components/QuarterlyAnalytics';
 import { RetainerHabitExplainer } from './components/RetainerHabitExplainer';
 import { CEOMondayBriefingEngineV2 } from './components/CEOMondayBriefingEngineV2';
+import { DailyHuddleView } from './components/DailyHuddleView';
 
-import { RefreshCw, CheckCircle2, Layers } from 'lucide-react';
+import { RefreshCw, CheckCircle2, Layers, Flame, ArrowRight } from 'lucide-react';
 import { AMBATTUR_FABRICATION_SAMPLE, DEFAULT_RULES as P1_DEFAULT_RULES } from '../project1/data/initialData';
 import { generateOwnerReport } from '../project1/utils/calculations';
 import { INITIAL_DISPATCHES, INITIAL_RULES as P2_DEFAULT_RULES } from '../project2/data/initialData';
@@ -168,10 +169,10 @@ export default function App({ onJumpToEngine }: Project5AppProps = {}) {
           </div>
           <button
             onClick={() => handlePullLiveFromP1ToP4(false)}
-            className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-mono font-bold text-xs flex items-center gap-1.5 cursor-pointer transition shadow-sm"
+            className="w-full sm:w-auto min-h-[44px] sm:min-h-0 px-3.5 py-2 sm:py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-mono font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer transition shadow-sm touch-manipulation active:scale-[0.98]"
           >
             <RefreshCw className="w-3.5 h-3.5" />
-            <span>Sync Live P1–P4 Numbers Now</span>
+            <span>Sync Live P1–P5 Numbers Now</span>
           </button>
         </div>
 
@@ -191,9 +192,51 @@ export default function App({ onJumpToEngine }: Project5AppProps = {}) {
           stockoutCount={towerData.stockoutRiskCount}
         />
 
+        {/* Tab: Daily Huddle Standup View */}
+        {currentTab === 'huddle' && (
+          <div className="animate-in fade-in duration-150">
+            <DailyHuddleView
+              towerData={towerData}
+              isDarkMode={isDarkMode}
+              language={language}
+              role={role}
+              onJumpToEngine={onJumpToEngine}
+            />
+          </div>
+        )}
+
         {/* Tab 1: Control Tower Primary View */}
         {currentTab === 'tower' && (
           <div className="space-y-6 animate-in fade-in duration-150">
+            {/* Quick Link to 9:00 AM Daily Huddle Board */}
+            <div className={`p-4 rounded-xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 ${
+              isDarkMode ? 'bg-gradient-to-r from-amber-950/40 via-neutral-900 to-neutral-900 border-amber-500/30' : 'bg-amber-50/70 border-amber-200'
+            }`}>
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 shrink-0">
+                  <Flame className="w-5 h-5 fill-amber-400/20" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-sm text-white">Today's Daily Operations Huddle (9:00 AM Standup)</span>
+                    <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-mono font-bold">
+                      Top 3 from P1–P4
+                    </span>
+                  </div>
+                  <p className="text-xs text-neutral-400">
+                    Review and clear the top 3 tactical actions across Dead Stock, Dispatches, Freight Leaks, and Bins for today's shift.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setCurrentTab('huddle')}
+                className="w-full sm:w-auto min-h-[44px] sm:min-h-0 px-4 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-neutral-950 font-mono font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer transition shadow-md touch-manipulation active:scale-[0.98]"
+              >
+                <span>Open Daily Huddle</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
             {/* Version 2.0: CEO Monday Briefing Engine & Executive Operations Control Tower */}
             <CEOMondayBriefingEngineV2
               towerData={towerData}

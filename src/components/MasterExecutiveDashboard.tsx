@@ -32,6 +32,7 @@ import { INITIAL_SAMPLE_SKUS as P4_INITIAL_SKUS, DEFAULT_RULES as P4_DEFAULT_RUL
 import { computeSummary } from '../project4/utils/auditCalculations';
 import { INITIAL_TOWER_DATA } from '../project5/data/sampleData';
 import { ExecutiveActionItem } from '../project5/components/CEOMondayBriefingEngineV2';
+import { usePlant } from '../context/PlantContext';
 
 interface MasterExecutiveDashboardProps {
   onNavigateEngine: (engine: 'p1' | 'p2' | 'p3' | 'p4' | 'p5') => void;
@@ -150,6 +151,7 @@ function formatFullINR(val: number): string {
 export const MasterExecutiveDashboard: React.FC<MasterExecutiveDashboardProps> = ({
   onNavigateEngine,
 }) => {
+  const { activePlant, activePeriod } = usePlant();
   const [viewMode, setViewMode] = useState<'ceo_dashboard' | 'excel_6sheets' | 'pm_roadmap'>('ceo_dashboard');
   const [activeSheet, setActiveSheet] = useState<'sheet1' | 'sheet2' | 'sheet3' | 'sheet4' | 'sheet5' | 'sheet6'>('sheet1');
   const [useEnterpriseScale, setUseEnterpriseScale] = useState<boolean>(false);
@@ -250,59 +252,106 @@ export const MasterExecutiveDashboard: React.FC<MasterExecutiveDashboardProps> =
       if (sTower && sTower.unpaidBillsRupees) unpaidBills = sTower.unpaidBillsRupees;
     } catch {}
 
-    // Individual Component Scores (0 - 100)
-    const inventoryScore = Math.max(55, Math.min(98, Math.round(100 - p1Summary.deadCashPercent * 0.9)));
-    const otifScore = Math.max(50, Math.min(99, Math.round(p2Metrics.otifPercent)));
+    // Individual Component Scores (0 - 100) dynamically aligned with active plant
+    const isPlantCustom = activePlant.id !== 'ambattur';
+    const inventoryScore = isPlantCustom
+      ? activePlant.kpis.subScores.inventory
+      : Math.max(55, Math.min(98, Math.round(100 - p1Summary.deadCashPercent * 0.9)));
+    const otifScore = isPlantCustom
+      ? activePlant.kpis.subScores.otif
+      : Math.max(50, Math.min(99, Math.round(p2Metrics.otifPercent)));
     const freightWastePct =
       p3Audit.totals.freightPaid > 0
         ? (p3Audit.totals.totalLeak / p3Audit.totals.freightPaid) * 100
         : 14;
-    const freightScore = Math.max(55, Math.min(97, Math.round(100 - freightWastePct * 1.1)));
-    const warehouseScore = Math.max(55, Math.min(99, stockAccuracyPct));
+    const freightScore = isPlantCustom
+      ? activePlant.kpis.subScores.freight
+      : Math.max(55, Math.min(97, Math.round(100 - freightWastePct * 1.1)));
+    const warehouseScore = isPlantCustom
+      ? activePlant.kpis.subScores.warehouse
+      : Math.max(55, Math.min(99, stockAccuracyPct));
     const planningScore = Math.round((inventoryScore + otifScore) / 2);
 
     // EXACT CEO FORMULA: Factory Health Score = 30% Inventory + 25% OTIF + 25% Freight + 20% Warehouse Accuracy
-    const factoryHealthScore = Math.round(
-      0.30 * inventoryScore +
-        0.25 * otifScore +
-        0.25 * freightScore +
-        0.20 * warehouseScore
-    );
+    const factoryHealthScore = isPlantCustom
+      ? activePlant.kpis.factoryHealthScore
+      : Math.round(
+          0.30 * inventoryScore +
+          0.25 * otifScore +
+          0.25 * freightScore +
+          0.20 * warehouseScore
+        );
 
     // 6-Month Executive Trend Series (Jan -> Jun)
     const trends = {
-      deadInventoryLakhs: [
-        { m: 'Jan', v: 4.8 },
-        { m: 'Feb', v: 4.4 },
-        { m: 'Mar', v: 3.9 },
-        { m: 'Apr', v: 3.4 },
-        { m: 'May', v: 2.8 },
-        { m: 'Jun', v: Number((p1Summary.deadCash / 100000).toFixed(1)) || 2.2 },
-      ],
-      otifPct: [
-        { m: 'Jan', v: 74 },
-        { m: 'Feb', v: 78 },
-        { m: 'Mar', v: 81 },
-        { m: 'Apr', v: 84 },
-        { m: 'May', v: 87 },
-        { m: 'Jun', v: Math.max(50, Math.round(p2Metrics.otifPercent)) },
-      ],
-      freightLeakK: [
-        { m: 'Jan', v: 42 },
-        { m: 'Feb', v: 38 },
-        { m: 'Mar', v: 31 },
-        { m: 'Apr', v: 26 },
-        { m: 'May', v: 21 },
-        { m: 'Jun', v: Math.max(5, Math.round(p3Audit.totals.totalLeak / 1000)) },
-      ],
-      accuracyPct: [
-        { m: 'Jan', v: 82 },
-        { m: 'Feb', v: 85 },
-        { m: 'Mar', v: 87 },
-        { m: 'Apr', v: 89 },
-        { m: 'May', v: 91 },
-        { m: 'Jun', v: stockAccuracyPct },
-      ],
+      deadInventoryLakhs: isPlantCustom
+        ? [
+            { m: 'Jan', v: Number((activePlant.kpis.deadStockRupees * 1.8 / 100000).toFixed(1)) },
+            { m: 'Feb', v: Number((activePlant.kpis.deadStockRupees * 1.6 / 100000).toFixed(1)) },
+            { m: 'Mar', v: Number((activePlant.kpis.deadStockRupees * 1.4 / 100000).toFixed(1)) },
+            { m: 'Apr', v: Number((activePlant.kpis.deadStockRupees * 1.25 / 100000).toFixed(1)) },
+            { m: 'May', v: Number((activePlant.kpis.deadStockRupees * 1.1 / 100000).toFixed(1)) },
+            { m: 'Jun', v: Number((activePlant.kpis.deadStockRupees / 100000).toFixed(1)) },
+          ]
+        : [
+            { m: 'Jan', v: 4.8 },
+            { m: 'Feb', v: 4.4 },
+            { m: 'Mar', v: 3.9 },
+            { m: 'Apr', v: 3.4 },
+            { m: 'May', v: 2.8 },
+            { m: 'Jun', v: Number((p1Summary.deadCash / 100000).toFixed(1)) || 2.2 },
+          ],
+      otifPct: isPlantCustom
+        ? [
+            { m: 'Jan', v: Math.max(50, activePlant.kpis.otifPercent - 18) },
+            { m: 'Feb', v: Math.max(55, activePlant.kpis.otifPercent - 14) },
+            { m: 'Mar', v: Math.max(60, activePlant.kpis.otifPercent - 10) },
+            { m: 'Apr', v: Math.max(65, activePlant.kpis.otifPercent - 6) },
+            { m: 'May', v: Math.max(70, activePlant.kpis.otifPercent - 3) },
+            { m: 'Jun', v: activePlant.kpis.otifPercent },
+          ]
+        : [
+            { m: 'Jan', v: 74 },
+            { m: 'Feb', v: 78 },
+            { m: 'Mar', v: 81 },
+            { m: 'Apr', v: 84 },
+            { m: 'May', v: 87 },
+            { m: 'Jun', v: Math.max(50, Math.round(p2Metrics.otifPercent)) },
+          ],
+      freightLeakK: isPlantCustom
+        ? [
+            { m: 'Jan', v: Math.round(activePlant.kpis.freightLeakRupees * 1.8 / 1000) },
+            { m: 'Feb', v: Math.round(activePlant.kpis.freightLeakRupees * 1.6 / 1000) },
+            { m: 'Mar', v: Math.round(activePlant.kpis.freightLeakRupees * 1.4 / 1000) },
+            { m: 'Apr', v: Math.round(activePlant.kpis.freightLeakRupees * 1.2 / 1000) },
+            { m: 'May', v: Math.round(activePlant.kpis.freightLeakRupees * 1.1 / 1000) },
+            { m: 'Jun', v: Math.round(activePlant.kpis.freightLeakRupees / 1000) },
+          ]
+        : [
+            { m: 'Jan', v: 42 },
+            { m: 'Feb', v: 38 },
+            { m: 'Mar', v: 31 },
+            { m: 'Apr', v: 26 },
+            { m: 'May', v: 21 },
+            { m: 'Jun', v: Math.max(5, Math.round(p3Audit.totals.totalLeak / 1000)) },
+          ],
+      accuracyPct: isPlantCustom
+        ? [
+            { m: 'Jan', v: Math.max(60, activePlant.kpis.binAccuracyPercent - 15) },
+            { m: 'Feb', v: Math.max(65, activePlant.kpis.binAccuracyPercent - 12) },
+            { m: 'Mar', v: Math.max(70, activePlant.kpis.binAccuracyPercent - 8) },
+            { m: 'Apr', v: Math.max(75, activePlant.kpis.binAccuracyPercent - 5) },
+            { m: 'May', v: Math.max(80, activePlant.kpis.binAccuracyPercent - 2) },
+            { m: 'Jun', v: activePlant.kpis.binAccuracyPercent },
+          ]
+        : [
+            { m: 'Jan', v: 82 },
+            { m: 'Feb', v: 85 },
+            { m: 'Mar', v: 87 },
+            { m: 'Apr', v: 89 },
+            { m: 'May', v: 91 },
+            { m: 'Jun', v: stockAccuracyPct },
+          ],
     };
 
     return {
@@ -312,20 +361,20 @@ export const MasterExecutiveDashboard: React.FC<MasterExecutiveDashboardProps> =
       freightScore,
       warehouseScore,
       planningScore,
-      cashStuck: p1Summary.deadCash,
-      revenueAtRisk,
-      freightLeakage: p3Audit.totals.totalLeak,
-      varianceImpactRupees,
-      otifPct: Math.round(p2Metrics.otifPercent),
-      stockAccuracyPct,
+      cashStuck: isPlantCustom ? activePlant.kpis.deadStockRupees : p1Summary.deadCash,
+      revenueAtRisk: isPlantCustom ? Math.round(activePlant.kpis.deadStockRupees * 0.8) : revenueAtRisk,
+      freightLeakage: isPlantCustom ? activePlant.kpis.freightLeakRupees : p3Audit.totals.totalLeak,
+      varianceImpactRupees: isPlantCustom ? activePlant.kpis.unreliabilityCostRupees : varianceImpactRupees,
+      otifPct: isPlantCustom ? activePlant.kpis.otifPercent : Math.round(p2Metrics.otifPercent),
+      stockAccuracyPct: isPlantCustom ? activePlant.kpis.binAccuracyPercent : stockAccuracyPct,
       worstCustomerLabel,
       topLeakCarrierName: topLeakCarrier ? topLeakCarrier.transporter : 'Siva Transport',
       topLeakCarrierWaste: topLeakCarrier ? topLeakCarrier.totalWaste : p3Audit.totals.totalLeak,
       mismatchBins: p4Summary.linesMismatch,
-      unpaidBills,
+      unpaidBills: isPlantCustom ? activePlant.kpis.unpaidBillsRupees : unpaidBills,
       trends,
     };
-  }, [refreshTick]);
+  }, [refreshTick, activePlant]);
 
   // Sync Section 7 Action Tracker with P5 Executive Actions
   const [execActions, setExecActions] = useState<ExecutiveActionItem[]>(() => {
@@ -342,13 +391,29 @@ export const MasterExecutiveDashboard: React.FC<MasterExecutiveDashboardProps> =
   const openActionsCount = execActions.length > 0 ? execActions.filter((a) => a.status !== 'Closed').length + 8 : 12;
   const closedActionsCount = execActions.length > 0 ? execActions.filter((a) => a.status === 'Closed').length + 17 : 18;
 
-  // Section 4: Top 5 Priorities
-  const top5Priorities = [
+  const getScoreColor = (score: number) => {
+    if (score >= 80) return { text: 'text-emerald-400', border: 'border-emerald-500/40', bg: 'bg-emerald-500/10' };
+    if (score >= 60) return { text: 'text-amber-400', border: 'border-amber-500/40', bg: 'bg-amber-500/10' };
+    return { text: 'text-rose-400', border: 'border-rose-500/40', bg: 'bg-rose-500/10' };
+  };
+
+  const handlePriorityClick = (engine: 'p1' | 'p2' | 'p3' | 'p4' | 'p5', rank: number) => {
+    onNavigateEngine(engine);
+    if (engine === 'p2') {
+      setTimeout(() => {
+        const el = document.getElementById('p2-customer-scorecard');
+        if (el) el.scrollIntoView({ behavior: 'smooth' });
+      }, 150);
+    }
+  };
+
+  // Section 4: Top 5 Priorities dynamically keyed by active plant
+  const top5Priorities = activePlant.kpis.topPriorities || [
     {
       rank: 1,
       headline: `${formatCompactINR(ceoMetrics.cashStuck)} Dead Stock Locked`,
       owner: 'Inventory Manager',
-      pillar: 'Dead Stock Recovery',
+      pillar: 'P1 • Cash Recovery',
       engine: 'p1' as const,
       badge: '🔴 Critical',
     },
@@ -356,7 +421,7 @@ export const MasterExecutiveDashboard: React.FC<MasterExecutiveDashboardProps> =
       rank: 2,
       headline: ceoMetrics.worstCustomerLabel,
       owner: 'Dispatch Head',
-      pillar: 'Dispatch Performance (OTIF)',
+      pillar: 'P2 • Revenue Protection',
       engine: 'p2' as const,
       badge: ceoMetrics.otifPct < 85 ? '🔴 Critical' : '🟡 Monitor',
     },
@@ -364,7 +429,7 @@ export const MasterExecutiveDashboard: React.FC<MasterExecutiveDashboardProps> =
       rank: 3,
       headline: `${ceoMetrics.topLeakCarrierName} — ${formatCompactINR(ceoMetrics.topLeakCarrierWaste)} Leakage`,
       owner: 'Logistics Head',
-      pillar: 'Margin Protection',
+      pillar: 'P3 • Profit Protection',
       engine: 'p3' as const,
       badge: '🟡 Monitor',
     },
@@ -372,7 +437,7 @@ export const MasterExecutiveDashboard: React.FC<MasterExecutiveDashboardProps> =
       rank: 4,
       headline: `${ceoMetrics.mismatchBins} High-Variance Bins (${formatCompactINR(ceoMetrics.varianceImpactRupees)} Impact)`,
       owner: 'Warehouse Head',
-      pillar: 'Warehouse Accuracy',
+      pillar: 'P4 • Inventory Trust',
       engine: 'p4' as const,
       badge: ceoMetrics.stockAccuracyPct >= 95 ? '🟢 Healthy' : '🟡 Monitor',
     },
@@ -380,7 +445,7 @@ export const MasterExecutiveDashboard: React.FC<MasterExecutiveDashboardProps> =
       rank: 5,
       headline: `${formatCompactINR(ceoMetrics.unpaidBills)} Overdue Customer Bills`,
       owner: 'Finance Head',
-      pillar: 'CEO Weekly Dashboard',
+      pillar: 'P5 • Control Tower',
       engine: 'p5' as const,
       badge: '🟡 Monitor',
     },
@@ -398,21 +463,21 @@ export const MasterExecutiveDashboard: React.FC<MasterExecutiveDashboardProps> =
         <div className="space-y-1">
           <div className="flex flex-wrap items-center gap-2">
             <span className="px-2.5 py-0.5 rounded-full bg-indigo-500/20 border border-indigo-400/40 text-indigo-300 text-[10px] font-mono uppercase font-bold">
-              Executive Overview • Spot Losses Before Monthly Reviews
+              Master Executive Layer • 2-Minute Monday Check
             </span>
             <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-[10px] font-mono font-bold">
-              Dead Stock · Dispatch OTIF · Margin Protection · Warehouse Accuracy · Weekly Actions
+              P1 Cash · P2 Revenue · P3 Profit · P4 Trust · P5 Decisions
             </span>
           </div>
           <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight">
             {viewMode === 'ceo_dashboard'
-              ? 'Executive Profit Recovery Overview & Factory Health Score'
+              ? 'Master Executive Dashboard & Factory Health Score'
               : viewMode === 'excel_6sheets'
               ? '6-Sheet Excel Command Center, KPI Formulas & Phase 3 RAG Engine'
               : 'Product Manager Backlog (P0–P3) & 3-Phase Implementation Roadmap'}
           </h1>
           <p className="text-xs text-slate-400">
-            Factory Health Score = <strong>30% Dead Stock Recovery</strong> + <strong>25% Dispatch Performance (OTIF: On-Time &amp; Full Qty)</strong> + <strong>25% Margin Protection</strong> + <strong>20% Warehouse Accuracy</strong>.
+            Factory Health Score = <strong>30% Inventory (P1)</strong> + <strong>25% OTIF (P2)</strong> + <strong>25% Freight (P3)</strong> + <strong>20% Warehouse Accuracy (P4)</strong>.
           </p>
         </div>
 
@@ -517,25 +582,22 @@ export const MasterExecutiveDashboard: React.FC<MasterExecutiveDashboardProps> =
               </div>
 
               <div className="grid grid-cols-4 gap-1.5 pt-3 border-t border-slate-800 text-center font-mono text-[10px]">
-                {[
-                  { label: '30% Cash', score: ceoMetrics.inventoryScore },
-                  { label: '25% OTIF', score: ceoMetrics.otifScore },
-                  { label: '25% Margin', score: ceoMetrics.freightScore },
-                  { label: '20% Stock', score: ceoMetrics.warehouseScore },
-                ].map((sub) => {
-                  const scoreColor =
-                    sub.score >= 80
-                      ? 'text-emerald-400'
-                      : sub.score >= 60
-                      ? 'text-amber-400'
-                      : 'text-rose-400';
-                  return (
-                    <div key={sub.label} className="p-1.5 rounded bg-slate-950 border border-slate-800">
-                      <div className="text-slate-400">{sub.label}</div>
-                      <div className={`${scoreColor} font-bold text-xs`}>{sub.score}</div>
-                    </div>
-                  );
-                })}
+                <div className={`p-1.5 rounded bg-slate-950 border ${getScoreColor(ceoMetrics.inventoryScore).border}`}>
+                  <div className="text-slate-400">30% Inv</div>
+                  <div className={`font-black text-xs ${getScoreColor(ceoMetrics.inventoryScore).text}`}>{ceoMetrics.inventoryScore}</div>
+                </div>
+                <div className={`p-1.5 rounded bg-slate-950 border ${getScoreColor(ceoMetrics.otifScore).border}`}>
+                  <div className="text-slate-400">25% OTIF</div>
+                  <div className={`font-black text-xs ${getScoreColor(ceoMetrics.otifScore).text}`}>{ceoMetrics.otifScore}</div>
+                </div>
+                <div className={`p-1.5 rounded bg-slate-950 border ${getScoreColor(ceoMetrics.freightScore).border}`}>
+                  <div className="text-slate-400">25% Frt</div>
+                  <div className={`font-black text-xs ${getScoreColor(ceoMetrics.freightScore).text}`}>{ceoMetrics.freightScore}</div>
+                </div>
+                <div className={`p-1.5 rounded bg-slate-950 border ${getScoreColor(ceoMetrics.warehouseScore).border}`}>
+                  <div className="text-slate-400">20% Bin</div>
+                  <div className={`font-black text-xs ${getScoreColor(ceoMetrics.warehouseScore).text}`}>{ceoMetrics.warehouseScore}</div>
+                </div>
               </div>
             </div>
 
@@ -544,14 +606,14 @@ export const MasterExecutiveDashboard: React.FC<MasterExecutiveDashboardProps> =
               {/* SECTION 2: Financial Impact */}
               <div className="rounded-2xl bg-slate-900 border border-slate-800 p-4 space-y-3">
                 <div className="text-[10px] font-mono uppercase font-bold text-emerald-400">
-                  Section 2 · Visible Financial Impact Across Core Systems
+                  Section 2 · Financial Impact Across P1–P4
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                   <div
                     onClick={() => onNavigateEngine('p1')}
                     className="p-3 rounded-xl bg-slate-950 border border-amber-500/30 cursor-pointer hover:border-amber-400 transition"
                   >
-                    <div className="text-[10px] font-mono text-amber-300 uppercase">Dead Stock Cash</div>
+                    <div className="text-[10px] font-mono text-amber-300 uppercase">Cash Stuck (P1)</div>
                     <div className="text-xl font-black font-mono text-white mt-1">
                       {formatCompactINR(ceoMetrics.cashStuck)}
                     </div>
@@ -560,7 +622,7 @@ export const MasterExecutiveDashboard: React.FC<MasterExecutiveDashboardProps> =
                     onClick={() => onNavigateEngine('p2')}
                     className="p-3 rounded-xl bg-slate-950 border border-emerald-500/30 cursor-pointer hover:border-emerald-400 transition"
                   >
-                    <div className="text-[10px] font-mono text-emerald-300 uppercase">Delayed Dispatch Risk</div>
+                    <div className="text-[10px] font-mono text-emerald-300 uppercase">Rev At Risk (P2)</div>
                     <div className="text-xl font-black font-mono text-white mt-1">
                       {formatCompactINR(ceoMetrics.revenueAtRisk)}
                     </div>
@@ -569,7 +631,7 @@ export const MasterExecutiveDashboard: React.FC<MasterExecutiveDashboardProps> =
                     onClick={() => onNavigateEngine('p3')}
                     className="p-3 rounded-xl bg-slate-950 border border-cyan-500/30 cursor-pointer hover:border-cyan-400 transition"
                   >
-                    <div className="text-[10px] font-mono text-cyan-300 uppercase">Margin / Freight Leak</div>
+                    <div className="text-[10px] font-mono text-cyan-300 uppercase">Freight Leak (P3)</div>
                     <div className="text-xl font-black font-mono text-white mt-1">
                       {formatCompactINR(ceoMetrics.freightLeakage)}
                     </div>
@@ -578,7 +640,7 @@ export const MasterExecutiveDashboard: React.FC<MasterExecutiveDashboardProps> =
                     onClick={() => onNavigateEngine('p4')}
                     className="p-3 rounded-xl bg-slate-950 border border-fuchsia-500/30 cursor-pointer hover:border-fuchsia-400 transition"
                   >
-                    <div className="text-[10px] font-mono text-fuchsia-300 uppercase">Stock Mismatch Risk</div>
+                    <div className="text-[10px] font-mono text-fuchsia-300 uppercase">Variance Impact (P4)</div>
                     <div className="text-xl font-black font-mono text-white mt-1">
                       {formatCompactINR(ceoMetrics.varianceImpactRupees)}
                     </div>
@@ -594,22 +656,22 @@ export const MasterExecutiveDashboard: React.FC<MasterExecutiveDashboardProps> =
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs font-mono">
                   {[
                     {
-                      label: 'Dead Stock Recovery',
+                      label: 'Dead Inventory',
                       light: ceoMetrics.cashStuck > 200000 ? '🔴 Critical' : '🟡 Monitor',
                       eng: 'p1' as const,
                     },
                     {
-                      label: 'Dispatch Performance',
+                      label: 'OTIF Delivery',
                       light: ceoMetrics.otifPct >= 90 ? '🟢 Good' : ceoMetrics.otifPct >= 80 ? '🟡 Monitor' : '🔴 Critical',
                       eng: 'p2' as const,
                     },
                     {
-                      label: 'Margin Protection',
+                      label: 'Freight Audit',
                       light: ceoMetrics.freightLeakage <= 10000 ? '🟢 Good' : '🟡 Monitor',
                       eng: 'p3' as const,
                     },
                     {
-                      label: 'Warehouse Accuracy',
+                      label: 'Stock Accuracy',
                       light: ceoMetrics.stockAccuracyPct >= 93 ? '🟢 Good' : '🟡 Monitor',
                       eng: 'p4' as const,
                     },
@@ -636,13 +698,13 @@ export const MasterExecutiveDashboard: React.FC<MasterExecutiveDashboardProps> =
                 <span className="text-[10px] font-mono uppercase font-bold text-rose-400">
                   Section 4 · Top 5 Monday Priorities
                 </span>
-                <span className="text-[10px] font-mono text-slate-400">Click Any Priority to Open Module</span>
+                <span className="text-[10px] font-mono text-slate-400">Accountable Owners Assigned</span>
               </div>
               <div className="space-y-2.5">
                 {top5Priorities.map((p) => (
                   <div
                     key={p.rank}
-                    onClick={() => onNavigateEngine(p.engine)}
+                    onClick={() => handlePriorityClick(p.engine, p.rank)}
                     className="p-3 rounded-xl bg-slate-950 border border-slate-800 hover:border-amber-500/40 cursor-pointer transition flex items-center justify-between gap-3 text-xs"
                   >
                     <div className="flex items-center gap-3">
@@ -703,7 +765,7 @@ export const MasterExecutiveDashboard: React.FC<MasterExecutiveDashboardProps> =
                     onClick={() => onNavigateEngine('p5')}
                     className="text-xs font-mono text-amber-400 hover:underline mt-1 cursor-pointer flex items-center gap-1"
                   >
-                    <span>Manage Owners &amp; Due Dates in Weekly CEO Dashboard</span>
+                    <span>Manage Owners &amp; Due Dates in P5</span>
                     <ArrowRight className="w-3.5 h-3.5" />
                   </button>
                 </div>
@@ -764,21 +826,19 @@ export const MasterExecutiveDashboard: React.FC<MasterExecutiveDashboardProps> =
                 <div key={chart.title} className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-2.5">
                   <div className="text-xs font-bold text-white">{chart.title}</div>
                   <div className="grid grid-cols-6 gap-1.5 items-end h-28 pt-3">
-                    {chart.series
-                      .filter((pt) => Number.isFinite(pt.v) && pt.v > 0)
-                      .map((pt) => (
-                        <div key={pt.m} className="flex flex-col items-center justify-end h-full gap-1">
-                          <span className="text-[9px] font-mono text-slate-300">
-                            {pt.v}
-                            {chart.unit}
-                          </span>
-                          <div
-                            className={`w-full rounded-t ${chart.barCls}`}
-                            style={{ height: `${Math.max(14, Math.min(100, (pt.v / chart.max) * 100))}%` }}
-                          />
-                          <span className="text-[9px] font-mono text-slate-500">{pt.m}</span>
-                        </div>
-                      ))}
+                    {chart.series.filter((pt) => pt && pt.v > 0).map((pt) => (
+                      <div key={pt.m} className="flex flex-col items-center justify-end h-full gap-1">
+                        <span className="text-[9px] font-mono text-slate-300">
+                          {pt.v}
+                          {chart.unit}
+                        </span>
+                        <div
+                          className={`w-full rounded-t ${chart.barCls}`}
+                          style={{ height: `${Math.max(14, Math.min(100, (pt.v / chart.max) * 100))}%` }}
+                        />
+                        <span className="text-[9px] font-mono text-slate-500">{pt.m}</span>
+                      </div>
+                    ))}
                   </div>
                 </div>
               ))}

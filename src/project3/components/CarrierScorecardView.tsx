@@ -9,11 +9,14 @@ import {
   DollarSign, 
   ShieldCheck, 
   FileSpreadsheet,
-  ArrowRight
+  ArrowRight,
+  FileText,
+  MessageSquare
 } from 'lucide-react';
 import { TransporterSummary, CalculatedTrip, RulesConfig } from '../types/freight';
 import { formatINR } from '../utils/auditCalculations';
 import { CapacityRiskMatrix } from './CapacityRiskMatrix';
+import { CarrierDebitNoteModal } from './CarrierDebitNoteModal';
 
 interface CarrierScorecardViewProps {
   transporters: TransporterSummary[];
@@ -28,6 +31,7 @@ export const CarrierScorecardView: React.FC<CarrierScorecardViewProps> = ({
   rules,
   onNavigateToTrips
 }) => {
+  const [selectedDebitCarrier, setSelectedDebitCarrier] = useState<TransporterSummary | null>(null);
   // What-If Simulator State:
   // % of Siva's trips transferred to Murugan (0 to 100%)
   const [sivaTransferPercent, setSivaTransferPercent] = useState<number>(100);
@@ -157,18 +161,46 @@ export const CarrierScorecardView: React.FC<CarrierScorecardViewProps> = ({
               </div>
             </div>
 
-            <div className="mt-4 p-3 bg-rose-50 text-[11px] text-rose-900 rounded-lg leading-relaxed">
-              <strong>Owner Strategy:</strong> This is the meeting. Present his bills against Murugan's. Demand immediate rate-matching and accountability for 15.5 idle gate hours.
+            <div className="mt-4 p-3 bg-rose-50 text-[11px] text-rose-900 rounded-lg leading-relaxed space-y-2">
+              <p><strong>Owner Strategy:</strong> This is the meeting. Present his bills against Murugan's. Demand immediate rate-matching and accountability for 15.5 idle gate hours.</p>
+              <div className="pt-2 border-t border-rose-200/70 flex items-start gap-1.5 text-rose-800">
+                <AlertCircle className="w-4 h-4 shrink-0 text-rose-600 mt-0.5" />
+                <span><strong>Cross-Module Impact (P2 ↔ P3):</strong> Linked to 2 "No vehicle" delivery fails in P2 Customer OTIF (PO-ALL-9012 & WA-2026-09-17). Carrier delays caused customer line-shortages.</span>
+              </div>
             </div>
           </div>
 
-          <button
-            onClick={() => onNavigateToTrips({ transporter: 'Siva Transport' })}
-            className="mt-5 w-full py-2 text-xs font-semibold text-rose-800 bg-rose-100 hover:bg-rose-200 rounded-lg transition-colors flex items-center justify-center gap-1"
-          >
-            <span>View Siva Trips</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </button>
+          <div className="mt-5 space-y-2">
+            <button
+              onClick={() => setSelectedDebitCarrier(siva || transporters.find(t => t.transporter.toLowerCase().includes('siva')) || transporters[0])}
+              className="w-full py-2.5 px-3 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-lg shadow-sm transition-all flex items-center justify-center gap-2"
+            >
+              <FileText className="w-4 h-4" />
+              <span>Generate Debit Note ({formatINR(siva?.totalWaste || 10177)})</span>
+            </button>
+
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  const text = `*NOTICE OF DISALLOWANCE & DEBIT NOTE*\nTo: Siva Transport\nRef: Fortnight Freight Reconciliation\nTotal Billed: ${formatINR(siva?.totalBilled || 23500)}\nRate Overcharge (vs Benchmark): ${formatINR(siva?.totalRateLeak || 7077)}\nUnverified Gate Detention: ${formatINR(siva?.totalDetention || 3100)}\n*Total Deducted from Payment: ${formatINR(siva?.totalWaste || 10177)}*\nNet Approved for Disbursement: ${formatINR((siva?.totalBilled || 23500) - (siva?.totalWaste || 10177))}\nPlease collect reconciliation statement from factory gate accounts.`;
+                  navigator.clipboard.writeText(text);
+                  window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+                }}
+                className="flex-1 py-1.5 text-[11px] font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-lg transition-colors flex items-center justify-center gap-1.5"
+              >
+                <MessageSquare className="w-3.5 h-3.5" />
+                <span>WhatsApp Claim</span>
+              </button>
+
+              <button
+                onClick={() => onNavigateToTrips({ transporter: 'Siva Transport' })}
+                className="flex-1 py-1.5 text-[11px] font-semibold text-rose-800 bg-rose-100 hover:bg-rose-200 rounded-lg transition-colors flex items-center justify-center gap-1"
+              >
+                <span>Audit Trips</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
         </div>
 
         {/* Ravi (Broker) Card */}
@@ -324,6 +356,17 @@ export const CarrierScorecardView: React.FC<CarrierScorecardViewProps> = ({
 
       {/* Capacity & Dual-Sourcing Risk Matrix (Solving Hardest Truth #4) */}
       <CapacityRiskMatrix onNavigateToTrips={onNavigateToTrips} />
+
+      {/* Carrier Debit Note Generator Modal */}
+      {selectedDebitCarrier && (
+        <CarrierDebitNoteModal
+          isOpen={Boolean(selectedDebitCarrier)}
+          onClose={() => setSelectedDebitCarrier(null)}
+          transporter={selectedDebitCarrier}
+          trips={trips}
+          rules={rules}
+        />
+      )}
     </div>
   );
 };

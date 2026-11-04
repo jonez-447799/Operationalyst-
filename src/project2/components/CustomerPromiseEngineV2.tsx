@@ -12,7 +12,10 @@ import {
   CheckCircle2,
   Flame,
   ArrowRight,
-  BarChart3
+  BarChart3,
+  MessageSquare,
+  Copy,
+  Check
 } from 'lucide-react';
 import { DispatchRow, RulesConfig, OTIFMetrics } from '../types/otif';
 import { calculateRowStatus } from '../utils/otifCalculator';
@@ -26,16 +29,17 @@ interface CustomerPromiseEngineV2Props {
 
 // Strategic Customer Priority Tiers (Annual Business Value in ₹ Lakhs)
 const CUSTOMER_PRIORITY_MAP: Record<string, { tier: 'Tier-1 OEM (Strategic)' | 'Tier-2 Key Account' | 'Tier-3 Trader'; annualRevLakhs: number }> = {
-  'TVS': { tier: 'Tier-1 OEM (Strategic)', annualRevLakhs: 520 },
+  'Hyundai': { tier: 'Tier-1 OEM (Strategic)', annualRevLakhs: 520 },
+  'Hyundai vendor park': { tier: 'Tier-1 OEM (Strategic)', annualRevLakhs: 520 },
+  'TVS Motor': { tier: 'Tier-1 OEM (Strategic)', annualRevLakhs: 520 },
   'Ashok Leyland': { tier: 'Tier-1 OEM (Strategic)', annualRevLakhs: 480 },
-  'Daimler': { tier: 'Tier-1 OEM (Strategic)', annualRevLakhs: 440 },
   'Royal Enfield': { tier: 'Tier-1 OEM (Strategic)', annualRevLakhs: 410 },
-  'Hyundai': { tier: 'Tier-1 OEM (Strategic)', annualRevLakhs: 390 },
-  'Caterpillar': { tier: 'Tier-1 OEM (Strategic)', annualRevLakhs: 350 },
-  'TAFE': { tier: 'Tier-2 Key Account', annualRevLakhs: 180 },
+  'Hyundai Mobis': { tier: 'Tier-1 OEM (Strategic)', annualRevLakhs: 390 },
+  'Caterpillar India': { tier: 'Tier-1 OEM (Strategic)', annualRevLakhs: 350 },
+  'TAFE Tractors': { tier: 'Tier-2 Key Account', annualRevLakhs: 180 },
+  'Daimler India': { tier: 'Tier-1 OEM (Strategic)', annualRevLakhs: 440 },
   'Brakes India': { tier: 'Tier-2 Key Account', annualRevLakhs: 150 },
-  'Sundaram': { tier: 'Tier-2 Key Account', annualRevLakhs: 125 },
-  'Apex': { tier: 'Tier-2 Key Account', annualRevLakhs: 165 },
+  'Sundaram Fasteners': { tier: 'Tier-2 Key Account', annualRevLakhs: 125 },
 };
 
 function getCustomerTier(customer: string) {
@@ -58,7 +62,8 @@ export const CustomerPromiseEngineV2: React.FC<CustomerPromiseEngineV2Props> = (
   const [activeSubView, setActiveSubView] = useState<
     'severity_revenue' | 'customer_heatmap' | 'predictive_risk' | 'transporter_pareto'
   >('severity_revenue');
-  const [customerSortMode, setCustomerSortMode] = useState<'revenue' | 'worst_otif'>('worst_otif');
+  const [customerSortBy, setCustomerSortBy] = useState<'worst_otif' | 'revenue_at_risk'>('worst_otif');
+  const [copiedAlert, setCopiedAlert] = useState<string | null>(null);
 
   // Enrich dispatches with V2.0 analytics (Delay Severity, Order Value, 6-Category Root Cause, Transporter)
   const v2Analytics = useMemo(() => {
@@ -92,7 +97,7 @@ export const CustomerPromiseEngineV2: React.FC<CustomerPromiseEngineV2Props> = (
       else if (rawReason.includes('lorry') || rawReason.includes('transport') || rawReason.includes('vehicle')) v2Category = 'Transport Delay';
       else if (rawReason.includes('pack') || rawReason.includes('plan')) v2Category = 'Planning Error';
       else if (rawReason.includes('customer') || (rawReason.includes('hold') && !rawReason.includes('qc'))) v2Category = 'Customer Hold';
-      else if (rawReason.includes('paperwork') || rawReason.includes('invoice') || rawReason.includes('doc') || rawReason.includes('eway')) v2Category = 'Documentation Issue';
+      else if (rawReason.includes('invoice') || rawReason.includes('doc') || rawReason.includes('eway') || rawReason.includes('paperwork') || rawReason.includes('paper')) v2Category = 'Documentation Issue';
       else v2Category = 'Production Delay';
 
       // Assign transporter carrier based on vehicle prefix or index
@@ -162,7 +167,12 @@ export const CustomerPromiseEngineV2: React.FC<CustomerPromiseEngineV2Props> = (
         const accountAtRisk = otif < 75 && c.annualRevLakhs >= 150;
         return { ...c, otif, accountAtRisk };
       })
-      .sort((a, b) => b.annualRevLakhs - a.annualRevLakhs);
+      .sort((a, b) => {
+        if (customerSortBy === 'worst_otif') {
+          return a.otif - b.otif;
+        }
+        return b.annualRevLakhs - a.annualRevLakhs;
+      });
 
     const accountsAtRiskCount = customerList.filter((c) => c.accountAtRisk).length;
     const annualRenewalAtRiskRupees = customerList
@@ -494,7 +504,7 @@ export const CustomerPromiseEngineV2: React.FC<CustomerPromiseEngineV2Props> = (
                       <div className="w-full h-2 rounded-full bg-slate-900 overflow-hidden">
                         <div
                           className="h-full bg-emerald-500 rounded-full"
-                          style={{ width: `${count > 0 ? Math.max(6, pct) : 0}%` }}
+                          style={{ width: `${Math.max(4, pct)}%` }}
                         />
                       </div>
                     </div>
@@ -510,29 +520,34 @@ export const CustomerPromiseEngineV2: React.FC<CustomerPromiseEngineV2Props> = (
                 <IndianRupee className="w-4 h-4 text-amber-400" />
                 <span>Lost Revenue Estimator &amp; Customer Priority Ranking</span>
               </h3>
-              <div className="inline-flex rounded-lg bg-slate-900 p-0.5 border border-slate-800 text-[10px] font-mono">
+              <div className="flex items-center gap-1 bg-slate-900 border border-slate-700 p-0.5 rounded-lg text-[10px] font-mono">
                 <button
-                  onClick={() => setCustomerSortMode('worst_otif')}
-                  className={`px-2 py-1 rounded cursor-pointer transition ${
-                    customerSortMode === 'worst_otif'
-                      ? 'bg-emerald-500 text-slate-950 font-bold'
-                      : 'text-slate-400 hover:text-white'
+                  onClick={() => setCustomerSortBy('worst_otif')}
+                  className={`px-2 py-0.5 rounded transition cursor-pointer ${
+                    customerSortBy === 'worst_otif' ? 'bg-amber-500 text-slate-950 font-bold' : 'text-slate-400 hover:text-white'
                   }`}
+                  title="Rank customers with lowest On-Time In-Full gate fulfillment first"
                 >
-                  Sort: Worst Gate %
+                  Worst Gate Score (%)
                 </button>
                 <button
-                  onClick={() => setCustomerSortMode('revenue')}
-                  className={`px-2 py-1 rounded cursor-pointer transition ${
-                    customerSortMode === 'revenue'
-                      ? 'bg-amber-500 text-slate-950 font-bold'
-                      : 'text-slate-400 hover:text-white'
+                  onClick={() => setCustomerSortBy('revenue_at_risk')}
+                  className={`px-2 py-0.5 rounded transition cursor-pointer ${
+                    customerSortBy === 'revenue_at_risk' ? 'bg-amber-500 text-slate-950 font-bold' : 'text-slate-400 hover:text-white'
                   }`}
+                  title="Rank customers with largest annual contract value at risk first"
                 >
-                  Sort: Revenue (₹)
+                  Revenue at Risk (₹)
                 </button>
               </div>
             </div>
+
+            {copiedAlert && (
+              <div className="p-2 rounded-lg bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-mono flex items-center gap-2">
+                <Check className="w-4 h-4 text-emerald-400" />
+                <span>WhatsApp Alert Copied for {copiedAlert}! Pre-formatted for CEO Monday 9 AM review.</span>
+              </div>
+            )}
 
             <div className="grid grid-cols-3 gap-2 text-center text-xs">
               <div className="p-2.5 rounded-lg bg-slate-900 border border-slate-800">
@@ -563,16 +578,11 @@ export const CustomerPromiseEngineV2: React.FC<CustomerPromiseEngineV2Props> = (
                     <th className="py-2 px-2.5 text-right">Annual Business</th>
                     <th className="py-2 px-2.5 text-right">OTIF %</th>
                     <th className="py-2 px-2.5 text-center">Retention Status</th>
+                    <th className="py-2 px-2 text-center">WhatsApp</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800/70">
-                  {[...v2Analytics.customerList]
-                    .sort((a, b) =>
-                      customerSortMode === 'worst_otif'
-                        ? a.otif - b.otif || b.annualRevLakhs - a.annualRevLakhs
-                        : b.annualRevLakhs - a.annualRevLakhs
-                    )
-                    .map((c) => (
+                  {v2Analytics.customerList.map((c) => (
                     <tr
                       key={c.customer}
                       onClick={() => onFilterCustomer && onFilterCustomer(c.customer)}
@@ -600,6 +610,21 @@ export const CustomerPromiseEngineV2: React.FC<CustomerPromiseEngineV2Props> = (
                             Protected
                           </span>
                         )}
+                      </td>
+                      <td className="py-2 px-2 text-center">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const alertMsg = `Alert [Dispatch Head]: ${c.customer} OTIF is at ${c.otif}% (${c.passes}/${c.total} loads). Annual account value: ₹${(c.annualRevLakhs / 100).toFixed(2)} Cr. Action required before Monday 9 AM review.`;
+                            navigator.clipboard.writeText(alertMsg);
+                            setCopiedAlert(c.customer);
+                            setTimeout(() => setCopiedAlert(null), 3000);
+                          }}
+                          className="p-1 rounded bg-emerald-500/15 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/30 transition cursor-pointer"
+                          title="Copy pre-formatted WhatsApp alert for CEO / Dispatch Head"
+                        >
+                          <MessageSquare className="w-3.5 h-3.5" />
+                        </button>
                       </td>
                     </tr>
                   ))}

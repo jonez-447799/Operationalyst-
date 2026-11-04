@@ -15,7 +15,10 @@ import {
   HelpCircle, 
   Info,
   Check,
-  AlertCircle
+  AlertCircle,
+  MessageSquare,
+  Zap,
+  FileSpreadsheet
 } from 'lucide-react';
 
 interface StockSheetProps {
@@ -49,6 +52,7 @@ export const StockSheet: React.FC<StockSheetProps> = ({
   const [statusFilter, setStatusFilter] = useState<'All' | 'Dead' | 'Slow' | 'Moving'>('All');
   const [categoryFilter, setCategoryFilter] = useState<string>('All');
   const [abcFilter, setAbcFilter] = useState<'All' | 'A' | 'B' | 'C'>('All');
+  const [quickFilterA180, setQuickFilterA180] = useState<boolean>(false);
 
   // Formula tooltip modal / notification
   const [formulaNotice, setFormulaNotice] = useState<{ col: string; formula: string; explanation: string } | null>(null);
@@ -77,7 +81,8 @@ export const StockSheet: React.FC<StockSheetProps> = ({
     const matchesStatus = statusFilter === 'All' || item.status === statusFilter;
     const matchesCategory = categoryFilter === 'All' || item.category === categoryFilter;
     const matchesAbc = abcFilter === 'All' || item.abcClass === abcFilter;
-    return matchesSearch && matchesStatus && matchesCategory && matchesAbc;
+    const matchesA180 = !quickFilterA180 || (item.abcClass === 'A' && (item.daysIdle || 0) >= 180);
+    return matchesSearch && matchesStatus && matchesCategory && matchesAbc && matchesA180;
   });
 
   // Quick edit handler for yellow cells
@@ -221,6 +226,89 @@ export const StockSheet: React.FC<StockSheetProps> = ({
     document.body.removeChild(link);
   };
 
+  // Export Tally Debit Note / Material Return CSV for vendor rejections
+  const handleExportTallyDebitNote = () => {
+    const deadItems = evaluatedItems.filter((i) => (i.daysIdle || 0) >= 180);
+    const headers = [
+      'Voucher Type',
+      'Voucher Date',
+      'Item Code',
+      'Item Name',
+      'Category',
+      'Return Qty',
+      'Cost Rate (INR)',
+      'Debit Note Amount (INR)',
+      'Party / Vendor Account',
+      'Ledger Name',
+      'Narration / Reason'
+    ];
+    const rows = deadItems.map((item) => [
+      '"Debit Note"',
+      `"${rules.asOfDate}"`,
+      `"${item.itemCode}"`,
+      `"${item.itemName}"`,
+      `"${item.category}"`,
+      item.qtyOnHand,
+      item.costRate,
+      item.closingValue || 0,
+      `"Approved Vendor / Supplier"`,
+      `"Purchase Returns / Dead Stock Rejection"`,
+      `"Debit note raised for trapped dead stock idle ${item.daysIdle} days (ABC Class ${item.abcClass})"`
+    ]);
+
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `Tally_Debit_Note_Material_Return_${rules.asOfDate}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // Export Liquidation Quote Sheet CSV for secondary buyers and scrap dealers
+  const handleExportLiquidationQuote = () => {
+    const deadItems = evaluatedItems.filter((i) => i.status === 'Dead');
+    const headers = [
+      'Item Code',
+      'Item Name',
+      'Category',
+      'Available Qty',
+      'Book Cost Rate (INR)',
+      'Book Closing Value (INR)',
+      'Floor Liquidation Rate (INR)',
+      'Estimated Cash Recovery (INR)',
+      'Target Disposition Channel',
+      'Terms of Sale'
+    ];
+    const rows = deadItems.map((item) => {
+      const discount = item.category === 'Raw Material' ? 0.45 : item.category === 'Spares' ? 0.70 : 0.55;
+      const floorRate = Math.round(item.costRate * discount);
+      const estRecovery = Math.round((item.closingValue || 0) * discount);
+      return [
+        `"${item.itemCode}"`,
+        `"${item.itemName}"`,
+        `"${item.category}"`,
+        item.qtyOnHand,
+        item.costRate,
+        item.closingValue || 0,
+        floorRate,
+        estRecovery,
+        `"${item.category === 'Raw Material' ? 'Certified Industrial Scrap Merchant' : 'Secondary Surplus Trader'}"`,
+        `"Immediate Cash Against Gate Delivery - As Is Where Is"`
+      ];
+    });
+
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `Liquidation_Quote_Sheet_${rules.asOfDate}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="space-y-4">
       {/* 1. Header & Sheet Philosophy Banner */}
@@ -246,13 +334,31 @@ export const StockSheet: React.FC<StockSheetProps> = ({
           </div>
         </div>
 
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex flex-wrap items-center gap-2 shrink-0">
           <button
             onClick={() => setShowImportModal(true)}
             className="px-3 py-1.5 text-xs font-semibold text-neutral-700 dark:text-neutral-200 bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-700 rounded-md transition-colors flex items-center gap-1.5 shadow-sm"
           >
             <FileUp className="w-3.5 h-3.5" />
-            <span>Import Tally File</span>
+            <span>Import Tally</span>
+          </button>
+
+          <button
+            onClick={handleExportTallyDebitNote}
+            className="px-3 py-1.5 text-xs font-semibold text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-950/40 border border-rose-300 dark:border-rose-800 hover:bg-rose-100 dark:hover:bg-rose-900/60 rounded-md transition-colors flex items-center gap-1.5 shadow-sm"
+            title="Auto-generate Tally Debit Note / Material Return CSV for vendor rejections"
+          >
+            <FileSpreadsheet className="w-3.5 h-3.5" />
+            <span>Tally Debit Note</span>
+          </button>
+
+          <button
+            onClick={handleExportLiquidationQuote}
+            className="px-3 py-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 rounded-md transition-colors flex items-center gap-1.5 shadow-sm"
+            title="Auto-generate secondary buyer and scrap dealer quotation sheet"
+          >
+            <FileSpreadsheet className="w-3.5 h-3.5" />
+            <span>Liquidation Quote</span>
           </button>
 
           <button
@@ -329,6 +435,20 @@ export const StockSheet: React.FC<StockSheetProps> = ({
             <option value="B">Class B (Next 15%)</option>
             <option value="C">Class C (Tail 5%)</option>
           </select>
+
+          {/* 1-Click A-Class >180 Days Quick Filter */}
+          <button
+            onClick={() => setQuickFilterA180(!quickFilterA180)}
+            className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all flex items-center gap-1.5 border shadow-sm ${
+              quickFilterA180
+                ? 'bg-rose-600 text-white border-rose-500 ring-2 ring-rose-400/30'
+                : 'bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border-rose-300 dark:border-rose-800 hover:bg-rose-100 dark:hover:bg-rose-900/50'
+            }`}
+            title="Isolate highest-value trapped working capital: Class-A items with idle days ≥180"
+          >
+            <Zap className={`w-3.5 h-3.5 ${quickFilterA180 ? 'fill-current' : ''}`} />
+            <span>A-Class &gt;180d {quickFilterA180 ? '(Active)' : ''}</span>
+          </button>
 
           <button
             onClick={() => setShowAddModal(true)}
@@ -422,7 +542,7 @@ export const StockSheet: React.FC<StockSheetProps> = ({
                 <th className="py-2.5 px-3 font-semibold text-right border-r border-neutral-200 dark:border-neutral-700">
                   Dead Value <span className="text-[10px] font-normal text-neutral-400">(Helper)</span>
                 </th>
-                <th className="py-2.5 px-2 text-center">Del</th>
+                <th className="py-2.5 px-2 text-center w-16">Action</th>
               </tr>
             </thead>
 
@@ -678,16 +798,30 @@ export const StockSheet: React.FC<StockSheetProps> = ({
                       {item.deadValue && item.deadValue > 0 ? formatCurrency(item.deadValue, currency) : '—'}
                     </td>
 
-                    {/* Delete button */}
+                    {/* Action buttons (WhatsApp Alert + Delete) */}
                     <td className="py-2 px-2 text-center">
-                      <button
-                        onClick={() => onDeleteItem(item.id)}
-                        className="text-neutral-400 hover:text-rose-500 p-1 rounded transition-colors"
-                        title="Delete SKU row"
-                        aria-label="Delete SKU row"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
+                      <div className="flex items-center justify-center gap-1">
+                        <button
+                          onClick={() => {
+                            const text = `*DEAD STOCK RECOVERY ALERT*\nItem: ${item.itemName} (${item.itemCode})\nCategory: ${item.category}\nIdle Days: ${item.daysIdle} days\nClosing Value: ₹${(item.closingValue || 0).toLocaleString('en-IN')}\nStatus: ${item.status} | ABC: ${item.abcClass}\nRecommendation: ${item.action}\nAs of date: ${rules.asOfDate}`;
+                            navigator.clipboard.writeText(text);
+                            window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+                          }}
+                          className="text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 p-1 rounded hover:bg-emerald-50 dark:hover:bg-emerald-950/40 transition-colors"
+                          title="Share SKU WhatsApp Alert / Quote"
+                          aria-label="Share WhatsApp Alert"
+                        >
+                          <MessageSquare className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => onDeleteItem(item.id)}
+                          className="text-neutral-400 hover:text-rose-500 p-1 rounded transition-colors"
+                          title="Delete SKU row"
+                          aria-label="Delete SKU row"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );

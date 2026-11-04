@@ -371,6 +371,7 @@ export default function App() {
               items={enrichedItems}
               rules={rules}
               summary={summary}
+              onUpdateItem={handleUpdateItem}
               onSelectSKU={(code) => {
                 setSelectedSKUCode(code);
                 setActiveTab('countsheet');
