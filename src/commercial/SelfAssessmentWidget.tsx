@@ -95,7 +95,7 @@ export const SelfAssessmentWidget: React.FC<SelfAssessmentWidgetProps> = ({
   };
 
   // Compute Total Score
-  const totalScore = Object.values(answers).reduce((acc, val) => {
+  const totalScore = Object.values(answers).reduce<number>((acc, val) => {
     const opt = OPTIONS.find((o) => o.value === val);
     return acc + (opt ? opt.points : 0);
   }, 0);

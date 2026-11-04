@@ -59,10 +59,14 @@ interface CommercialLandingPageProps {
   ) => void;
   onOpenSmartMapper: () => void;
   onOpenAuditPage?: () => void;
+  isFounderMode?: boolean;
+  onExitFounderMode?: () => void;
 }
 
 export const CommercialLandingPage: React.FC<CommercialLandingPageProps> = ({
   onLaunchEngine,
+  isFounderMode = false,
+  onExitFounderMode,
 }) => {
   // Modal states
   const [isAuditModalOpen, setIsAuditModalOpen] = useState(false);
@@ -72,7 +76,7 @@ export const CommercialLandingPage: React.FC<CommercialLandingPageProps> = ({
   const [isIcebergModalOpen, setIsIcebergModalOpen] = useState(false);
   const [isCampaignStudioOpen, setIsCampaignStudioOpen] = useState(false);
 
-  // A/B Test Readiness Configuration (defaults to Variant A, switchable via Iceberg Lab)
+  // A/B Test Readiness Configuration (defaults to Variant A, switchable via Founder Lab)
   const [headlineVariant, setHeadlineVariant] = useState<'A' | 'B' | 'C'>(ACTIVE_DEFAULT_VARIANT);
 
   // Data & Trust Accordion State
@@ -107,13 +111,47 @@ export const CommercialLandingPage: React.FC<CommercialLandingPageProps> = ({
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-emerald-500/20 selection:text-emerald-300">
+      {/* Founder Internal Marketing Studio Ribbon (Only visible at /founder or ?founder=1) */}
+      {isFounderMode && (
+        <div className="bg-amber-500/10 border-b border-amber-500/30 px-4 py-2 text-xs font-mono flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2 text-amber-300 font-bold">
+            <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+            <span>Founder Campaign &amp; A/B Studio Active (/founder)</span>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={() => setIsCampaignStudioOpen(true)}
+              className="px-2.5 py-1 rounded-md bg-slate-900 border border-emerald-500/40 text-emerald-300 hover:text-white flex items-center gap-1 cursor-pointer"
+            >
+              <Megaphone className="w-3 h-3 text-emerald-400" />
+              <span>Ad Scripts, LinkedIn &amp; Teleprompter</span>
+            </button>
+            <button
+              onClick={() => setIsIcebergModalOpen(true)}
+              className="px-2.5 py-1 rounded-md bg-slate-900 border border-amber-500/40 text-amber-300 hover:text-white flex items-center gap-1 cursor-pointer"
+            >
+              <Sparkles className="w-3 h-3 text-amber-400" />
+              <span>Headline A/B Lab</span>
+            </button>
+            {onExitFounderMode && (
+              <button
+                onClick={onExitFounderMode}
+                className="px-2 py-1 rounded-md bg-slate-900 border border-slate-700 text-slate-400 hover:text-white cursor-pointer"
+              >
+                View as Public Buyer (/)
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* ===================================================================== */}
       {/* SECTION 1: NAVIGATION                                                 */}
       {/* ===================================================================== */}
       <header className="sticky top-0 z-40 bg-slate-950/90 backdrop-blur-md border-b border-slate-850">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
           {/* Logo & Wordmark */}
-          <div className="flex items-center gap-3">
+          <a href="/" className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center">
               <Layers className="w-4 h-4 text-emerald-400" />
             </div>
@@ -125,10 +163,10 @@ export const CommercialLandingPage: React.FC<CommercialLandingPageProps> = ({
                 Manufacturing Inventory Intelligence
               </p>
             </div>
-          </div>
+          </a>
 
-          {/* Clean Navigation Links */}
-          <nav className="hidden lg:flex items-center gap-5 text-xs font-semibold text-slate-300">
+          {/* Clean Buyer Navigation Links */}
+          <nav className="hidden lg:flex items-center gap-6 text-xs font-semibold text-slate-300">
             <a href="#how-it-works" className="hover:text-emerald-400 transition">
               How It Works
             </a>
@@ -147,41 +185,33 @@ export const CommercialLandingPage: React.FC<CommercialLandingPageProps> = ({
             <a href="#data-trust" className="hover:text-emerald-400 transition">
               Data &amp; Trust
             </a>
-            <button
-              onClick={() => setIsIcebergModalOpen(true)}
-              className="px-2.5 py-1 rounded-md bg-slate-900 border border-amber-500/30 text-amber-300 hover:text-amber-200 text-[11px] font-mono transition flex items-center gap-1 cursor-pointer"
-              title="View the 27 Behavioral Economics & Decision Science Dimensions"
-            >
-              <Sparkles className="w-3 h-3 text-amber-400" />
-              <span>Iceberg Lab</span>
-            </button>
-            <button
-              onClick={() => setIsCampaignStudioOpen(true)}
-              className="px-2.5 py-1 rounded-md bg-slate-900 border border-emerald-500/30 text-emerald-300 hover:text-emerald-200 text-[11px] font-mono transition flex items-center gap-1 cursor-pointer"
-              title="View 6 Ad Variations, Founder Teleprompter & Outreach Playbook"
-            >
-              <Megaphone className="w-3 h-3 text-emerald-400" />
-              <span>Campaigns</span>
-            </button>
-            <button
-              onClick={handleViewPlatform}
-              className="text-slate-400 hover:text-white transition flex items-center gap-1 cursor-pointer font-mono text-[11px]"
-              title="Launch the underlying multi-engine software platform"
+            <a
+              href="/platform"
+              onClick={(e) => {
+                e.preventDefault();
+                handleViewPlatform();
+              }}
+              className="px-2.5 py-1 rounded-md bg-slate-900 border border-slate-800 text-slate-300 hover:text-white hover:border-emerald-500/40 transition flex items-center gap-1.5 cursor-pointer font-mono text-[11px]"
+              title="Open the Operationalyst Software Platform (/platform)"
             >
               <Activity className="w-3.5 h-3.5 text-emerald-400" />
-              <span>View Platform</span>
-            </button>
+              <span>Platform</span>
+            </a>
           </nav>
 
           {/* Right Action Button */}
           <div className="flex items-center gap-2.5">
-            <button
-              onClick={handleViewPlatform}
+            <a
+              href="/platform"
+              onClick={(e) => {
+                e.preventDefault();
+                handleViewPlatform();
+              }}
               className="lg:hidden min-h-[38px] px-2.5 py-1.5 rounded-lg bg-slate-900 text-slate-300 hover:text-white border border-slate-800 text-xs font-mono font-semibold flex items-center gap-1 cursor-pointer"
             >
               <Activity className="w-3.5 h-3.5 text-emerald-400" />
               <span>Platform</span>
-            </button>
+            </a>
             <button
               onClick={() => handleOpenAuditModal('nav_button')}
               className="min-h-[38px] px-4 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs flex items-center gap-1.5 cursor-pointer transition shadow-md touch-manipulation active:scale-95"
@@ -566,6 +596,7 @@ export const CommercialLandingPage: React.FC<CommercialLandingPageProps> = ({
           onRequestAudit={(source) => handleOpenAuditModal(source)}
           onViewSampleReport={(source) => handleOpenSampleReport(source)}
           onOpenIcebergModal={() => setIsIcebergModalOpen(true)}
+          isFounderMode={isFounderMode}
         />
       </section>
 
@@ -727,39 +758,38 @@ export const CommercialLandingPage: React.FC<CommercialLandingPageProps> = ({
       </section>
 
       {/* ===================================================================== */}
-      {/* SECTION 12: FUTURE PROOF AREA (RESERVED FOR VERIFIED PROOF)            */}
+      {/* SECTION 12: PILOT VALIDATION & DOCUMENTATION STANDARD                 */}
       {/* ===================================================================== */}
       <section className="py-16 sm:py-20 px-4 sm:px-6 max-w-5xl mx-auto space-y-6">
         <div className="text-center space-y-2">
-          <span className="text-xs font-mono font-bold text-slate-400 uppercase tracking-widest">
-            VERIFIED PROOF REGISTRY
+          <span className="text-xs font-mono font-bold text-emerald-400 uppercase tracking-widest">
+            VERIFIABLE OUTCOME STANDARD
           </span>
           <h2 className="text-2xl sm:text-3xl font-black text-white">
-            Verified Manufacturing Outcomes
+            How Pilot Findings Are Documented &amp; Verified
           </h2>
-          <p className="text-xs text-slate-400 font-mono">
-            Customer evidence will be published here after pilot outcomes have been documented and approved.
+          <p className="text-xs text-slate-400 font-mono max-w-2xl mx-auto">
+            Every pilot audit produces an auditable findings record linked directly to your underlying stock ledger.
           </p>
         </div>
 
-        {/* Structured Case Study Template for Future Real Data */}
-        <div className="p-6 rounded-2xl bg-slate-900 border border-dashed border-slate-800 text-xs font-mono text-slate-400 space-y-3">
-          <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-            <span className="font-bold text-slate-300">Case Study Documentation Schema (Reserved Component)</span>
-            <span>Status: Awaiting Pilot Validations</span>
+        <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 text-xs font-mono text-slate-300 space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-2">
+            <span className="font-bold text-white">Standard Pilot Audit Verification Checklist</span>
+            <span className="text-emerald-400">Active Pilot Intake</span>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px]">
-            <div>• Industry Sector</div>
-            <div>• Dataset Scope</div>
-            <div>• Initial Challenge</div>
-            <div>• Analysis Performed</div>
-            <div>• Verified Findings</div>
-            <div>• Action Taken</div>
-            <div>• Approved Quotation</div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px] text-slate-400">
+            <div>• Industry &amp; Plant Scope</div>
+            <div>• Evaluated SKU Count</div>
+            <div>• Agreed Ageing Cutoffs</div>
+            <div>• Non-Moving Capital Flagged</div>
+            <div>• Top-15 Priority SKU List</div>
+            <div>• Reserve Spares Exclusions</div>
+            <div>• Floor Review Actions</div>
             <div>• Documented Limitations</div>
           </div>
           <p className="text-[11px] text-slate-400 pt-1 font-sans">
-            Note: In strict alignment with ethical persuasion principles, Operationalyst displays zero fabricated customer logos or invented savings figures.
+            Operationalyst publishes client case studies only after pilot outcomes are verified and explicitly approved by participating manufacturing teams.
           </p>
         </div>
       </section>
@@ -786,16 +816,15 @@ export const CommercialLandingPage: React.FC<CommercialLandingPageProps> = ({
               <div>
                 <h3 className="font-bold text-white text-base">Jonez Snowin</h3>
                 <div className="text-xs text-slate-400 font-mono">
-                  Operations &amp; Manufacturing Analytics Builder
+                  Founder · Operationalyst
                 </div>
               </div>
             </div>
 
             <p className="text-xs sm:text-sm text-slate-300 leading-relaxed font-sans">
-              &ldquo;Operationalyst is being developed to help manufacturing teams convert existing
-              inventory and operational data into clearer review priorities. The current focus is learning
-              directly from manufacturing teams and validating the audit method with real operational use
-              cases.&rdquo;
+              &ldquo;Operationalyst is being built to help manufacturing teams convert existing
+              inventory and operational exports into clearer review priorities — without replacing ERP
+              systems. Every pilot audit is reviewed directly with plant leadership.&rdquo;
             </p>
 
             <div className="flex flex-wrap items-center gap-4 text-xs font-mono pt-2 border-t border-slate-850 text-slate-400">
@@ -806,8 +835,8 @@ export const CommercialLandingPage: React.FC<CommercialLandingPageProps> = ({
                 </a>
               </div>
               <div className="flex items-center gap-1.5">
-                <Linkedin className="w-3.5 h-3.5 text-cyan-400" />
-                <span className="text-slate-400">LinkedIn: /in/jonezsnowin (Profile Pending)</span>
+                <Building2 className="w-3.5 h-3.5 text-cyan-400" />
+                <span className="text-slate-400">Direct Founder-Led Pilot Reviews</span>
               </div>
             </div>
           </div>
@@ -942,13 +971,17 @@ export const CommercialLandingPage: React.FC<CommercialLandingPageProps> = ({
               <a href="mailto:joneszz2004@gmail.com" className="hover:text-white transition">
                 Contact
               </a>
-              <button
-                onClick={handleViewPlatform}
+              <a
+                href="/platform"
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleViewPlatform();
+                }}
                 className="text-emerald-400 hover:text-emerald-300 font-bold transition cursor-pointer flex items-center gap-1"
               >
                 <Activity className="w-3 h-3" />
-                <span>View Platform</span>
-              </button>
+                <span>Operationalyst Platform (/platform)</span>
+              </a>
             </div>
           </div>
 
@@ -957,9 +990,16 @@ export const CommercialLandingPage: React.FC<CommercialLandingPageProps> = ({
               Operationalyst findings depend on the quality, completeness and definitions of the supplied data.
             </div>
             <div className="flex items-center gap-3">
-              <span>Privacy Policy (Placeholder)</span>
+              <a href="#data-trust" className="hover:text-white transition">
+                Data &amp; Confidentiality Policy
+              </a>
               <span>·</span>
-              <span>Terms of Service (Placeholder)</span>
+              <button
+                onClick={() => setIsMethodologyOpen(true)}
+                className="hover:text-white transition cursor-pointer"
+              >
+                Audit Scope &amp; Disclaimers
+              </button>
             </div>
           </div>
         </div>

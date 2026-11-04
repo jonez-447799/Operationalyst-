@@ -40,12 +40,14 @@ interface B2BBehavioralSystemProps {
   onRequestAudit: (source: string) => void;
   onViewSampleReport: (source: string) => void;
   onOpenIcebergModal: () => void;
+  isFounderMode?: boolean;
 }
 
 export const B2BBehavioralSystem: React.FC<B2BBehavioralSystemProps> = ({
   onRequestAudit,
   onViewSampleReport,
   onOpenIcebergModal,
+  isFounderMode = false,
 }) => {
   // 1. Stakeholder Perspective Active Tab
   const [activeStakeholderId, setActiveStakeholderId] = useState<
@@ -67,7 +69,7 @@ export const B2BBehavioralSystem: React.FC<B2BBehavioralSystemProps> = ({
   return (
     <div className="space-y-16 sm:space-y-24">
       {/* ===================================================================== */}
-      {/* 1. B2B BUYING STAKEHOLDER LENS (Psychology #15 & #16)                  */}
+      {/* 1. PLANT STAKEHOLDER PERSPECTIVES                                     */}
       {/* ===================================================================== */}
       <section className="py-12 px-4 sm:px-6 bg-slate-900/60 rounded-3xl border border-slate-800 shadow-2xl relative overflow-hidden">
         <div className="absolute top-0 right-0 w-96 h-96 bg-emerald-500/5 blur-3xl pointer-events-none" />
@@ -77,25 +79,27 @@ export const B2BBehavioralSystem: React.FC<B2BBehavioralSystemProps> = ({
             <div className="space-y-2">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-950 border border-slate-800 text-emerald-400 text-xs font-mono font-bold tracking-wider uppercase">
                 <Users className="w-3.5 h-3.5" />
-                <span>B2B Multi-Stakeholder Buying Architecture</span>
+                <span>Built for Every Seat in Plant Leadership</span>
               </div>
               <h2 className="text-2xl sm:text-3xl font-black text-white">
-                Different Roles. Different Anxieties. One Unified Truth.
+                Built for Owners, Plant Heads, Materials Teams &amp; Finance.
               </h2>
               <p className="text-sm text-slate-300 max-w-2xl leading-relaxed">
-                In manufacturing, the person evaluating inventory software is rarely the only one paying for
-                it or approving it. Select your operational seat to see how Operationalyst serves your exact role:
+                Inventory decisions involve operations, stores, procurement, and finance together. Select
+                your role to see the exact questions and metrics the Factory Inventory Audit prepares for you:
               </p>
             </div>
 
-            <button
-              onClick={onOpenIcebergModal}
-              className="px-3.5 py-2 rounded-xl bg-slate-950 hover:bg-slate-800 border border-slate-700 text-xs font-mono text-slate-300 hover:text-white flex items-center gap-2 transition cursor-pointer self-start md:self-auto shrink-0"
-              title="Inspect the 27 Behavioral Science Foundations"
-            >
-              <Compass className="w-3.5 h-3.5 text-amber-400" />
-              <span>Behavioral Science Iceberg</span>
-            </button>
+            {isFounderMode && (
+              <button
+                onClick={onOpenIcebergModal}
+                className="px-3.5 py-2 rounded-xl bg-slate-950 hover:bg-slate-800 border border-slate-700 text-xs font-mono text-slate-300 hover:text-white flex items-center gap-2 transition cursor-pointer self-start md:self-auto shrink-0"
+                title="Inspect the 27 Behavioral Science Foundations"
+              >
+                <Compass className="w-3.5 h-3.5 text-amber-400" />
+                <span>Behavioral Science Iceberg</span>
+              </button>
+            )}
           </div>
 
           {/* Stakeholder Selector Tabs */}
@@ -146,12 +150,12 @@ export const B2BBehavioralSystem: React.FC<B2BBehavioralSystemProps> = ({
                   </p>
                 </div>
 
-                {/* Unspoken Anxiety vs Institutional Mitigation */}
+                {/* Operational Concern vs Safeguard */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-2">
                   <div className="p-4 rounded-xl bg-rose-500/5 border border-rose-500/20 space-y-1.5">
                     <div className="flex items-center gap-1.5 text-xs font-mono font-bold text-rose-400">
                       <AlertTriangle className="w-3.5 h-3.5" />
-                      <span>Unspoken Anxiety</span>
+                      <span>Typical Operational Concern</span>
                     </div>
                     <p className="text-xs text-slate-300 leading-relaxed font-sans">
                       {activeStakeholder.unspokenAnxiety}
@@ -161,7 +165,7 @@ export const B2BBehavioralSystem: React.FC<B2BBehavioralSystemProps> = ({
                   <div className="p-4 rounded-xl bg-emerald-500/5 border border-emerald-500/20 space-y-1.5">
                     <div className="flex items-center gap-1.5 text-xs font-mono font-bold text-emerald-400">
                       <ShieldAlert className="w-3.5 h-3.5" />
-                      <span>Institutional Guarantee</span>
+                      <span>Operationalyst Safeguard</span>
                     </div>
                     <p className="text-xs text-slate-300 leading-relaxed font-sans">
                       {activeStakeholder.riskMitigation}
@@ -198,7 +202,7 @@ export const B2BBehavioralSystem: React.FC<B2BBehavioralSystemProps> = ({
                     <ArrowRight className="w-3.5 h-3.5" />
                   </button>
                   <p className="text-[10px] text-slate-500 text-center font-mono">
-                    Zero software installation · 100% offline spreadsheet compatibility
+                    Zero software installation · Works from existing Excel / ERP exports
                   </p>
                 </div>
               </div>
@@ -208,21 +212,21 @@ export const B2BBehavioralSystem: React.FC<B2BBehavioralSystemProps> = ({
       </section>
 
       {/* ===================================================================== */}
-      {/* 2. OBJECTION ENGINEERING MATRIX (Psychology #23 & #9)                 */}
+      {/* 2. STRAIGHT ANSWERS FOR PLANT LEADERSHIP                              */}
       {/* ===================================================================== */}
       <section className="py-12 px-4 sm:px-6 bg-slate-950 border border-slate-850 rounded-3xl shadow-xl">
         <div className="max-w-5xl mx-auto space-y-8">
           <div className="text-center space-y-3">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-900 border border-slate-800 text-amber-400 text-xs font-mono font-bold tracking-wider uppercase">
               <ShieldAlert className="w-3.5 h-3.5" />
-              <span>OBJECTION ENGINEERING MATRIX</span>
+              <span>STRAIGHT ANSWERS FOR PLANT LEADERSHIP</span>
             </div>
             <h2 className="text-2xl sm:text-3xl font-black text-white">
-              Every Hard Question Answered With Direct Proof
+              Practical Questions Manufacturing Teams Ask Before Sharing Data
             </h2>
             <p className="text-sm text-slate-300 max-w-2xl mx-auto leading-relaxed">
-              We do not avoid skeptical questions from manufacturing leaders. Here are the 6 most common
-              concerns, the underlying operational reality, and our risk reversal guarantees:
+              Skeptical questions are healthy in plant operations. Select any concern below to inspect how
+              the audit handles your ERP setup, data confidentiality, and engineering judgement:
             </p>
           </div>
 
@@ -261,7 +265,7 @@ export const B2BBehavioralSystem: React.FC<B2BBehavioralSystemProps> = ({
                 <div className="md:col-span-2 p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-5">
                   <div className="space-y-1.5 border-b border-slate-800 pb-3">
                     <span className="text-[10px] font-mono text-amber-400 uppercase font-bold tracking-wider">
-                      Addressing Objection:
+                      Common Question:
                     </span>
                     <h3 className="text-base sm:text-lg font-black text-white">
                       {selectedObjection.objection}
@@ -271,7 +275,7 @@ export const B2BBehavioralSystem: React.FC<B2BBehavioralSystemProps> = ({
                   <div className="space-y-4">
                     <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-1">
                       <div className="text-[11px] font-mono text-slate-400 uppercase font-bold">
-                        Underlying Organizational Anxiety:
+                        Why Teams Ask This:
                       </div>
                       <p className="text-xs text-slate-300 font-sans leading-relaxed">
                         {selectedObjection.underlyingAnxiety}
@@ -281,7 +285,7 @@ export const B2BBehavioralSystem: React.FC<B2BBehavioralSystemProps> = ({
                     <div className="p-3.5 rounded-xl bg-slate-950 border border-emerald-500/30 space-y-1">
                       <div className="text-[11px] font-mono text-emerald-400 uppercase font-bold flex items-center gap-1.5">
                         <CheckCircle2 className="w-3.5 h-3.5" />
-                        <span>Evidence &amp; Mechanism:</span>
+                        <span>How Operationalyst Works:</span>
                       </div>
                       <p className="text-xs text-slate-200 font-sans leading-relaxed">
                         {selectedObjection.evidenceAndMechanism}
@@ -291,7 +295,7 @@ export const B2BBehavioralSystem: React.FC<B2BBehavioralSystemProps> = ({
                     <div className="p-3.5 rounded-xl bg-slate-950 border border-cyan-500/30 space-y-1">
                       <div className="text-[11px] font-mono text-cyan-400 uppercase font-bold flex items-center gap-1.5">
                         <Lock className="w-3.5 h-3.5" />
-                        <span>Institutional Safeguard &amp; Guarantee:</span>
+                        <span>Operational Safeguard:</span>
                       </div>
                       <p className="text-xs text-slate-200 font-sans leading-relaxed">
                         {selectedObjection.institutionalGuarantee}
@@ -318,20 +322,20 @@ export const B2BBehavioralSystem: React.FC<B2BBehavioralSystemProps> = ({
       </section>
 
       {/* ===================================================================== */}
-      {/* 3. CUSTOMER ANXIETY MAPPING ACROSS THE FUNNEL (Psychology #24)        */}
+      {/* 3. ZERO-SURPRISE PILOT AUDIT WORKFLOW                                 */}
       {/* ===================================================================== */}
       <section className="py-12 px-4 sm:px-6 bg-slate-900/40 border border-slate-850 rounded-3xl">
         <div className="max-w-5xl mx-auto space-y-8">
           <div className="text-center space-y-3">
             <span className="text-xs font-mono font-bold text-emerald-400 uppercase tracking-widest">
-              PSYCHOLOGICAL SAFETY ARCHITECTURE
+              CLEAR 5-STEP ENGAGEMENT WORKFLOW
             </span>
             <h2 className="text-2xl sm:text-3xl font-black text-white">
-              Customer Anxiety Mapping Across the 5 Touchpoints
+              What Happens at Every Stage — With Zero Surprises
             </h2>
             <p className="text-sm text-slate-300 max-w-2xl mx-auto leading-relaxed">
-              Every stage of your interaction with Operationalyst has been engineered to eliminate ambiguity
-              and ensure psychological safety for your operational team.
+              Every stage of a Pilot Factory Audit has clear boundaries so your operations, stores, and
+              finance teams stay in full control of scope and data.
             </p>
           </div>
 

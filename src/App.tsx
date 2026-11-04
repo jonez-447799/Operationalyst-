@@ -64,10 +64,61 @@ const STORAGE_KEY_VERSION_MODE = 'industrial_architecture_version_mode_v6';
 const STORAGE_KEY_CLIENTS = 'suite_client_workspaces_v1';
 const STORAGE_KEY_ACTIVE_CLIENT = 'suite_active_client_id_v1';
 
-function parseRequestedArchitecture(): ArchitectureVersion | null {
+function isFounderRouteActive(): boolean {
   try {
+    const pathname = window.location.pathname.toLowerCase();
     const searchParams = new URLSearchParams(window.location.search);
+    return (
+      pathname === '/founder' ||
+      pathname.startsWith('/founder/') ||
+      searchParams.get('founder') === '1' ||
+      searchParams.get('founder') === 'true'
+    );
+  } catch {
+    return false;
+  }
+}
+
+function getCanonicalPathForMode(mode: ArchitectureVersion): string {
+  switch (mode) {
+    case 'commercial_home':
+      return '/';
+    case 'factory_audit':
+      return '/audit';
+    case 'ad_funnel':
+      return '/?funnel=1';
+    case 'ceo_master':
+      return '/platform';
+    case 'standalone_p1':
+      return '/platform/dead-stock';
+    case 'standalone_p2':
+      return '/platform/dispatch';
+    case 'standalone_p3':
+      return '/platform/margin';
+    case 'standalone_p4':
+      return '/platform/accuracy';
+    case 'standalone_p5':
+      return '/platform/ceo';
+    case 'custom_combos':
+      return '/platform/bundles';
+    case 'merged_suite':
+      return '/platform/tower';
+    default:
+      return '/';
+  }
+}
+
+function parseRequestedArchitecture(): ArchitectureVersion {
+  try {
+    const pathname = window.location.pathname.toLowerCase().replace(/\/+$/, '') || '/';
+    const searchParams = new URLSearchParams(window.location.search);
+    const hashRaw = (window.location.hash.startsWith('#')
+      ? window.location.hash.slice(1)
+      : window.location.hash
+    ).toLowerCase();
+
     const explicitParam = (
+      searchParams.get('module') ||
       searchParams.get('project') ||
       searchParams.get('p') ||
       searchParams.get('engine') ||
@@ -75,51 +126,81 @@ function parseRequestedArchitecture(): ArchitectureVersion | null {
       searchParams.get('page')
     )?.toLowerCase();
 
-    // Check for /platform in pathname or explicit platform query parameter
-    if (window.location.pathname.toLowerCase().includes('/platform')) {
-      return 'ceo_master';
+    if (searchParams.get('funnel') === '1') {
+      return 'ad_funnel';
     }
 
-    if (explicitParam) {
-      if (explicitParam === 'home' || explicitParam === 'landing' || explicitParam === 'commercial' || explicitParam === 'commercial_home') {
+    // 1. Clean Path Routing (/platform, /platform/*, /audit, /founder, /)
+    if (pathname === '/audit') {
+      return 'factory_audit';
+    }
+    if (pathname === '/platform/dead-stock' || pathname === '/platform/p1') {
+      return 'standalone_p1';
+    }
+    if (pathname === '/platform/dispatch' || pathname === '/platform/p2') {
+      return 'standalone_p2';
+    }
+    if (pathname === '/platform/margin' || pathname === '/platform/p3') {
+      return 'standalone_p3';
+    }
+    if (pathname === '/platform/accuracy' || pathname === '/platform/p4') {
+      return 'standalone_p4';
+    }
+    if (pathname === '/platform/ceo' || pathname === '/platform/p5') {
+      return 'standalone_p5';
+    }
+    if (pathname === '/platform/bundles') {
+      return 'custom_combos';
+    }
+    if (pathname === '/platform/tower') {
+      return 'merged_suite';
+    }
+
+    // Check explicit query or /platform#hash deep links
+    const token = explicitParam || (pathname.startsWith('/platform') ? hashRaw : '');
+    if (token) {
+      if (token === 'home' || token === 'landing' || token === 'commercial' || token === 'commercial_home') {
         return 'commercial_home';
       }
-      if (explicitParam === 'platform' || explicitParam === 'app' || explicitParam === 'dashboard') {
+      if (token === 'platform' || token === 'app' || token === 'dashboard' || token === 'ceo' || token === 'master' || token === 'ceo_master') {
         return 'ceo_master';
       }
-      if (explicitParam === 'audit' || explicitParam === 'factory_audit' || explicitParam === 'free_audit') {
+      if (token === 'audit' || token === 'factory_audit' || token === 'free_audit') {
         return 'factory_audit';
       }
-      if (explicitParam === 'funnel' || explicitParam === 'ad_funnel') {
+      if (token === 'funnel' || token === 'ad_funnel') {
         return 'ad_funnel';
       }
-      if (explicitParam === 'p1' || explicitParam === 'cash' || explicitParam === 'inventory' || explicitParam === 'standalone_p1') {
+      if (token === 'p1' || token === 'cash' || token === 'dead-stock' || token === 'deadstock' || token === 'inventory' || token === 'standalone_p1') {
         return 'standalone_p1';
       }
-      if (explicitParam === 'p2' || explicitParam === 'otif' || explicitParam === 'dispatch' || explicitParam === 'standalone_p2') {
+      if (token === 'p2' || token === 'otif' || token === 'dispatch' || token === 'standalone_p2') {
         return 'standalone_p2';
       }
-      if (explicitParam === 'p3' || explicitParam === 'freight' || explicitParam === 'profit' || explicitParam === 'standalone_p3') {
+      if (token === 'p3' || token === 'freight' || token === 'margin' || token === 'profit' || token === 'standalone_p3') {
         return 'standalone_p3';
       }
-      if (explicitParam === 'p4' || explicitParam === 'binaudit' || explicitParam === 'warehouse' || explicitParam === 'standalone_p4') {
+      if (token === 'p4' || token === 'binaudit' || token === 'accuracy' || token === 'warehouse' || token === 'standalone_p4') {
         return 'standalone_p4';
       }
-      if (explicitParam === 'p5' || explicitParam === 'tower' || explicitParam === 'controltower' || explicitParam === 'standalone_p5') {
+      if (token === 'p5' || token === 'tower' || token === 'ceo-briefing' || token === 'controltower' || token === 'standalone_p5') {
         return 'standalone_p5';
       }
-      if (explicitParam === 'ceo' || explicitParam === 'master' || explicitParam === 'ceo_master') {
-        return 'ceo_master';
-      }
-      if (explicitParam === 'suite' || explicitParam === 'merged' || explicitParam === 'merged_suite') {
+      if (token === 'suite' || token === 'merged' || token === 'control-tower' || token === 'merged_suite') {
         return 'merged_suite';
       }
-      if (explicitParam === 'combos' || explicitParam === 'custom_combos') {
+      if (token === 'combos' || token === 'bundles' || token === 'custom_combos') {
         return 'custom_combos';
       }
     }
+
+    if (pathname.startsWith('/platform')) {
+      return 'ceo_master';
+    }
   } catch {}
-  return null;
+
+  // Root URL (/) and /founder ALWAYS open the Commercial Landing Page
+  return 'commercial_home';
 }
 
 export default function App() {
@@ -134,16 +215,27 @@ export default function App() {
     allPeriods,
   } = usePlant();
 
-  const [versionMode, setVersionMode] = useState<ArchitectureVersion>(() => {
-    const fromUrl = parseRequestedArchitecture();
-    if (fromUrl) return fromUrl;
-    // Default to Commercial Landing Page for first-time visitors
-    return 'commercial_home';
-  });
+  const [versionMode, setVersionMode] = useState<ArchitectureVersion>(() => parseRequestedArchitecture());
+  const [founderMode, setFounderMode] = useState<boolean>(() => isFounderRouteActive());
 
-  // Commercial Rebranding Mode (P1-P5 Codes vs Manufacturing Control Tower Commercial Names)
+  // Navigate cleanly and keep browser URL (/ vs /platform/* vs /audit) synchronized
+  const navigateMode = (nextMode: ArchitectureVersion, options?: { clearFounder?: boolean }) => {
+    setVersionMode(nextMode);
+    if (options?.clearFounder) {
+      setFounderMode(false);
+    }
+    try {
+      const targetPath = getCanonicalPathForMode(nextMode);
+      const currentFull = window.location.pathname + window.location.search;
+      if (currentFull !== targetPath) {
+        window.history.pushState({ mode: nextMode }, '', targetPath);
+      }
+    } catch {}
+  };
+
+  // Outcome-First Commercial Naming ON by default inside /platform
   const [useCommercialNames, setUseCommercialNames] = useState<boolean>(() => {
-    return localStorage.getItem('suite_commercial_names_v1') === 'true';
+    return localStorage.getItem('suite_commercial_names_v1') !== 'false';
   });
 
   // Client Presentation Lock (Hides top multi-project switcher bar during live client screen-share)
@@ -226,10 +318,8 @@ export default function App() {
     };
     hydrateFromUrl();
     const handleUrlNavigation = () => {
-      const requested = parseRequestedArchitecture();
-      if (requested) {
-        setVersionMode(requested);
-      }
+      setFounderMode(isFounderRouteActive());
+      setVersionMode(parseRequestedArchitecture());
     };
     window.addEventListener('hashchange', hydrateFromUrl);
     window.addEventListener('hashchange', handleUrlNavigation);
@@ -334,13 +424,17 @@ export default function App() {
       <div className="min-h-screen bg-slate-950 text-slate-100 selection:bg-amber-500/20 selection:text-amber-200">
         <CommercialLandingPage
           onLaunchEngine={(eng) => {
-            setVersionMode(eng);
+            navigateMode(eng);
             window.scrollTo({ top: 0, behavior: 'smooth' });
           }}
           onOpenSmartMapper={() => openMapperForEngine()}
           onOpenAuditPage={() => {
-            setVersionMode('factory_audit');
+            navigateMode('factory_audit');
             window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
+          isFounderMode={founderMode}
+          onExitFounderMode={() => {
+            navigateMode('commercial_home', { clearFounder: true });
           }}
         />
 
@@ -362,11 +456,11 @@ export default function App() {
       <div className="min-h-screen bg-slate-950 text-slate-100 selection:bg-emerald-500/20 selection:text-emerald-300">
         <FactoryAuditPage
           onBackToHome={() => {
-            setVersionMode('commercial_home');
+            navigateMode('commercial_home');
             window.scrollTo({ top: 0, behavior: 'smooth' });
           }}
           onLaunchLiveDemo={(eng) => {
-            setVersionMode((eng as any) || 'ceo_master');
+            navigateMode((eng as ArchitectureVersion) || 'ceo_master');
             window.scrollTo({ top: 0, behavior: 'smooth' });
           }}
           onOpenSmartMapper={() => openMapperForEngine()}
@@ -390,20 +484,24 @@ export default function App() {
       <div className="min-h-screen bg-slate-950 text-slate-100">
         <CommercialLandingPage
           onLaunchEngine={(eng) => {
-            setVersionMode(eng);
+            navigateMode(eng);
             window.scrollTo({ top: 0, behavior: 'smooth' });
           }}
           onOpenSmartMapper={() => openMapperForEngine()}
           onOpenAuditPage={() => {
-            setVersionMode('factory_audit');
+            navigateMode('factory_audit');
             window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
+          isFounderMode={founderMode}
+          onExitFounderMode={() => {
+            navigateMode('commercial_home', { clearFounder: true });
           }}
         />
         <AdToDemoFunnelModal
           isOpen={true}
-          onClose={() => setVersionMode('commercial_home')}
-          onOpenAuditPage={() => setVersionMode('factory_audit')}
-          onLaunchLiveDemo={(eng) => setVersionMode((eng as any) || 'ceo_master')}
+          onClose={() => navigateMode('commercial_home')}
+          onOpenAuditPage={() => navigateMode('factory_audit')}
+          onLaunchLiveDemo={(eng) => navigateMode((eng as ArchitectureVersion) || 'ceo_master')}
         />
       </div>
     );
@@ -420,31 +518,31 @@ export default function App() {
               <Gauge className="w-4 h-4 text-emerald-400 shrink-0" />
               <span className="text-xs font-black text-white truncate">
                 {versionMode === 'ceo_master'
-                  ? 'CEO Command Center'
+                  ? useCommercialNames ? 'Executive Overview' : 'CEO Command Center'
                   : versionMode === 'standalone_p1'
-                  ? 'P1 Cash Recovery'
+                  ? useCommercialNames ? 'Dead Stock Recovery' : 'P1 Cash Recovery'
                   : versionMode === 'standalone_p2'
-                  ? 'P2 Promise OTIF'
+                  ? useCommercialNames ? 'Dispatch Performance' : 'P2 Promise OTIF'
                   : versionMode === 'standalone_p3'
-                  ? 'P3 Profit Protection'
+                  ? useCommercialNames ? 'Margin Protection' : 'P3 Profit Protection'
                   : versionMode === 'standalone_p4'
-                  ? 'P4 Warehouse Bins'
+                  ? useCommercialNames ? 'Warehouse Accuracy' : 'P4 Warehouse Bins'
                   : versionMode === 'standalone_p5'
-                  ? 'P5 CEO Briefing'
+                  ? useCommercialNames ? 'CEO Dashboard' : 'P5 CEO Briefing'
                   : versionMode === 'custom_combos'
                   ? 'Modular Bundles'
-                  : '5-Engine Suite'}
+                  : 'Operations Control Tower'}
               </span>
             </div>
 
             <div className="flex items-center gap-1.5 shrink-0">
               <button
                 onClick={() => {
-                  setVersionMode('commercial_home');
+                  navigateMode('commercial_home');
                   window.scrollTo({ top: 0, behavior: 'smooth' });
                 }}
                 className="px-2 py-1.5 rounded-md bg-amber-500/15 text-amber-300 border border-amber-500/30 font-bold text-[11px] flex items-center gap-1 cursor-pointer"
-                title="Commercial Overview"
+                title="Return to Operationalyst Homepage (/)"
               >
                 <Home className="w-3.5 h-3.5" />
                 <span>Home</span>
@@ -513,29 +611,29 @@ export default function App() {
               <div className="grid grid-cols-2 gap-1.5 pt-0.5">
                 <button
                   onClick={() => {
-                    setVersionMode('commercial_home');
+                    navigateMode('commercial_home');
                     setShowMobileMenu(false);
                     window.scrollTo({ top: 0, behavior: 'smooth' });
                   }}
                   className="min-h-[44px] py-2 px-2.5 rounded-lg border font-bold text-[11px] flex items-center justify-center gap-1.5 cursor-pointer touch-manipulation active:scale-[0.98] bg-amber-500/15 border-amber-500/40 text-amber-300 col-span-2"
                 >
                   <Home className="w-3.5 h-3.5 text-amber-400" />
-                  <span>Overview &amp; Solution</span>
+                  <span>← Back to Homepage (/)</span>
                 </button>
                 <button
                   onClick={() => {
-                    setVersionMode('factory_audit');
+                    navigateMode('factory_audit');
                     setShowMobileMenu(false);
                     window.scrollTo({ top: 0, behavior: 'smooth' });
                   }}
                   className="min-h-[44px] py-2 px-2.5 rounded-lg border font-bold text-[11px] flex items-center justify-center gap-1.5 cursor-pointer touch-manipulation active:scale-[0.98] bg-emerald-500/20 border-emerald-500/50 text-emerald-300 col-span-2"
                 >
                   <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
-                  <span>Free Factory Audit (Ad Landing)</span>
+                  <span>Pilot Factory Audit (/audit)</span>
                 </button>
                 <button
                   onClick={() => {
-                    setVersionMode('ceo_master');
+                    navigateMode('ceo_master');
                     setShowMobileMenu(false);
                   }}
                   className={`min-h-[44px] py-2 px-2.5 rounded-lg border font-bold text-[11px] flex items-center justify-center gap-1.5 cursor-pointer touch-manipulation active:scale-[0.98] ${
@@ -545,11 +643,11 @@ export default function App() {
                   }`}
                 >
                   <Gauge className="w-3.5 h-3.5 text-emerald-400" />
-                  <span>CEO Master</span>
+                  <span>{useCommercialNames ? 'Overview' : 'CEO Master'}</span>
                 </button>
                 <button
                   onClick={() => {
-                    setVersionMode('standalone_p1');
+                    navigateMode('standalone_p1');
                     setShowMobileMenu(false);
                   }}
                   className={`min-h-[44px] py-2 px-2.5 rounded-lg border font-bold text-[11px] flex items-center justify-center gap-1.5 cursor-pointer touch-manipulation active:scale-[0.98] ${
@@ -559,11 +657,11 @@ export default function App() {
                   }`}
                 >
                   <Package className="w-3.5 h-3.5 text-emerald-400" />
-                  <span>P1 Cash</span>
+                  <span>{useCommercialNames ? 'Dead Stock' : 'P1 Cash'}</span>
                 </button>
                 <button
                   onClick={() => {
-                    setVersionMode('standalone_p2');
+                    navigateMode('standalone_p2');
                     setShowMobileMenu(false);
                   }}
                   className={`min-h-[44px] py-2 px-2.5 rounded-lg border font-bold text-[11px] flex items-center justify-center gap-1.5 cursor-pointer touch-manipulation active:scale-[0.98] ${
@@ -573,11 +671,11 @@ export default function App() {
                   }`}
                 >
                   <Truck className="w-3.5 h-3.5 text-amber-400" />
-                  <span>P2 OTIF</span>
+                  <span>{useCommercialNames ? 'Dispatch' : 'P2 OTIF'}</span>
                 </button>
                 <button
                   onClick={() => {
-                    setVersionMode('standalone_p3');
+                    navigateMode('standalone_p3');
                     setShowMobileMenu(false);
                   }}
                   className={`min-h-[44px] py-2 px-2.5 rounded-lg border font-bold text-[11px] flex items-center justify-center gap-1.5 cursor-pointer touch-manipulation active:scale-[0.98] ${
@@ -587,11 +685,11 @@ export default function App() {
                   }`}
                 >
                   <Scale className="w-3.5 h-3.5 text-cyan-400" />
-                  <span>P3 Freight</span>
+                  <span>{useCommercialNames ? 'Margin' : 'P3 Freight'}</span>
                 </button>
                 <button
                   onClick={() => {
-                    setVersionMode('standalone_p4');
+                    navigateMode('standalone_p4');
                     setShowMobileMenu(false);
                   }}
                   className={`min-h-[44px] py-2 px-2.5 rounded-lg border font-bold text-[11px] flex items-center justify-center gap-1.5 cursor-pointer touch-manipulation active:scale-[0.98] ${
@@ -601,11 +699,11 @@ export default function App() {
                   }`}
                 >
                   <ScanBarcode className="w-3.5 h-3.5 text-fuchsia-400" />
-                  <span>P4 Warehouse</span>
+                  <span>{useCommercialNames ? 'Accuracy' : 'P4 Warehouse'}</span>
                 </button>
                 <button
                   onClick={() => {
-                    setVersionMode('standalone_p5');
+                    navigateMode('standalone_p5');
                     setShowMobileMenu(false);
                   }}
                   className={`min-h-[44px] py-2 px-2.5 rounded-lg border font-bold text-[11px] flex items-center justify-center gap-1.5 cursor-pointer touch-manipulation active:scale-[0.98] ${
@@ -615,7 +713,7 @@ export default function App() {
                   }`}
                 >
                   <Radio className="w-3.5 h-3.5 text-rose-400" />
-                  <span>P5 Briefing</span>
+                  <span>{useCommercialNames ? 'CEO Brief' : 'P5 Briefing'}</span>
                 </button>
               </div>
 
@@ -623,7 +721,7 @@ export default function App() {
               <div className="grid grid-cols-2 gap-1.5 pt-0.5">
                 <button
                   onClick={() => {
-                    setVersionMode('custom_combos');
+                    navigateMode('custom_combos');
                     setShowMobileMenu(false);
                   }}
                   className="min-h-[44px] py-2 px-2.5 rounded-lg bg-slate-900 border border-amber-500/30 text-amber-300 font-bold text-[11px] flex items-center justify-center gap-1 cursor-pointer touch-manipulation active:scale-[0.98]"
@@ -633,13 +731,13 @@ export default function App() {
                 </button>
                 <button
                   onClick={() => {
-                    setVersionMode('merged_suite');
+                    navigateMode('merged_suite');
                     setShowMobileMenu(false);
                   }}
                   className="min-h-[44px] py-2 px-2.5 rounded-lg bg-slate-900 border border-indigo-500/30 text-indigo-300 font-bold text-[11px] flex items-center justify-center gap-1 cursor-pointer touch-manipulation active:scale-[0.98]"
                 >
                   <Layers className="w-3.5 h-3.5" />
-                  <span>Full 5-Engine Suite</span>
+                  <span>Control Tower</span>
                 </button>
                 <button
                   onClick={() => setUseCommercialNames((prev) => !prev)}
@@ -666,140 +764,130 @@ export default function App() {
             <div className="flex flex-wrap items-center gap-1 bg-slate-900 p-1 rounded-lg border border-slate-800">
               <button
                 onClick={() => {
-                  setVersionMode('commercial_home');
+                  navigateMode('commercial_home');
                   window.scrollTo({ top: 0, behavior: 'smooth' });
                 }}
-                className={`px-2.5 py-1 rounded-md font-semibold transition cursor-pointer flex items-center gap-1.5 text-[11px] ${
-                  (versionMode as string) === 'commercial_home'
-                    ? 'bg-amber-500 text-slate-950 font-black shadow-sm'
-                    : 'text-amber-300 hover:text-white hover:bg-slate-800 border border-amber-500/40 bg-amber-500/10'
-                }`}
-                title="Return to Operationalyst Commercial Landing Page & Solution Overview"
+                className="px-2.5 py-1 rounded-md font-semibold transition cursor-pointer flex items-center gap-1.5 text-[11px] text-amber-300 hover:text-white hover:bg-slate-800 border border-amber-500/40 bg-amber-500/10"
+                title="Return to Operationalyst Commercial Homepage (/)"
               >
                 <Home className="w-3.5 h-3.5" />
-                <span>Overview</span>
+                <span>← Homepage</span>
               </button>
 
               <button
                 onClick={() => {
-                  setVersionMode('factory_audit');
+                  navigateMode('factory_audit');
                   window.scrollTo({ top: 0, behavior: 'smooth' });
                 }}
-                className={`px-2.5 py-1 rounded-md font-semibold transition cursor-pointer flex items-center gap-1.5 text-[11px] ${
-                  (versionMode as string) === 'factory_audit'
-                    ? 'bg-emerald-500 text-slate-950 font-black shadow-sm'
-                    : 'text-emerald-300 hover:text-white hover:bg-slate-800 border border-emerald-500/40 bg-emerald-500/10'
-                }`}
-                title="Free Executive-Level Factory Audit (Ad Landing Page)"
+                className="px-2.5 py-1 rounded-md font-semibold transition cursor-pointer flex items-center gap-1.5 text-[11px] text-emerald-300 hover:text-white hover:bg-slate-800 border border-emerald-500/40 bg-emerald-500/10"
+                title="Open Pilot Factory Audit Page (/audit)"
               >
                 <Sparkles className="w-3.5 h-3.5" />
-                <span>Free Audit</span>
+                <span>Pilot Audit</span>
               </button>
 
               <button
-                onClick={() => {
-                  setVersionMode('ceo_master');
-                }}
+                onClick={() => navigateMode('ceo_master')}
                 className={`px-2.5 py-1 rounded-md font-semibold transition cursor-pointer flex items-center gap-1.5 text-[11px] ${
                   versionMode === 'ceo_master'
                     ? 'bg-gradient-to-r from-emerald-500 to-cyan-500 text-slate-950 shadow-sm font-black'
                     : 'text-emerald-300 hover:text-white hover:bg-slate-800 border border-emerald-500/30'
                 }`}
-                title="2-Minute CEO Master Executive Dashboard (Factory Health Score) + PM Backlog (P0-P3) & 3-Phase Roadmap"
+                title="Executive Overview & Factory Health Score (/platform)"
               >
                 <Gauge className="w-3.5 h-3.5" />
-                <span>{useCommercialNames ? 'Factory Health & Roadmap' : 'CEO Master'}</span>
+                <span>{useCommercialNames ? 'Executive Overview' : 'CEO Master'}</span>
               </button>
 
               <button
-                onClick={() => setVersionMode('standalone_p1')}
+                onClick={() => navigateMode('standalone_p1')}
                 className={`px-2.5 py-1 rounded-md font-semibold transition cursor-pointer flex items-center gap-1.5 text-[11px] ${
                   versionMode === 'standalone_p1'
                     ? 'bg-amber-500 text-slate-950 shadow-sm font-bold'
                     : 'text-slate-400 hover:text-white hover:bg-slate-800'
                 }`}
-                title="Dead Stock Recovery (Recovers Cash Locked in Dead Inventory Only)"
+                title="Dead Stock Recovery (/platform/dead-stock)"
               >
                 <Package className="w-3.5 h-3.5" />
                 <span>{useCommercialNames ? 'Dead Stock Recovery' : 'P1 (Dead Stock)'}</span>
               </button>
 
               <button
-                onClick={() => setVersionMode('standalone_p2')}
+                onClick={() => navigateMode('standalone_p2')}
                 className={`px-2.5 py-1 rounded-md font-semibold transition cursor-pointer flex items-center gap-1.5 text-[11px] ${
                   versionMode === 'standalone_p2'
                     ? 'bg-emerald-500 text-slate-950 shadow-sm font-bold'
                     : 'text-slate-400 hover:text-white hover:bg-slate-800'
                 }`}
-                title="Dispatch Performance & Delivery Protection (Protects Customer Service & Revenue via Strict OTIF)"
+                title="Dispatch Performance & Delivery Protection (/platform/dispatch)"
               >
                 <Truck className="w-3.5 h-3.5" />
                 <span>{useCommercialNames ? 'Dispatch Performance' : 'P2 (Promise OTIF)'}</span>
               </button>
 
               <button
-                onClick={() => setVersionMode('standalone_p3')}
+                onClick={() => navigateMode('standalone_p3')}
                 className={`px-2.5 py-1 rounded-md font-semibold transition cursor-pointer flex items-center gap-1.5 text-[11px] ${
                   versionMode === 'standalone_p3'
                     ? 'bg-cyan-500 text-slate-950 shadow-sm font-bold'
                     : 'text-slate-400 hover:text-white hover:bg-slate-800'
                 }`}
-                title="Margin Protection & Freight Audit (Protects Profit Margin from Freight Leaks)"
+                title="Margin Protection & Freight Audit (/platform/margin)"
               >
                 <Scale className="w-3.5 h-3.5" />
                 <span>{useCommercialNames ? 'Margin Protection' : 'P3 (Profit Protection)'}</span>
               </button>
 
               <button
-                onClick={() => setVersionMode('standalone_p4')}
+                onClick={() => navigateMode('standalone_p4')}
                 className={`px-2.5 py-1 rounded-md font-semibold transition cursor-pointer flex items-center gap-1.5 text-[11px] ${
                   versionMode === 'standalone_p4'
                     ? 'bg-fuchsia-500 text-slate-950 shadow-sm font-bold'
                     : 'text-slate-400 hover:text-white hover:bg-slate-800'
                 }`}
-                title="Warehouse Accuracy & Trust (Protects Inventory Integrity & Bin Accuracy)"
+                title="Warehouse Accuracy & Bin Integrity (/platform/accuracy)"
               >
                 <ScanBarcode className="w-3.5 h-3.5" />
                 <span>{useCommercialNames ? 'Warehouse Accuracy' : 'P4 (Warehouse Trust)'}</span>
               </button>
 
               <button
-                onClick={() => setVersionMode('standalone_p5')}
+                onClick={() => navigateMode('standalone_p5')}
                 className={`px-2.5 py-1 rounded-md font-semibold transition cursor-pointer flex items-center gap-1.5 text-[11px] ${
                   versionMode === 'standalone_p5'
                     ? 'bg-rose-500 text-white shadow-sm font-bold'
                     : 'text-slate-400 hover:text-white hover:bg-slate-800'
                 }`}
-                title="CEO Dashboard & Monday Briefing (Executive Operations Control Tower)"
+                title="CEO Dashboard & Weekly Briefing (/platform/ceo)"
               >
                 <Radio className="w-3.5 h-3.5" />
                 <span>{useCommercialNames ? 'CEO Dashboard' : 'P5 (CEO Briefing)'}</span>
               </button>
 
               <button
-                onClick={() => setVersionMode('custom_combos')}
+                onClick={() => navigateMode('custom_combos')}
                 className={`px-2.5 py-1 rounded-md font-semibold transition cursor-pointer flex items-center gap-1.5 text-[11px] ${
                   versionMode === 'custom_combos'
                     ? 'bg-gradient-to-r from-amber-500 to-indigo-600 text-white shadow-sm font-bold border border-amber-400/50'
                     : 'text-amber-300 hover:text-white hover:bg-slate-800 border border-amber-500/20'
                 }`}
-                title="Explore Custom Order Combinations: P1+P4, P1+P3+P5, P2+P3, P2+P4, or build your own sequence"
+                title="Modular Control Bundles (/platform/bundles)"
               >
                 <Sparkles className="w-3.5 h-3.5" />
-                <span>{useCommercialNames ? 'Modular Control Bundles' : 'Custom Combos'}</span>
+                <span>{useCommercialNames ? 'Modular Bundles' : 'Custom Combos'}</span>
               </button>
 
               <button
-                onClick={() => setVersionMode('merged_suite')}
+                onClick={() => navigateMode('merged_suite')}
                 className={`px-2.5 py-1 rounded-md font-semibold transition cursor-pointer flex items-center gap-1.5 text-[11px] ${
                   versionMode === 'merged_suite'
                     ? 'bg-indigo-600 text-white shadow-sm font-bold border border-indigo-400/40'
                     : 'text-slate-400 hover:text-white hover:bg-slate-800'
                 }`}
-                title="Run Unified Manufacturing Intelligence Suite (P1 + P2 + P3 + P4 + P5)"
+                title="Unified Operations Control Tower (/platform/tower)"
               >
                 <Layers className="w-3.5 h-3.5" />
-                <span>{useCommercialNames ? 'Operations Control Tower' : 'P1+P2+P3+P4+P5'}</span>
+                <span>{useCommercialNames ? 'Control Tower' : 'P1+P2+P3+P4+P5'}</span>
               </button>
             </div>
 
@@ -812,7 +900,7 @@ export default function App() {
                   value={activePlantId}
                   onChange={(e) => setActivePlantId(e.target.value as PlantId)}
                   className="bg-transparent text-[11px] font-bold text-white focus:outline-none cursor-pointer max-w-[170px]"
-                  title="Global Multi-Plant Selector (Syncs across P1–P5)"
+                  title="Global Multi-Plant Selector (Syncs across all modules)"
                 >
                   {allPlants.map((p) => (
                     <option key={p.id} value={p.id} className="bg-slate-900 text-white">
@@ -829,7 +917,7 @@ export default function App() {
                   value={activePeriodId}
                   onChange={(e) => setActivePeriodId(e.target.value as PeriodId)}
                   className="bg-transparent text-[11px] font-bold text-cyan-200 focus:outline-none cursor-pointer max-w-[160px]"
-                  title="Global Audit Window (Syncs calendar period across P1–P5)"
+                  title="Global Audit Window (Syncs calendar period across all modules)"
                 >
                   {allPeriods.map((per) => (
                     <option key={per.id} value={per.id} className="bg-slate-900 text-cyan-200">
@@ -851,7 +939,7 @@ export default function App() {
               <button
                 onClick={() => setShowDeviceSync(true)}
                 className="px-2.5 py-1 rounded-md bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-300 border border-cyan-500/30 font-bold text-[11px] flex items-center gap-1 cursor-pointer transition"
-                title="Sync Gate Guard Tablet (P2), Storekeeper Phone (P4) & Share 1-Click Client Link"
+                title="Sync Gate Guard Tablet, Storekeeper Phone & Share 1-Click Client Link"
               >
                 <RefreshCw className="w-3 h-3" />
                 <span>Device &amp; Client Sync</span>
@@ -864,7 +952,7 @@ export default function App() {
                     ? 'bg-indigo-500/20 text-indigo-300 border-indigo-500/40'
                     : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-white'
                 }`}
-                title="Toggle between internal P1–P5 codes and Executive Control Tower Brand Names"
+                title="Toggle between Executive Outcome Names and internal P1–P5 codes"
               >
                 <Briefcase className="w-3 h-3" />
                 <span>{useCommercialNames ? 'Brand Names: ON' : 'P1–P5 Codes'}</span>
@@ -926,11 +1014,11 @@ export default function App() {
         {versionMode === 'ceo_master' && (
           <MasterExecutiveDashboard
             onNavigateEngine={(eng) => {
-              if (eng === 'p1') setVersionMode('standalone_p1');
-              if (eng === 'p2') setVersionMode('standalone_p2');
-              if (eng === 'p3') setVersionMode('standalone_p3');
-              if (eng === 'p4') setVersionMode('standalone_p4');
-              if (eng === 'p5') setVersionMode('standalone_p5');
+              if (eng === 'p1') navigateMode('standalone_p1');
+              if (eng === 'p2') navigateMode('standalone_p2');
+              if (eng === 'p3') navigateMode('standalone_p3');
+              if (eng === 'p4') navigateMode('standalone_p4');
+              if (eng === 'p5') navigateMode('standalone_p5');
             }}
           />
         )}
@@ -941,10 +1029,10 @@ export default function App() {
         {versionMode === 'standalone_p5' && (
           <Project5App
             onJumpToEngine={(engine) => {
-              if (engine === 'p1') setVersionMode('standalone_p1');
-              if (engine === 'p2') setVersionMode('standalone_p2');
-              if (engine === 'p3') setVersionMode('standalone_p3');
-              if (engine === 'p4') setVersionMode('standalone_p4');
+              if (engine === 'p1') navigateMode('standalone_p1');
+              if (engine === 'p2') navigateMode('standalone_p2');
+              if (engine === 'p3') navigateMode('standalone_p3');
+              if (engine === 'p4') navigateMode('standalone_p4');
             }}
           />
         )}
@@ -956,11 +1044,11 @@ export default function App() {
         )}
         {versionMode === 'merged_suite' && (
           <MergedCommandCenter
-            onSwitchToStandaloneP1={() => setVersionMode('standalone_p1')}
-            onSwitchToStandaloneP2={() => setVersionMode('standalone_p2')}
-            onSwitchToStandaloneP3={() => setVersionMode('standalone_p3')}
-            onSwitchToStandaloneP4={() => setVersionMode('standalone_p4')}
-            onSwitchToStandaloneP5={() => setVersionMode('standalone_p5')}
+            onSwitchToStandaloneP1={() => navigateMode('standalone_p1')}
+            onSwitchToStandaloneP2={() => navigateMode('standalone_p2')}
+            onSwitchToStandaloneP3={() => navigateMode('standalone_p3')}
+            onSwitchToStandaloneP4={() => navigateMode('standalone_p4')}
+            onSwitchToStandaloneP5={() => navigateMode('standalone_p5')}
           />
         )}
       </div>
@@ -972,12 +1060,12 @@ export default function App() {
           className="fixed bottom-0 inset-x-0 z-50 md:hidden bg-slate-950/95 backdrop-blur-md border-t border-slate-800 px-1 pt-1 pb-[max(0.35rem,env(safe-area-inset-bottom))] grid grid-cols-6 gap-0.5 no-print shadow-2xl"
         >
           {[
-            { id: 'ceo_master' as const, label: 'CEO', icon: Gauge, activeCls: 'text-emerald-400 bg-emerald-500/15' },
-            { id: 'standalone_p1' as const, label: 'P1 Cash', icon: Package, activeCls: 'text-amber-400 bg-amber-500/15' },
-            { id: 'standalone_p2' as const, label: 'P2 OTIF', icon: Truck, activeCls: 'text-emerald-400 bg-emerald-500/15' },
-            { id: 'standalone_p3' as const, label: 'P3 Frt', icon: Scale, activeCls: 'text-cyan-400 bg-cyan-500/15' },
-            { id: 'standalone_p4' as const, label: 'P4 Bins', icon: ScanBarcode, activeCls: 'text-fuchsia-400 bg-fuchsia-500/15' },
-            { id: 'standalone_p5' as const, label: 'P5 Brief', icon: Radio, activeCls: 'text-rose-400 bg-rose-500/15' },
+            { id: 'ceo_master' as const, label: useCommercialNames ? 'Overview' : 'CEO', icon: Gauge, activeCls: 'text-emerald-400 bg-emerald-500/15' },
+            { id: 'standalone_p1' as const, label: useCommercialNames ? 'Dead Stock' : 'P1 Cash', icon: Package, activeCls: 'text-amber-400 bg-amber-500/15' },
+            { id: 'standalone_p2' as const, label: useCommercialNames ? 'Dispatch' : 'P2 OTIF', icon: Truck, activeCls: 'text-emerald-400 bg-emerald-500/15' },
+            { id: 'standalone_p3' as const, label: useCommercialNames ? 'Margin' : 'P3 Frt', icon: Scale, activeCls: 'text-cyan-400 bg-cyan-500/15' },
+            { id: 'standalone_p4' as const, label: useCommercialNames ? 'Accuracy' : 'P4 Bins', icon: ScanBarcode, activeCls: 'text-fuchsia-400 bg-fuchsia-500/15' },
+            { id: 'standalone_p5' as const, label: useCommercialNames ? 'CEO' : 'P5 Brief', icon: Radio, activeCls: 'text-rose-400 bg-rose-500/15' },
           ].map((tab) => {
             const Icon = tab.icon;
             const active = versionMode === tab.id;
@@ -985,7 +1073,7 @@ export default function App() {
               <button
                 key={tab.id}
                 onClick={() => {
-                  setVersionMode(tab.id);
+                  navigateMode(tab.id);
                   setShowMobileMenu(false);
                   window.scrollTo({ top: 0, behavior: 'smooth' });
                 }}

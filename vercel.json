@@ -1,10 +1,7 @@
 {
-  "buildCommand": "vite build",
-  "outputDirectory": "dist",
-  "cleanUrls": true,
   "rewrites": [
     {
-      "source": "/(.*)",
+      "source": "/((?!assets/|icon\\.svg|manifest\\.webmanifest).*)",
       "destination": "/index.html"
     }
   ]
