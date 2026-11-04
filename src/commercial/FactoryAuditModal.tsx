@@ -17,6 +17,7 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import { trackEvent } from '../utils/analytics';
+import { submitPilotLead } from '../utils/submitPilotLead';
 
 interface FactoryAuditModalProps {
   isOpen: boolean;
@@ -48,6 +49,7 @@ export const FactoryAuditModal: React.FC<FactoryAuditModalProps> = ({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [mailtoBackupHref, setMailtoBackupHref] = useState('mailto:joneszz2004@gmail.com');
 
   if (!isOpen) return null;
 
@@ -65,43 +67,31 @@ export const FactoryAuditModal: React.FC<FactoryAuditModalProps> = ({
     return Object.keys(errs).length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validate()) return;
 
     setSubmitting(true);
     trackEvent('pilot_form_started', { company, sector, role });
 
-    // Emulate clean asynchronous validation / local storage submission placeholder
-    setTimeout(() => {
-      try {
-        const payload = {
-          name,
-          email,
-          company,
-          role,
-          sector,
-          primaryChallenge,
-          preferredContact,
-          approxSkus,
-          currentSystem,
-          additionalContext,
-          submittedAt: new Date().toISOString(),
-        };
+    const { mailtoHref } = await submitPilotLead({
+      name,
+      email,
+      company,
+      role,
+      sector,
+      primaryChallenge,
+      preferredContact,
+      approxSkus,
+      currentSystem,
+      additionalContext,
+      sourcePage: window.location.pathname || '/',
+    });
 
-        // Development placeholder: persist in localStorage for review
-        const existing = JSON.parse(localStorage.getItem('audit_pilot_requests_v1') || '[]');
-        existing.push(payload);
-        localStorage.setItem('audit_pilot_requests_v1', JSON.stringify(existing));
-
-        trackEvent('pilot_form_completed', { company, role });
-      } catch (err) {
-        // Safe fail
-      }
-
-      setSubmitting(false);
-      setSubmitted(true);
-    }, 400);
+    trackEvent('pilot_form_completed', { company, role });
+    setMailtoBackupHref(mailtoHref);
+    setSubmitting(false);
+    setSubmitted(true);
   };
 
   const handleReset = () => {
@@ -176,12 +166,19 @@ export const FactoryAuditModal: React.FC<FactoryAuditModalProps> = ({
               </ul>
             </div>
 
-            <div className="flex justify-end pt-2">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-2.5 pt-2">
+              <a
+                href={mailtoBackupHref}
+                className="w-full sm:w-auto px-4 py-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 font-bold text-xs flex items-center justify-center gap-1.5 transition"
+              >
+                <Mail className="w-3.5 h-3.5 text-emerald-400" />
+                <span>Send Direct Email Copy to Founder</span>
+              </a>
               <button
                 onClick={handleReset}
-                className="px-5 py-2.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs cursor-pointer transition shadow"
+                className="w-full sm:w-auto px-5 py-2.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs cursor-pointer transition shadow"
               >
-                Close Window
+                Done
               </button>
             </div>
           </div>

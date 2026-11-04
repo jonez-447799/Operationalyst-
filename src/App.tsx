@@ -464,6 +464,7 @@ export default function App() {
             window.scrollTo({ top: 0, behavior: 'smooth' });
           }}
           onOpenSmartMapper={() => openMapperForEngine()}
+          isFounderMode={founderMode}
         />
 
         {/* Universal Dirty Tally / Excel Smart Column-Mapper Modal */}
@@ -980,6 +981,49 @@ export default function App() {
           <span>Exit Client Presentation Lock</span>
         </button>
       )}
+
+      {/* Unmistakable Demonstration Environment Disclosure Banner on /platform */}
+      <div className="bg-amber-950/35 border-b border-amber-500/30 px-4 py-2 text-xs flex flex-wrap items-center justify-between gap-2.5 text-stone-200 no-print">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="px-2 py-0.5 rounded bg-amber-500/20 border border-amber-400/40 text-amber-300 font-mono font-bold text-[11px] uppercase tracking-wider">
+            {syncRefreshKey > 0 ? 'CUSTOM IMPORTED WORKSPACE' : 'DEMONSTRATION ENVIRONMENT'}
+          </span>
+          <span className="text-stone-300 text-[11px] sm:text-xs">
+            {syncRefreshKey > 0
+              ? 'Viewing records imported in this browser session alongside Operationalyst analytical modules.'
+              : 'Illustrative manufacturing dataset (simulated dispatches, Gate OTIF & dormant SKUs) loaded for interactive product evaluation.'}
+          </span>
+        </div>
+        <div className="flex flex-wrap items-center gap-2 text-[11px]">
+          <button
+            onClick={() => openMapperForEngine()}
+            className="px-2.5 py-1 rounded bg-slate-900 hover:bg-slate-800 text-emerald-300 border border-emerald-500/30 font-semibold flex items-center gap-1 cursor-pointer transition"
+          >
+            <Wand2 className="w-3 h-3" />
+            <span>Upload Your Excel / Tally Sheet</span>
+          </button>
+          <button
+            onClick={() => {
+              navigateMode('factory_audit');
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            className="px-2.5 py-1 rounded bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold flex items-center gap-1 cursor-pointer transition"
+          >
+            <Sparkles className="w-3 h-3" />
+            <span>Request Real Factory Audit</span>
+          </button>
+          <button
+            onClick={() => {
+              navigateMode('commercial_home');
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            className="px-2 py-1 rounded text-stone-300 hover:text-white font-medium flex items-center gap-1 cursor-pointer transition"
+          >
+            <Home className="w-3 h-3" />
+            <span>Overview</span>
+          </button>
+        </div>
+      </div>
 
       {/* Universal Multi-Plant & Time Window Synchronization Bar */}
       <div className="bg-slate-900/90 border-b border-indigo-500/20 px-4 py-1.5 text-xs flex flex-wrap items-center justify-between gap-2 text-slate-300 no-print shadow-sm">
