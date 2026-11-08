@@ -1,4 +1,4 @@
-import { DispatchRow, RulesConfig, FactoryProfile, NotificationConfig } from '../types/otif';
+import type { DispatchRow, RulesConfig, FactoryProfile, NotificationConfig } from '../types/otif.ts';
 
 export const DEFAULT_FACTORY_PROFILE: FactoryProfile = {
   id: 'fac-01',

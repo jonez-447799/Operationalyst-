@@ -218,7 +218,7 @@ export const AdToDemoFunnelModal: React.FC<AdToDemoFunnelModalProps> = ({
 
               <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-3 font-sans">
                 <div className="border-b border-slate-800 pb-2 text-xs font-mono text-slate-400 space-y-1">
-                  <div><strong>From:</strong> Jonez Snowin &lt;joneszz2004@gmail.com&gt;</div>
+                  <div><strong>From:</strong> C. Jones Snowin &lt;joneszz2004@gmail.com&gt;</div>
                   <div><strong>Subject:</strong> Your Factory Audit Request Has Been Received</div>
                 </div>
 
@@ -232,7 +232,7 @@ export const AdToDemoFunnelModal: React.FC<AdToDemoFunnelModalProps> = ({
                   </p>
                   <p className="text-slate-400 font-mono text-[11px] pt-1">
                     Warm regards,<br />
-                    <strong>Jonez Snowin</strong><br />
+                    <strong>C. Jones Snowin</strong><br />
                     Operations &amp; Manufacturing Analytics Builder
                   </p>
                 </div>

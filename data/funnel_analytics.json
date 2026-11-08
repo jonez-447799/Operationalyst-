@@ -1,0 +1,26 @@
+[
+  {
+    "eventId": "FNLEVT-20261108-3540",
+    "timestamp": "2026-11-08T10:08:49.135Z",
+    "eventType": "LANDING_PAGE_VIEW",
+    "metadata": {
+      "sourceSection": "landing_page_load"
+    }
+  },
+  {
+    "eventId": "FNLEVT-20261108-9A2B",
+    "timestamp": "2026-11-08T10:08:50.151Z",
+    "eventType": "SCROLL_DEPTH_50_PCT",
+    "metadata": {
+      "sourceSection": "scroll_50_pct"
+    }
+  },
+  {
+    "eventId": "FNLEVT-20261108-AC76",
+    "timestamp": "2026-11-08T10:08:50.589Z",
+    "eventType": "SCROLL_DEPTH_90_PCT",
+    "metadata": {
+      "sourceSection": "scroll_90_pct"
+    }
+  }
+]

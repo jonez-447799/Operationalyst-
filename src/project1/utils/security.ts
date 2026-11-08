@@ -1,21 +1,22 @@
 import { AuditLogEntry, UserRole } from '../types';
 
 /**
- * Generates an immutable SHA-256-like cryptographic hash for audit entries
+ * Generates a non-cryptographic local reference ID for browser-stored demonstration activity entries.
+ * Note: This is NOT a cryptographic hash or tamper-proof server-side signature.
  */
 export function generateHash(content: string): string {
-  let hash = 0;
+  let checksum = 0;
   for (let i = 0; i < content.length; i++) {
     const char = content.charCodeAt(i);
-    hash = (hash << 5) - hash + char;
-    hash |= 0; // Convert to 32bit integer
+    checksum = (checksum << 5) - checksum + char;
+    checksum |= 0;
   }
-  const hex = Math.abs(hash).toString(16).padStart(8, '0');
-  return `sha256_${hex}${Date.now().toString(16).slice(-4)}`;
+  const hex = Math.abs(checksum).toString(16).padStart(8, '0');
+  return `local_ref_${hex}`;
 }
 
 /**
- * Role permissions matrix
+ * UI Role preview matrix (Demonstration interface visibility only — does not enforce server-side authorization)
  */
 export const ROLE_PERMISSIONS: Record<
   UserRole,
@@ -77,7 +78,7 @@ export const ROLE_PERMISSIONS: Record<
 };
 
 /**
- * Creates an audit log entry
+ * Creates a local browser activity history entry for demonstration purposes
  */
 export function createAuditLog(
   user: string,
@@ -94,13 +95,13 @@ export function createAuditLog(
     role,
     action,
     details,
-    ip: '192.168.1.104 (Local Gateway)',
+    ip: 'Local Browser Session',
     hash: generateHash(rawData),
   };
 }
 
 /**
- * Initial audit logs showing production initialization
+ * Illustrative local activity history entries for the demonstration environment
  */
 export const INITIAL_AUDIT_LOGS: AuditLogEntry[] = [
   {
@@ -109,9 +110,9 @@ export const INITIAL_AUDIT_LOGS: AuditLogEntry[] = [
     user: 'R. Sundaram (Plant Head)',
     role: 'Plant Head',
     action: 'TALLY_IMPORT',
-    details: 'Imported Ambattur fabrication unit stock summary: 20 SKUs, Total ₹6,45,650.',
-    ip: '192.168.1.104',
-    hash: 'sha256_e83b9f1a09d2',
+    details: 'Loaded Ambattur fabrication unit demonstration stock summary: 20 SKUs, Total ₹6,45,650.',
+    ip: 'Local Browser Session',
+    hash: 'local_ref_e83b9f1a',
   },
   {
     id: 'log-002',
@@ -120,8 +121,8 @@ export const INITIAL_AUDIT_LOGS: AuditLogEntry[] = [
     role: 'Owner',
     action: 'RULES_CONFIGURED',
     details: 'Set Dead threshold = 180 days, Slow = 90 days, Holding Burn = 18% p.a.',
-    ip: '192.168.1.101',
-    hash: 'sha256_7a9c1d4f2b18',
+    ip: 'Local Browser Session',
+    hash: 'local_ref_7a9c1d4f',
   },
   {
     id: 'log-003',
@@ -130,7 +131,7 @@ export const INITIAL_AUDIT_LOGS: AuditLogEntry[] = [
     role: 'Owner',
     action: 'OWNER_REPORT_GENERATED',
     details: 'Generated 1-page report: Dead Cash ₹2,23,110 (34.6%), Annual Burn ₹40,160.',
-    ip: '192.168.1.101',
-    hash: 'sha256_c41e80931df6',
+    ip: 'Local Browser Session',
+    hash: 'local_ref_c41e8093',
   },
 ];

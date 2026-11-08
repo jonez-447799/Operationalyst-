@@ -1,4 +1,4 @@
-import { StockItem, RulesConfig, OwnerReportSummary, CurrencyCode, StockCategory, LiquidationScenario } from '../types';
+import type { StockItem, RulesConfig, OwnerReportSummary, CurrencyCode, StockCategory, LiquidationScenario } from '../types.ts';
 
 /**
  * Exchange rates relative to INR (base currency)

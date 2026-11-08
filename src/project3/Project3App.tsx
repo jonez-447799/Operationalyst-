@@ -17,31 +17,39 @@ import { ProfitProtectionEngineV2 } from './components/ProfitProtectionEngineV2'
 import { INITIAL_TRIPS, DEFAULT_RULES, SCALE_PROFILES } from './data/defaultData';
 import { calculateAuditMetrics } from './utils/auditCalculations';
 import { Trip, RulesConfig, ScaleProfile } from './types/freight';
+import {
+  PlantId,
+  getActivePlantIdFromStorage,
+  readPlantDatasetFromBrowser,
+  writePlantDatasetToBrowser,
+} from '../data/multiPlantBaselines';
 
 export default function App() {
-  // Load from localStorage or use defaults
+  const [activePlantId, setActivePlantId] = useState<PlantId>(() => getActivePlantIdFromStorage());
+
+  // Load from plant-isolated localStorage or active plant baseline
   const [trips, setTrips] = useState<Trip[]>(() => {
-    try {
-      const saved = localStorage.getItem('freight_audit_trips_v1');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      }
-    } catch (e) {
-      console.warn('Failed to parse saved trips from localStorage', e);
-    }
-    return INITIAL_TRIPS;
+    return readPlantDatasetFromBrowser(getActivePlantIdFromStorage()).p3Trips || INITIAL_TRIPS;
   });
 
   const [rules, setRules] = useState<RulesConfig>(() => {
-    try {
-      const saved = localStorage.getItem('freight_audit_rules_v1');
-      if (saved) return JSON.parse(saved);
-    } catch (e) {
-      console.warn('Failed to parse saved rules', e);
-    }
-    return DEFAULT_RULES;
+    return readPlantDatasetFromBrowser(getActivePlantIdFromStorage()).p3Rules || DEFAULT_RULES;
   });
+
+  // Listen for plant changes in storage
+  useEffect(() => {
+    const handleStorage = () => {
+      const currentPlant = getActivePlantIdFromStorage();
+      if (currentPlant !== activePlantId) {
+        setActivePlantId(currentPlant);
+        const ds = readPlantDatasetFromBrowser(currentPlant);
+        setTrips(ds.p3Trips);
+        setRules(ds.p3Rules);
+      }
+    };
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
+  }, [activePlantId]);
 
   // Client Spend Scale Tier (Solving Hardest Truth #3)
   const [currentScale, setCurrentScale] = useState<ScaleProfile>(() => {
@@ -69,22 +77,22 @@ export default function App() {
   const [tripsLaneFilter, setTripsLaneFilter] = useState<string>('ALL');
   const [tripsTransporterFilter, setTripsTransporterFilter] = useState<string>('ALL');
 
-  // Save to localStorage when state changes
+  // Save to plant-isolated localStorage when state changes
   useEffect(() => {
     try {
-      localStorage.setItem('freight_audit_trips_v1', JSON.stringify(trips));
+      writePlantDatasetToBrowser(activePlantId, { p3Trips: trips });
     } catch (e) {
       console.warn('Failed to save trips', e);
     }
-  }, [trips]);
+  }, [trips, activePlantId]);
 
   useEffect(() => {
     try {
-      localStorage.setItem('freight_audit_rules_v1', JSON.stringify(rules));
+      writePlantDatasetToBrowser(activePlantId, { p3Rules: rules });
     } catch (e) {
       console.warn('Failed to save rules', e);
     }
-  }, [rules]);
+  }, [rules, activePlantId]);
 
   useEffect(() => {
     try {

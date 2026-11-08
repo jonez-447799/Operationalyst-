@@ -1,7 +1,26 @@
 import React, { useState } from 'react';
-import { Upload, FileSpreadsheet, CheckCircle2, AlertTriangle, X, Download, FileText, Check, Copy, Sparkles, FileDown } from 'lucide-react';
+import {
+  Upload,
+  FileSpreadsheet,
+  CheckCircle2,
+  AlertTriangle,
+  X,
+  Download,
+  Check,
+  Copy,
+  Sparkles,
+  FileDown,
+  Trash2
+} from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { DispatchRow, DelayReason } from '../types/otif';
+import {
+  validateImportDate,
+  validateImportNumber,
+  validateUploadFileSafety,
+  sanitizeSpreadsheetCell,
+  toSafeCsvCell
+} from '../../utils/importValidation';
 
 interface BulkImportModalProps {
   isOpen: boolean;
@@ -9,7 +28,35 @@ interface BulkImportModalProps {
   onImportDispatches: (rows: DispatchRow[], mode: 'replace' | 'append') => void;
 }
 
+export interface RowFieldError {
+  field: string;
+  sourceValue: string;
+  status: string;
+  reason: string;
+}
+
 interface ParsedPreviewRow {
+  rowNumber: number;
+  customer: string;
+  po: string;
+  part: string;
+  orderedQtyRaw: string;
+  shippedQtyRaw: string;
+  promisedDateRaw: string;
+  actualOutRaw: string;
+  orderedQty: number;
+  shippedQty: number;
+  promisedDate: string;
+  actualOut: string;
+  vehicle: string;
+  delayReason: DelayReason;
+  notes: string;
+  isValid: boolean;
+  errors: string[];
+  fieldErrors: RowFieldError[];
+}
+
+function buildSamplePreviewRows(rawList: Array<{
   customer: string;
   po: string;
   part: string;
@@ -20,11 +67,30 @@ interface ParsedPreviewRow {
   vehicle: string;
   delayReason: DelayReason;
   notes: string;
-  isValid: boolean;
-  errors: string[];
+}>): ParsedPreviewRow[] {
+  return rawList.map((r, idx) => ({
+    rowNumber: idx + 1,
+    customer: r.customer,
+    po: r.po,
+    part: r.part,
+    orderedQtyRaw: String(r.orderedQty),
+    shippedQtyRaw: String(r.shippedQty),
+    promisedDateRaw: r.promisedDate,
+    actualOutRaw: r.actualOut,
+    orderedQty: r.orderedQty,
+    shippedQty: r.shippedQty,
+    promisedDate: r.promisedDate,
+    actualOut: r.actualOut,
+    vehicle: r.vehicle,
+    delayReason: r.delayReason,
+    notes: r.notes,
+    isValid: true,
+    errors: [],
+    fieldErrors: [],
+  }));
 }
 
-export const SAMPLE_AUTOMOTIVE_DATASET = [
+export const SAMPLE_AUTOMOTIVE_DATASET: ParsedPreviewRow[] = buildSamplePreviewRows([
   {
     customer: 'Hyundai vendor park',
     po: 'PO-HMI-8810',
@@ -34,10 +100,8 @@ export const SAMPLE_AUTOMOTIVE_DATASET = [
     promisedDate: '2026-09-21T14:00',
     actualOut: '2026-09-21T13:40',
     vehicle: 'TN-21-AZ-4410',
-    delayReason: '' as DelayReason,
+    delayReason: '',
     notes: 'On-Time & In-Full (Cleared gate 20 min early)',
-    isValid: true,
-    errors: []
   },
   {
     customer: 'Maruti Suzuki Manesar',
@@ -48,10 +112,8 @@ export const SAMPLE_AUTOMOTIVE_DATASET = [
     promisedDate: '2026-09-21T18:00',
     actualOut: '2026-09-21T17:30',
     vehicle: 'HR-26-BQ-1190',
-    delayReason: '' as DelayReason,
+    delayReason: '',
     notes: 'Direct JIT dock feed (Zero defect batch)',
-    isValid: true,
-    errors: []
   },
   {
     customer: 'Ashok Leyland line',
@@ -62,10 +124,8 @@ export const SAMPLE_AUTOMOTIVE_DATASET = [
     promisedDate: '2026-09-22T11:00',
     actualOut: '2026-09-22T10:50',
     vehicle: 'TN-04-E-8812',
-    delayReason: 'Material short' as DelayReason,
+    delayReason: 'Material short',
     notes: 'Quantity Shortage (50/80): Raw ductile iron casting batch delay from foundry',
-    isValid: true,
-    errors: []
   },
   {
     customer: 'Royal Enfield supplier',
@@ -76,10 +136,8 @@ export const SAMPLE_AUTOMOTIVE_DATASET = [
     promisedDate: '2026-09-22T16:00',
     actualOut: '2026-09-22T19:30',
     vehicle: 'TN-11-F-3342',
-    delayReason: 'QC hold' as DelayReason,
+    delayReason: 'QC hold',
     notes: '3.5 hr Gate Delay: CMM hardness testing re-validation after tooling change',
-    isValid: true,
-    errors: []
   },
   {
     customer: 'Tata Motors line',
@@ -90,10 +148,8 @@ export const SAMPLE_AUTOMOTIVE_DATASET = [
     promisedDate: '2026-09-23T12:00',
     actualOut: '2026-09-23T11:20',
     vehicle: 'GJ-01-AX-9921',
-    delayReason: '' as DelayReason,
+    delayReason: '',
     notes: 'Clean Pass: Dispatched 40 mins ahead of plant cut-off',
-    isValid: true,
-    errors: []
   },
   {
     customer: 'Hyundai vendor park',
@@ -104,10 +160,8 @@ export const SAMPLE_AUTOMOTIVE_DATASET = [
     promisedDate: '2026-09-23T17:00',
     actualOut: '2026-09-23T20:45',
     vehicle: 'TN-21-AZ-4410',
-    delayReason: 'Labour short' as DelayReason,
+    delayReason: 'Labour short',
     notes: 'Double Breach: Short 70 pcs & 3hr 45m late due to shift absenteeism',
-    isValid: true,
-    errors: []
   },
   {
     customer: 'Mahindra Chakan',
@@ -118,10 +172,8 @@ export const SAMPLE_AUTOMOTIVE_DATASET = [
     promisedDate: '2026-09-24T10:00',
     actualOut: '2026-09-24T09:30',
     vehicle: 'MH-14-GH-5544',
-    delayReason: '' as DelayReason,
+    delayReason: '',
     notes: 'Pass: Laser engraved batch inspection signed off',
-    isValid: true,
-    errors: []
   },
   {
     customer: 'Bosch Mobility',
@@ -132,10 +184,8 @@ export const SAMPLE_AUTOMOTIVE_DATASET = [
     promisedDate: '2026-09-24T15:00',
     actualOut: '2026-09-24T17:15',
     vehicle: 'KA-04-ME-3120',
-    delayReason: 'No vehicle' as DelayReason,
+    delayReason: 'No vehicle',
     notes: '2hr 15m Gate Delay: Dedicated transporter truck had highway tyre failure',
-    isValid: true,
-    errors: []
   },
   {
     customer: 'Local Tier-2',
@@ -146,10 +196,8 @@ export const SAMPLE_AUTOMOTIVE_DATASET = [
     promisedDate: '2026-09-25T11:00',
     actualOut: '2026-09-25T10:40',
     vehicle: 'TN-02-CC-8761',
-    delayReason: '' as DelayReason,
+    delayReason: '',
     notes: 'Pass: Sub-assembly supplier prompt turnaround',
-    isValid: true,
-    errors: []
   },
   {
     customer: 'Ashok Leyland line',
@@ -160,14 +208,12 @@ export const SAMPLE_AUTOMOTIVE_DATASET = [
     promisedDate: '2026-09-25T14:00',
     actualOut: '2026-09-25T13:15',
     vehicle: 'TN-70-H-1904',
-    delayReason: '' as DelayReason,
+    delayReason: '',
     notes: 'WhatsApp Emergency Rush PO: Fabricated in 4 hrs, cleared gate 45m early',
-    isValid: true,
-    errors: []
-  }
-];
+  },
+]);
 
-export const SAMPLE_LINE_STOP_DATASET = [
+export const SAMPLE_LINE_STOP_DATASET: ParsedPreviewRow[] = buildSamplePreviewRows([
   {
     customer: 'Hyundai vendor park',
     po: 'PO-HMI-CRISIS-1',
@@ -177,10 +223,8 @@ export const SAMPLE_LINE_STOP_DATASET = [
     promisedDate: '2026-09-22T08:00',
     actualOut: '2026-09-22T13:00',
     vehicle: 'TN-21-AZ-9999',
-    delayReason: 'Material short' as DelayReason,
+    delayReason: 'Material short',
     notes: 'CRITICAL LINE-STOP RISK: 5-hour late gate out + 50% under-delivery due to forge breakdown',
-    isValid: true,
-    errors: []
   },
   {
     customer: 'Maruti Suzuki Manesar',
@@ -191,10 +235,8 @@ export const SAMPLE_LINE_STOP_DATASET = [
     promisedDate: '2026-09-22T12:00',
     actualOut: '2026-09-22T17:30',
     vehicle: 'HR-26-BQ-4411',
-    delayReason: 'QC hold' as DelayReason,
+    delayReason: 'QC hold',
     notes: '5.5 hr Delay: Metallurgical surface crack audit held at gate',
-    isValid: true,
-    errors: []
   },
   {
     customer: 'Ashok Leyland line',
@@ -205,10 +247,8 @@ export const SAMPLE_LINE_STOP_DATASET = [
     promisedDate: '2026-09-23T09:00',
     actualOut: '2026-09-23T14:15',
     vehicle: 'TN-04-E-1122',
-    delayReason: 'Paperwork' as DelayReason,
+    delayReason: 'Paperwork',
     notes: '5h 15m Delay + 50% Short: E-Way bill portal server outage at security dispatch',
-    isValid: true,
-    errors: []
   },
   {
     customer: 'Royal Enfield supplier',
@@ -219,10 +259,8 @@ export const SAMPLE_LINE_STOP_DATASET = [
     promisedDate: '2026-09-23T14:00',
     actualOut: '2026-09-23T13:30',
     vehicle: 'TN-11-F-7788',
-    delayReason: '' as DelayReason,
+    delayReason: '',
     notes: 'On-Time In-Full: Dedicated expedited express tempo bypass',
-    isValid: true,
-    errors: []
   },
   {
     customer: 'Hyundai vendor park',
@@ -233,10 +271,8 @@ export const SAMPLE_LINE_STOP_DATASET = [
     promisedDate: '2026-09-24T10:00',
     actualOut: '2026-09-24T09:45',
     vehicle: 'TN-21-AZ-8812',
-    delayReason: 'Material short' as DelayReason,
+    delayReason: 'Material short',
     notes: 'Partial Delivery (150/300): Sheet metal stamping press tooling break',
-    isValid: true,
-    errors: []
   },
   {
     customer: 'Maruti Suzuki Manesar',
@@ -247,14 +283,12 @@ export const SAMPLE_LINE_STOP_DATASET = [
     promisedDate: '2026-09-24T15:00',
     actualOut: '2026-09-24T14:40',
     vehicle: 'HR-26-BQ-9910',
-    delayReason: '' as DelayReason,
+    delayReason: '',
     notes: 'On-Time In-Full: Cleared 20 min before shift gate closure',
-    isValid: true,
-    errors: []
-  }
-];
+  },
+]);
 
-export const SAMPLE_ZERO_DEFECT_DATASET = [
+export const SAMPLE_ZERO_DEFECT_DATASET: ParsedPreviewRow[] = buildSamplePreviewRows([
   {
     customer: 'Hyundai vendor park',
     po: 'PO-HMI-GOLD-01',
@@ -264,10 +298,8 @@ export const SAMPLE_ZERO_DEFECT_DATASET = [
     promisedDate: '2026-09-21T11:00',
     actualOut: '2026-09-21T10:30',
     vehicle: 'TN-21-AZ-1100',
-    delayReason: '' as DelayReason,
+    delayReason: '',
     notes: 'Pristine dispatch: Zero defects, cleared gate 30m early',
-    isValid: true,
-    errors: []
   },
   {
     customer: 'Maruti Suzuki Manesar',
@@ -278,10 +310,8 @@ export const SAMPLE_ZERO_DEFECT_DATASET = [
     promisedDate: '2026-09-21T15:00',
     actualOut: '2026-09-21T14:20',
     vehicle: 'HR-26-BQ-2200',
-    delayReason: '' as DelayReason,
+    delayReason: '',
     notes: 'Pristine dispatch: Cleared 40m before dock cut-off',
-    isValid: true,
-    errors: []
   },
   {
     customer: 'Ashok Leyland line',
@@ -292,10 +322,8 @@ export const SAMPLE_ZERO_DEFECT_DATASET = [
     promisedDate: '2026-09-22T10:00',
     actualOut: '2026-09-22T09:45',
     vehicle: 'TN-04-E-3300',
-    delayReason: '' as DelayReason,
+    delayReason: '',
     notes: 'Pristine dispatch: 100% quantity verified by QA barcoder',
-    isValid: true,
-    errors: []
   },
   {
     customer: 'Royal Enfield supplier',
@@ -306,10 +334,8 @@ export const SAMPLE_ZERO_DEFECT_DATASET = [
     promisedDate: '2026-09-22T14:00',
     actualOut: '2026-09-22T13:35',
     vehicle: 'TN-11-F-4400',
-    delayReason: '' as DelayReason,
+    delayReason: '',
     notes: 'Pristine dispatch: Cleared security gate 25m early',
-    isValid: true,
-    errors: []
   },
   {
     customer: 'Tata Motors line',
@@ -320,10 +346,8 @@ export const SAMPLE_ZERO_DEFECT_DATASET = [
     promisedDate: '2026-09-23T11:30',
     actualOut: '2026-09-23T11:00',
     vehicle: 'GJ-01-AX-5500',
-    delayReason: '' as DelayReason,
+    delayReason: '',
     notes: 'Pristine dispatch: Full Lot acceptance certificate attached',
-    isValid: true,
-    errors: []
   },
   {
     customer: 'Local Tier-2',
@@ -334,12 +358,89 @@ export const SAMPLE_ZERO_DEFECT_DATASET = [
     promisedDate: '2026-09-23T16:00',
     actualOut: '2026-09-23T15:30',
     vehicle: 'TN-02-CC-6600',
-    delayReason: '' as DelayReason,
+    delayReason: '',
     notes: 'Pristine dispatch: Zero hold, 100% OTIF compliance',
-    isValid: true,
-    errors: []
+  },
+]);
+
+function evaluateRowValidation(row: Omit<ParsedPreviewRow, 'isValid' | 'errors' | 'fieldErrors' | 'orderedQty' | 'shippedQty' | 'promisedDate' | 'actualOut'>): ParsedPreviewRow {
+  const fieldErrors: RowFieldError[] = [];
+
+  if (!row.customer.trim()) {
+    fieldErrors.push({
+      field: 'Customer',
+      sourceValue: row.customer,
+      status: 'MISSING_TEXT',
+      reason: 'Customer name is required.',
+    });
   }
-];
+
+  const ordRes = validateImportNumber(row.orderedQtyRaw, { allowNegative: false, allowZero: false });
+  if (ordRes.status !== 'VALID_NUMBER') {
+    fieldErrors.push({
+      field: 'Ordered Qty',
+      sourceValue: row.orderedQtyRaw,
+      status: ordRes.status,
+      reason: ordRes.reason || 'Ordered Qty must be a valid positive number.',
+    });
+  }
+
+  const shipRes = validateImportNumber(row.shippedQtyRaw, { allowNegative: false, allowZero: true });
+  if (shipRes.status !== 'VALID_NUMBER') {
+    fieldErrors.push({
+      field: 'Shipped Qty',
+      sourceValue: row.shippedQtyRaw,
+      status: shipRes.status,
+      reason: shipRes.reason || 'Shipped Qty must be a valid non-negative number.',
+    });
+  }
+
+  const promRes = validateImportDate(row.promisedDateRaw);
+  if (promRes.status !== 'VALID') {
+    fieldErrors.push({
+      field: 'Promised Date Time',
+      sourceValue: row.promisedDateRaw,
+      status: promRes.status,
+      reason: promRes.reason || 'Promised Date Time is invalid or ambiguous.',
+    });
+  }
+
+  const actRes = validateImportDate(row.actualOutRaw);
+  if (actRes.status !== 'VALID') {
+    fieldErrors.push({
+      field: 'Actual Gate Out',
+      sourceValue: row.actualOutRaw,
+      status: actRes.status,
+      reason: actRes.reason || 'Actual Gate Out is invalid or ambiguous.',
+    });
+  }
+
+  const extractTime = (raw: string, fallbackTime: string) => {
+    const m = String(raw).match(/(\d{2}:\d{2})/);
+    return m ? m[1] : fallbackTime;
+  };
+
+  const promisedDate =
+    promRes.status === 'VALID' && promRes.normalized
+      ? `${promRes.normalized}T${extractTime(row.promisedDateRaw, '14:00')}`
+      : row.promisedDateRaw;
+
+  const actualOut =
+    actRes.status === 'VALID' && actRes.normalized
+      ? `${actRes.normalized}T${extractTime(row.actualOutRaw, '14:00')}`
+      : row.actualOutRaw;
+
+  return {
+    ...row,
+    orderedQty: ordRes.status === 'VALID_NUMBER' && ordRes.value !== undefined ? ordRes.value : 0,
+    shippedQty: shipRes.status === 'VALID_NUMBER' && shipRes.value !== undefined ? shipRes.value : 0,
+    promisedDate,
+    actualOut,
+    isValid: fieldErrors.length === 0,
+    errors: fieldErrors.map((fe) => `${fe.field}: ${fe.reason}`),
+    fieldErrors,
+  };
+}
 
 export const BulkImportModal: React.FC<BulkImportModalProps> = ({
   isOpen,
@@ -356,17 +457,17 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({
   if (!isOpen) return null;
 
   const handleDownloadTemplate = () => {
-    const templateData = SAMPLE_AUTOMOTIVE_DATASET.map(row => ({
-      'Customer': row.customer,
-      'PO Number': row.po,
-      'Part Description': row.part,
+    const templateData = SAMPLE_AUTOMOTIVE_DATASET.map((row) => ({
+      Customer: sanitizeSpreadsheetCell(row.customer),
+      'PO Number': sanitizeSpreadsheetCell(row.po),
+      'Part Description': sanitizeSpreadsheetCell(row.part),
       'Ordered Qty': row.orderedQty,
       'Shipped Qty': row.shippedQty,
       'Promised Date Time': row.promisedDate.replace('T', ' '),
       'Actual Gate Out': row.actualOut.replace('T', ' '),
-      'Vehicle Plate': row.vehicle,
-      'Delay Reason': row.delayReason,
-      'Notes': row.notes
+      'Vehicle Plate': sanitizeSpreadsheetCell(row.vehicle),
+      'Delay Reason': sanitizeSpreadsheetCell(row.delayReason),
+      Notes: sanitizeSpreadsheetCell(row.notes),
     }));
 
     const ws = XLSX.utils.json_to_sheet(templateData);
@@ -376,9 +477,21 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({
   };
 
   const handleDownloadCSV = () => {
-    const headers = 'Customer,PO Number,Part Description,Ordered Qty,Shipped Qty,Promised Date Time,Actual Gate Out,Vehicle Plate,Delay Reason,Notes\n';
-    const rows = SAMPLE_AUTOMOTIVE_DATASET.map(r => 
-      `"${r.customer}","${r.po}","${r.part}",${r.orderedQty},${r.shippedQty},"${r.promisedDate.replace('T', ' ')}","${r.actualOut.replace('T', ' ')}","${r.vehicle}","${r.delayReason}","${r.notes}"`
+    const headers =
+      'Customer,PO Number,Part Description,Ordered Qty,Shipped Qty,Promised Date Time,Actual Gate Out,Vehicle Plate,Delay Reason,Notes\n';
+    const rows = SAMPLE_AUTOMOTIVE_DATASET.map((r) =>
+      [
+        toSafeCsvCell(r.customer),
+        toSafeCsvCell(r.po),
+        toSafeCsvCell(r.part),
+        r.orderedQty,
+        r.shippedQty,
+        toSafeCsvCell(r.promisedDate.replace('T', ' ')),
+        toSafeCsvCell(r.actualOut.replace('T', ' ')),
+        toSafeCsvCell(r.vehicle),
+        toSafeCsvCell(r.delayReason),
+        toSafeCsvCell(r.notes),
+      ].join(',')
     ).join('\n');
     const blob = new Blob([headers + rows], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -390,9 +503,21 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({
   };
 
   const handleCopyCSV = () => {
-    const headers = 'Customer,PO Number,Part Description,Ordered Qty,Shipped Qty,Promised Date Time,Actual Gate Out,Vehicle Plate,Delay Reason,Notes\n';
-    const rows = SAMPLE_AUTOMOTIVE_DATASET.map(r => 
-      `"${r.customer}","${r.po}","${r.part}",${r.orderedQty},${r.shippedQty},"${r.promisedDate.replace('T', ' ')}","${r.actualOut.replace('T', ' ')}","${r.vehicle}","${r.delayReason}","${r.notes}"`
+    const headers =
+      'Customer,PO Number,Part Description,Ordered Qty,Shipped Qty,Promised Date Time,Actual Gate Out,Vehicle Plate,Delay Reason,Notes\n';
+    const rows = SAMPLE_AUTOMOTIVE_DATASET.map((r) =>
+      [
+        toSafeCsvCell(r.customer),
+        toSafeCsvCell(r.po),
+        toSafeCsvCell(r.part),
+        r.orderedQty,
+        r.shippedQty,
+        toSafeCsvCell(r.promisedDate.replace('T', ' ')),
+        toSafeCsvCell(r.actualOut.replace('T', ' ')),
+        toSafeCsvCell(r.vehicle),
+        toSafeCsvCell(r.delayReason),
+        toSafeCsvCell(r.notes),
+      ].join(',')
     ).join('\n');
     navigator.clipboard.writeText(headers + rows);
     setCopiedCsv(true);
@@ -405,30 +530,37 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({
     setPreviewRows(dataset);
   };
 
-  const normalizeDate = (val: any): string => {
-    if (!val) return '2026-09-20T12:00';
-    if (typeof val === 'number') {
-      // Excel serial date
-      const date = new Date(Math.round((val - 25569) * 86400 * 1000));
-      return date.toISOString().slice(0, 16);
-    }
-    const str = String(val).trim();
-    if (str.includes('T')) return str.slice(0, 16);
-    // Replace space with T if YYYY-MM-DD HH:mm
-    if (/^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}/.test(str)) {
-      return str.replace(/\s+/, 'T').slice(0, 16);
-    }
-    // Fallback if Date parses
-    const parsed = new Date(str);
-    if (!isNaN(parsed.getTime())) {
-      return parsed.toISOString().slice(0, 16);
-    }
-    return '2026-09-20T12:00';
+  const handleUpdateQuarantinedRowField = (
+    rowNumber: number,
+    fieldKey: 'customer' | 'orderedQtyRaw' | 'shippedQtyRaw' | 'promisedDateRaw' | 'actualOutRaw',
+    newVal: string
+  ) => {
+    setPreviewRows((prev) =>
+      prev.map((row) => {
+        if (row.rowNumber !== rowNumber) return row;
+        return evaluateRowValidation({
+          ...row,
+          [fieldKey]: newVal,
+        });
+      })
+    );
+  };
+
+  const handleExcludeRow = (rowNumber: number) => {
+    setPreviewRows((prev) => prev.filter((r) => r.rowNumber !== rowNumber));
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const uploadedFile = e.target.files?.[0];
     if (!uploadedFile) return;
+
+    const safety = validateUploadFileSafety(uploadedFile, ['.xlsx', '.xls', '.csv']);
+    if (!safety.valid) {
+      setErrorMsg(safety.reason || 'File rejected by upload safety check.');
+      setFile(null);
+      setPreviewRows([]);
+      return;
+    }
 
     setFile(uploadedFile);
     setErrorMsg(null);
@@ -437,14 +569,24 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({
     const reader = new FileReader();
     reader.onload = (evt) => {
       try {
-        const bstr = evt.target?.result;
-        const wb = XLSX.read(bstr, { type: 'binary', cellDates: true });
+        const buffer = evt.target?.result as ArrayBuffer;
+        if (!buffer) {
+          setErrorMsg('Empty file buffer.');
+          setIsProcessing(false);
+          return;
+        }
+        const wb = XLSX.read(new Uint8Array(buffer), { type: 'array', raw: false });
+        if (!wb.SheetNames || wb.SheetNames.length === 0) {
+          setErrorMsg('Invalid workbook: No worksheets found in the uploaded file.');
+          setIsProcessing(false);
+          return;
+        }
         const sheetName = wb.SheetNames[0];
         const ws = wb.Sheets[sheetName];
         const rawJson: any[] = XLSX.utils.sheet_to_json(ws, { defval: '' });
 
         if (!rawJson || rawJson.length === 0) {
-          setErrorMsg('The selected spreadsheet contains no data rows.');
+          setErrorMsg('Empty file: The selected spreadsheet contains no data rows.');
           setIsProcessing(false);
           return;
         }
@@ -456,11 +598,10 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({
           'Labour short',
           'Paperwork',
           'Customer hold',
-          ''
+          '',
         ];
 
-        const parsed: ParsedPreviewRow[] = rawJson.map((row) => {
-          // Flexible column key resolver (case-insensitive & fuzzy)
+        const parsed: ParsedPreviewRow[] = rawJson.map((row, idx) => {
           const findKey = (candidates: string[]): any => {
             for (const key of Object.keys(row)) {
               const clean = key.toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -471,17 +612,16 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({
             return '';
           };
 
-          const customer = String(findKey(['cust', 'client', 'buyer']) || row['Customer'] || 'OEM Customer').trim();
-          const po = String(findKey(['po', 'order', 'purchase']) || row['PO Number'] || `PO-${Math.floor(1000 + Math.random() * 9000)}`).trim();
+          const customer = String(findKey(['cust', 'client', 'buyer']) || row['Customer'] || '').trim();
+          const po = String(findKey(['po', 'order', 'purchase']) || row['PO Number'] || `PO-${idx + 101}`).trim();
           const part = String(findKey(['part', 'item', 'desc', 'product']) || row['Part Description'] || 'Industrial Component').trim();
-          const orderedQty = Math.max(1, Number(findKey(['orderqty', 'ordered', 'targetqty']) || row['Ordered Qty']) || 100);
-          const shippedQty = Math.max(0, Number(findKey(['shipqty', 'shipped', 'actualqty', 'dispatchqty']) || row['Shipped Qty']) || orderedQty);
-          
-          const promisedDate = normalizeDate(findKey(['promis', 'sched', 'duedate', 'expected']) || row['Promised Date Time']);
-          const actualOut = normalizeDate(findKey(['actual', 'gateout', 'outtime', 'dispatchtime']) || row['Actual Gate Out']);
+          const orderedQtyRaw = String(findKey(['orderqty', 'ordered', 'targetqty']) ?? row['Ordered Qty'] ?? '').trim();
+          const shippedQtyRaw = String(findKey(['shipqty', 'shipped', 'actualqty', 'dispatchqty']) ?? row['Shipped Qty'] ?? '').trim();
+          const promisedDateRaw = String(findKey(['promis', 'sched', 'duedate', 'expected']) ?? row['Promised Date Time'] ?? '').trim();
+          const actualOutRaw = String(findKey(['actual', 'gateout', 'outtime', 'dispatchtime']) ?? row['Actual Gate Out'] ?? '').trim();
           const vehicle = String(findKey(['veh', 'truck', 'plate', 'lorry']) || row['Vehicle Plate'] || 'TN-GATE-01').trim();
-          
-          let rawReason = String(findKey(['reason', 'delay', 'cause']) || row['Delay Reason'] || '').trim();
+
+          const rawReason = String(findKey(['reason', 'delay', 'cause']) || row['Delay Reason'] || '').trim();
           let delayReason: DelayReason = '';
           for (const vr of validReasons) {
             if (vr && rawReason.toLowerCase().includes(vr.toLowerCase())) {
@@ -492,42 +632,46 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({
 
           const notes = String(findKey(['note', 'remark', 'comment']) || row['Notes'] || '').trim();
 
-          const errors: string[] = [];
-          if (!customer) errors.push('Customer missing');
-          if (orderedQty <= 0) errors.push('Ordered Qty must be > 0');
-
-          return {
+          return evaluateRowValidation({
+            rowNumber: idx + 1,
             customer,
             po,
             part,
-            orderedQty,
-            shippedQty,
-            promisedDate,
-            actualOut,
+            orderedQtyRaw,
+            shippedQtyRaw,
+            promisedDateRaw,
+            actualOutRaw,
             vehicle,
             delayReason,
             notes,
-            isValid: errors.length === 0,
-            errors,
-          };
+          });
         });
 
         setPreviewRows(parsed);
       } catch (err: any) {
         console.error('File parsing error:', err);
-        setErrorMsg('Failed to parse file. Please upload a valid .xlsx or .csv dispatch spreadsheet.');
+        setErrorMsg('Invalid workbook: Failed to parse file. Please upload a valid .xlsx or .csv dispatch spreadsheet.');
       } finally {
         setIsProcessing(false);
       }
     };
 
-    reader.readAsBinaryString(uploadedFile);
+    reader.readAsArrayBuffer(uploadedFile);
   };
 
-  const handleConfirmImport = () => {
-    if (previewRows.length === 0) return;
+  const invalidRows = previewRows.filter((r) => !r.isValid);
+  const validRows = previewRows.filter((r) => r.isValid);
 
-    const formattedRows: DispatchRow[] = previewRows.map((r, idx) => ({
+  const handleConfirmImport = () => {
+    if (invalidRows.length > 0) {
+      setErrorMsg(
+        `Import blocked: ${invalidRows.length} quarantined row(s) contain invalid or missing dates/numbers. Please correct them inline or exclude them before importing.`
+      );
+      return;
+    }
+    if (validRows.length === 0) return;
+
+    const formattedRows: DispatchRow[] = validRows.map((r, idx) => ({
       id: `disp-imp-${Date.now()}-${idx}`,
       customer: r.customer,
       po: r.po,
@@ -557,12 +701,12 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({
             <div>
               <h2 className="text-base font-bold text-white flex items-center gap-2">
                 <span>Excel &amp; CSV Bulk Dispatch Importer</span>
-                <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/40">
-                  Instant ERP Sync
+                <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                  Strict Validation &amp; Quarantine
                 </span>
               </h2>
               <p className="text-xs text-slate-400">
-                Upload today's gate register or SAP/Tally export (.xlsx, .csv) with automatic column mapping.
+                Upload gate register or ERP export (.xlsx, .csv, max 5MB). Invalid or ambiguous dates and numbers are quarantined for review.
               </p>
             </div>
           </div>
@@ -582,10 +726,7 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({
               <div className="flex items-center gap-2">
                 <Sparkles className="w-4 h-4 text-amber-400" />
                 <span className="text-xs font-bold text-white uppercase tracking-wider">
-                  Pre-built Test Datasets (Instant 1-Click Evaluation)
-                </span>
-                <span className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                  Ready to Test
+                  Illustrative Sample Datasets (1-Click Demonstration Evaluation)
                 </span>
               </div>
               <div className="flex items-center gap-2 text-xs">
@@ -608,10 +749,6 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({
               </div>
             </div>
 
-            <p className="text-[11px] text-slate-400">
-              Click any scenario below to immediately load authentic factory dispatches into the preview, verify calculations, and push into the live dashboard:
-            </p>
-
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
               <button
                 type="button"
@@ -627,11 +764,8 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({
                   </span>
                 </div>
                 <p className="text-[11px] text-slate-400 leading-snug">
-                  Hyundai, Maruti, Ashok Leyland, RE &amp; Bosch. Contains 6 passes, QC holds, material delay &amp; WhatsApp rush PO.
+                  Hyundai, Maruti, Ashok Leyland, RE &amp; Bosch sample dispatches.
                 </p>
-                <div className="mt-2 text-[10px] font-bold text-amber-400 flex items-center gap-1">
-                  <span>Load into Preview →</span>
-                </div>
               </button>
 
               <button
@@ -648,11 +782,8 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({
                   </span>
                 </div>
                 <p className="text-[11px] text-slate-400 leading-snug">
-                  High penalty stress test. 4 severe failures: 5hr gate delay, 50% under-delivery, press tooling break &amp; portal outage.
+                  High-delay stress scenario with gate delays and partial shipments.
                 </p>
-                <div className="mt-2 text-[10px] font-bold text-rose-400 flex items-center gap-1">
-                  <span>Load into Preview →</span>
-                </div>
               </button>
 
               <button
@@ -669,11 +800,8 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({
                   </span>
                 </div>
                 <p className="text-[11px] text-slate-400 leading-snug">
-                  Gold standard factory performance. All dispatches 100% on-time, in-full with zero security gate delays.
+                  All dispatches on-time and in-full with zero gate delays.
                 </p>
-                <div className="mt-2 text-[10px] font-bold text-emerald-400 flex items-center gap-1">
-                  <span>Load into Preview →</span>
-                </div>
               </button>
             </div>
           </div>
@@ -695,19 +823,18 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({
                   {file ? file.name : 'Click to select or drag & drop factory dispatch file'}
                 </div>
                 <div className="text-xs text-slate-400">
-                  Supports Microsoft Excel (.xlsx, .xls) and CSV exports from SAP, Tally, or Google Sheets
+                  Supports .xlsx, .xls, and .csv (up to 5 MB, parsed safely via ArrayBuffer)
                 </div>
               </div>
             </div>
 
-            {/* Template download helper */}
             <div className="bg-slate-950 border border-slate-800 rounded-xl p-4 flex flex-col justify-between">
               <div>
                 <span className="text-xs font-bold text-amber-400 uppercase tracking-wider block mb-1">
                   Standard Format
                 </span>
                 <p className="text-xs text-slate-300 leading-relaxed">
-                  Download our pre-built factory dispatch template pre-filled with test data for instant testing.
+                  Download our pre-built dispatch template with formula-injection protection.
                 </p>
               </div>
               <button
@@ -725,6 +852,108 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({
             <div className="p-3 bg-rose-500/15 border border-rose-500/40 rounded-xl text-xs text-rose-300 flex items-center gap-2">
               <AlertTriangle className="w-4 h-4 shrink-0 text-rose-400" />
               <span>{errorMsg}</span>
+            </div>
+          )}
+
+          {/* Quarantined Rows Panel */}
+          {invalidRows.length > 0 && (
+            <div className="rounded-xl border border-rose-500/50 bg-rose-950/20 p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-xs font-bold text-rose-300">
+                  <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
+                  <span>
+                    Quarantined Rows ({invalidRows.length}) — Invalid or Ambiguous Dates/Numbers Detected
+                  </span>
+                </div>
+                <span className="text-[11px] text-rose-200/80 font-mono">
+                  Correct inline or exclude row to proceed
+                </span>
+              </div>
+
+              <div className="overflow-x-auto rounded-lg border border-rose-500/30 bg-slate-950 max-h-52 overflow-y-auto">
+                <table className="w-full text-left text-[11px] font-mono">
+                  <thead className="bg-slate-900 text-slate-400 border-b border-slate-800 sticky top-0">
+                    <tr>
+                      <th className="py-2 px-3">Row #</th>
+                      <th className="py-2 px-3">Ordered Qty</th>
+                      <th className="py-2 px-3">Shipped Qty</th>
+                      <th className="py-2 px-3">Promised Date</th>
+                      <th className="py-2 px-3">Actual Gate Out</th>
+                      <th className="py-2 px-3">Validation Reason</th>
+                      <th className="py-2 px-3 text-right">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800">
+                    {invalidRows.map((r) => (
+                      <tr key={r.rowNumber} className="bg-rose-950/10">
+                        <td className="py-2 px-3 font-bold text-rose-300">Row {r.rowNumber}</td>
+                        <td className="py-2 px-3">
+                          <input
+                            type="text"
+                            value={r.orderedQtyRaw}
+                            onChange={(e) =>
+                              handleUpdateQuarantinedRowField(r.rowNumber, 'orderedQtyRaw', e.target.value)
+                            }
+                            className="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs text-amber-200 w-20"
+                          />
+                        </td>
+                        <td className="py-2 px-3">
+                          <input
+                            type="text"
+                            value={r.shippedQtyRaw}
+                            onChange={(e) =>
+                              handleUpdateQuarantinedRowField(r.rowNumber, 'shippedQtyRaw', e.target.value)
+                            }
+                            className="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs text-amber-200 w-20"
+                          />
+                        </td>
+                        <td className="py-2 px-3">
+                          <input
+                            type="text"
+                            value={r.promisedDateRaw}
+                            onChange={(e) =>
+                              handleUpdateQuarantinedRowField(r.rowNumber, 'promisedDateRaw', e.target.value)
+                            }
+                            placeholder="YYYY-MM-DD HH:mm"
+                            className="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs text-amber-200 w-36"
+                          />
+                        </td>
+                        <td className="py-2 px-3">
+                          <input
+                            type="text"
+                            value={r.actualOutRaw}
+                            onChange={(e) =>
+                              handleUpdateQuarantinedRowField(r.rowNumber, 'actualOutRaw', e.target.value)
+                            }
+                            placeholder="YYYY-MM-DD HH:mm"
+                            className="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs text-amber-200 w-36"
+                          />
+                        </td>
+                        <td className="py-2 px-3 text-rose-300 font-sans">
+                          {r.fieldErrors.map((fe, idx) => (
+                            <div key={idx}>
+                              <span className="font-mono text-[10px] px-1 py-0.5 rounded bg-rose-500/20 mr-1">
+                                {fe.status}
+                              </span>
+                              {fe.field}: {fe.reason}
+                            </div>
+                          ))}
+                        </td>
+                        <td className="py-2 px-3 text-right">
+                          <button
+                            type="button"
+                            onClick={() => handleExcludeRow(r.rowNumber)}
+                            className="px-2 py-1 rounded bg-slate-800 hover:bg-rose-600 text-slate-300 hover:text-white text-[10px] font-bold inline-flex items-center gap-1 cursor-pointer"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                            <span>Exclude</span>
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
 
@@ -747,7 +976,7 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({
                       : 'text-slate-400 hover:text-white'
                   }`}
                 >
-                  Replace Current Register ({previewRows.length} rows)
+                  Replace Current Register ({validRows.length} rows)
                 </button>
                 <button
                   type="button"
@@ -773,7 +1002,7 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({
                 </span>
                 <span className="text-emerald-400 font-semibold flex items-center gap-1">
                   <CheckCircle2 className="w-3.5 h-3.5" />
-                  {previewRows.filter(r => r.isValid).length} of {previewRows.length} lines verified
+                  {validRows.length} of {previewRows.length} lines verified
                 </span>
               </div>
 
@@ -792,9 +1021,9 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-800 bg-slate-900/60">
-                    {previewRows.map((r, i) => (
-                      <tr key={i} className="hover:bg-slate-800/40">
-                        <td className="py-2 px-3 text-slate-500">{i + 1}</td>
+                    {previewRows.map((r) => (
+                      <tr key={r.rowNumber} className="hover:bg-slate-800/40">
+                        <td className="py-2 px-3 text-slate-500">{r.rowNumber}</td>
                         <td className="py-2 px-3 font-semibold text-white">{r.customer}</td>
                         <td className="py-2 px-3 text-slate-300">
                           <div>{r.po}</div>
@@ -811,9 +1040,9 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({
                         <td className="py-2 px-3 text-slate-300 font-semibold">{r.vehicle}</td>
                         <td className="py-2 px-3">
                           {r.isValid ? (
-                            <span className="text-emerald-400 text-[11px] font-bold">✓ Ready</span>
+                            <span className="text-emerald-400 text-[11px] font-bold">✓ Valid</span>
                           ) : (
-                            <span className="text-rose-400 text-[11px] font-bold">⚠️ Fix</span>
+                            <span className="text-rose-400 text-[11px] font-bold">⚠️ Quarantined</span>
                           )}
                         </td>
                       </tr>
@@ -837,16 +1066,22 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({
 
           <div className="flex items-center gap-3">
             <span className="text-xs text-slate-400 font-mono hidden sm:inline">
-              {previewRows.length > 0 ? `${previewRows.length} loads ready for engine ingestion` : 'Awaiting file'}
+              {previewRows.length > 0
+                ? `${validRows.length} valid, ${invalidRows.length} quarantined`
+                : 'Awaiting file'}
             </span>
             <button
               type="button"
               onClick={handleConfirmImport}
-              disabled={previewRows.length === 0 || isProcessing}
-              className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white rounded-lg text-xs font-bold transition flex items-center gap-2 cursor-pointer shadow-md"
+              disabled={validRows.length === 0 || invalidRows.length > 0 || isProcessing}
+              className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg text-xs font-bold transition flex items-center gap-2 cursor-pointer shadow-md"
             >
               <Check className="w-4 h-4" />
-              <span>Import Dispatches to Engine</span>
+              <span>
+                {invalidRows.length > 0
+                  ? `Resolve ${invalidRows.length} Quarantined Row(s)`
+                  : `Import ${validRows.length} Validated Dispatches`}
+              </span>
             </button>
           </div>
         </div>

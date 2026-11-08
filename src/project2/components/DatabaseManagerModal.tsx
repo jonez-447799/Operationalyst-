@@ -144,13 +144,13 @@ export const DatabaseManagerModal: React.FC<DatabaseManagerModalProps> = ({
             </div>
             <div>
               <h2 className="text-base font-bold text-white flex items-center gap-2">
-                <span>Multi-Client Factory Database Vaults</span>
+                <span>Local Browser Workspace Slots</span>
                 <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
-                  Tenant Isolation
+                  Local Demonstration Storage
                 </span>
               </h2>
               <p className="text-xs text-slate-400">
-                Keep every factory client's dispatches, customers, POs, and audit rules in 100% separate, private databases.
+                Keep each demonstration workspace's dispatches, customers, POs, and rules in separate local browser storage slots.
               </p>
             </div>
           </div>
@@ -191,7 +191,7 @@ export const DatabaseManagerModal: React.FC<DatabaseManagerModalProps> = ({
                 title="Download this client's complete database as JSON"
               >
                 <Download className="w-3.5 h-3.5 text-indigo-400" />
-                <span>Export Vault</span>
+                <span>Local demonstration export</span>
               </button>
               <label className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-lg text-xs font-semibold transition cursor-pointer flex items-center gap-1.5">
                 <Upload className="w-3.5 h-3.5 text-emerald-400" />
@@ -421,7 +421,7 @@ export const DatabaseManagerModal: React.FC<DatabaseManagerModalProps> = ({
 
         {/* Footer */}
         <div className="px-6 py-3 border-t border-slate-800 bg-slate-900/80 flex items-center justify-between text-xs text-slate-500">
-          <span>Enterprise Multi-Tenant Engine • Cryptographically Isolated Vaults</span>
+          <span>Local Browser Workspace Slots • Operational data remains inside this browser</span>
           <button
             onClick={onClose}
             className="px-4 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium rounded-lg transition cursor-pointer"

@@ -212,34 +212,22 @@ export const Header: React.FC<HeaderProps> = ({
               </button>
             )}
 
-            {/* Role Switcher */}
-            <div className="relative hidden xl:block">
+            {/* Role Preview Switcher */}
+            <div className="relative hidden xl:block" title="Role previews change the interface only. They do not provide security or authorization in this demonstration environment.">
               <select
-                aria-label="Active User Role"
+                aria-label="Preview interface as"
                 value={currentRole}
                 onChange={(e) => setCurrentRole(e.target.value as UserRole)}
                 className="appearance-none bg-neutral-100 dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 text-neutral-800 dark:text-neutral-200 text-xs font-medium rounded-md pl-2 pr-6 py-1.5 focus:outline-none focus:ring-1 focus:ring-amber-500 cursor-pointer"
               >
-                <option value="Owner">Role: Owner</option>
-                <option value="Plant Head">Role: Plant Head</option>
-                <option value="Accounts">Role: Accounts</option>
-                <option value="Auditor">Role: Auditor</option>
-                <option value="Read Only">Role: Read Only</option>
+                <option value="Owner">Preview interface as: Owner</option>
+                <option value="Plant Head">Preview interface as: Plant Head</option>
+                <option value="Accounts">Preview interface as: Accounts</option>
+                <option value="Auditor">Preview interface as: Auditor</option>
+                <option value="Read Only">Preview interface as: Read Only</option>
               </select>
-              <Lock className="w-3 h-3 text-neutral-400 absolute right-1.5 top-2.5 pointer-events-none" />
+              <ChevronDown className="w-3 h-3 text-neutral-400 absolute right-1.5 top-2.5 pointer-events-none" />
             </div>
-
-            {/* Lock Session Quick Action */}
-            {onLockSession && (
-              <button
-                onClick={onLockSession}
-                className="p-1.5 text-neutral-600 dark:text-neutral-300 hover:text-amber-600 dark:hover:text-amber-400 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
-                title="Lock Factory Vault (AES-256)"
-                aria-label="Lock Session"
-              >
-                <Lock className="w-4 h-4" />
-              </button>
-            )}
 
             {/* Dark mode toggle */}
             <button

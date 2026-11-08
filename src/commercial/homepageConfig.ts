@@ -124,7 +124,7 @@ export const AUDIT_DELIVERABLES = [
   },
   {
     title: 'Findings Review Call',
-    description: '30-minute direct consultation with founder Jonez Snowin to walk through the findings structure.',
+    description: '30-minute direct consultation with founder C. Jones Snowin to walk through the findings structure.',
   },
 ];
 
@@ -175,7 +175,7 @@ export const DATA_TRUST_ITEMS = [
   {
     question: 'Who can access submitted information?',
     answer:
-      'Only founder Jonez Snowin accesses submitted information during manual audit analysis. No third-party contractors or external data brokers have access.',
+      'Only founder C. Jones Snowin accesses submitted information during manual audit analysis. No third-party contractors or external data brokers have access.',
   },
   {
     question: 'How is information processed?',
@@ -185,7 +185,7 @@ export const DATA_TRUST_ITEMS = [
   {
     question: 'How long is information retained?',
     answer:
-      'Pilot review files are retained strictly for the duration of the audit discussion and analysis period (maximum 14 days), after which files are permanently purged. (Policy details pending final implementation for self-serve cloud storage).',
+      'Pilot review files are retained strictly for the duration of the audit discussion and analysis period (maximum 14 days), after which files are permanently purged unless ongoing workspace retention is explicitly requested in writing by the client.',
   },
   {
     question: 'How can deletion be requested?',
@@ -234,11 +234,11 @@ export const FAQ_ITEMS = [
   },
   {
     q: 'Is the pilot free or paid?',
-    a: 'Founder-led pilot audits are currently conducted on a collaborative validation basis with a limited number of manufacturing teams at zero upfront software cost. To be confirmed before public commercial launch for subsequent tiers.',
+    a: 'Founder-led pilot audits are conducted on a collaborative validation basis with a limited number of manufacturing teams at zero upfront software cost and zero automatic subscription obligation.',
   },
   {
     q: 'How is submitted data handled?',
-    a: 'Files are processed in an isolated analytical environment solely for producing your audit deliverable and are permanently deleted after review. Policy details pending final public implementation.',
+    a: 'Files are processed deterministically in an isolated analytical environment solely for producing your audit deliverable and are purged within 14 days of findings handover (or immediately upon emailing joneszz2004@gmail.com).',
   },
 ];
 
@@ -394,7 +394,7 @@ export const CUSTOMER_ANXIETY_MAP: CustomerAnxietyStage[] = [
     stage: '4. Findings Review',
     touchpoint: '30-Minute Executive Call',
     unspokenAnxiety: '“Will this be a high-pressure sales pitch disguised as a consulting review?”',
-    institutionalSafeguard: 'Conducted directly by founder Jonez Snowin. Focused strictly on findings, data limitations, and floor priorities.',
+    institutionalSafeguard: 'Conducted directly by founder C. Jones Snowin. Focused strictly on findings, data limitations, and floor priorities.',
     behavioralMechanism: 'Benevolence and authority over salesmanship.',
   },
   {
@@ -435,4 +435,200 @@ export const BEHAVIORAL_ICEBERG_DIMENSIONS = [
   { num: '26', name: 'Information Architecture', scope: 'Decoupled showroom from industrial cockpit; structured progressive navigation.' },
   { num: '27', name: 'Emotional Design', scope: 'Target emotion: Relieved competence and clarity (“Finally, I know what needs attention”).' },
 ];
+
+// ============================================================================
+// PHASE 4: RECONCILED 2-MODE SAMPLE AUDIT DATA
+// ============================================================================
+
+import { AMBATTUR_FABRICATION_SAMPLE, DEFAULT_RULES as P1_DEFAULT_RULES } from '../project1/data/initialData.ts';
+import { evaluateStockEngine, generateOwnerReport, formatCurrency } from '../project1/utils/calculations.ts';
+import { INITIAL_DISPATCHES, INITIAL_RULES as P2_DEFAULT_RULES } from '../project2/data/initialData.ts';
+import { calculateOTIFMetrics } from '../project2/utils/otifCalculator.ts';
+import { INITIAL_TRIPS, DEFAULT_RULES as P3_DEFAULT_RULES } from '../project3/data/defaultData.ts';
+import { calculateAuditMetrics } from '../project3/utils/auditCalculations.ts';
+import { INITIAL_SAMPLE_SKUS, DEFAULT_RULES as P4_DEFAULT_RULES } from '../project4/data/sampleData.ts';
+import { computeSummary } from '../project4/utils/auditCalculations.ts';
+
+export type SampleAuditModeId = 'sandbox_20' | 'illustrative_12400';
+
+export interface SampleAuditModeMetrics {
+  id: SampleAuditModeId;
+  badge: string;
+  badgeLabel: string;
+  shortLabel: string;
+  buttonLabel: string;
+  subtitle: string;
+  totalBookValueFormatted: string;
+  skusEvaluatedText: string;
+  deadStockValueFormatted: string;
+  deadStockSubtext: string;
+  slowMovingValueFormatted: string;
+  slowMovingSubtext: string;
+  prioritySkusHeadline: string;
+  prioritySkusSubtext: string;
+  topCategoryName: string;
+  topCategorySubtext: string;
+  p2OtifPill: string;
+  p3FreightPill: string;
+  p4BinPill: string;
+  inventoryAnalysedValue: string;
+  inventoryAnalysedSub: string;
+  itemsReviewedValue: string;
+  itemsReviewedSub: string;
+  nonMovingValue: string;
+  nonMovingSub: string;
+  slowMovingValue: string;
+  slowMovingSub: string;
+  priorityReviewValue: string;
+  priorityReviewSub: string;
+  highestCategoryValue: string;
+  highestCategorySub: string;
+  connectedPillarPills: Array<{
+    pillarCode: 'P2' | 'P3' | 'P4';
+    label: string;
+    value: string;
+    detail: string;
+  }>;
+}
+
+export function getReconciledSampleAuditModes(): Record<SampleAuditModeId, SampleAuditModeMetrics> {
+  // Dynamically compute Mode A from real P1-P4 engines
+  const p1Evaluated = evaluateStockEngine(AMBATTUR_FABRICATION_SAMPLE, P1_DEFAULT_RULES);
+  const p1Owner = generateOwnerReport(AMBATTUR_FABRICATION_SAMPLE, P1_DEFAULT_RULES);
+  const p2Metrics = calculateOTIFMetrics(INITIAL_DISPATCHES, P2_DEFAULT_RULES);
+  const p3Metrics = calculateAuditMetrics(INITIAL_TRIPS, P3_DEFAULT_RULES);
+  const p4Summary = computeSummary(INITIAL_SAMPLE_SKUS, P4_DEFAULT_RULES);
+  const p4AccuracyPct =
+    p4Summary.skusCounted > 0
+      ? ((p4Summary.linesMatched / p4Summary.skusCounted) * 100).toFixed(1)
+      : '100.0';
+
+  // Find highest dead-stock category in P1
+  const catEntries = Object.entries(p1Owner.categoryDeadBreakdown) as Array<
+    [string, { value: number; count: number; percent: number }]
+  >;
+  catEntries.sort((a, b) => b[1].value - a[1].value);
+  const topCatName = catEntries[0]?.[0] || 'Raw Material';
+  const topCatVal = catEntries[0]?.[1]?.value || 0;
+  const prioritySkusCount = p1Evaluated.filter(
+    (s) => s.status === 'Dead' || s.status === 'Slow'
+  ).length;
+
+  const p2PillStr = `P2 OTIF: ${p2Metrics.otifPercent.toFixed(1)}% (${p2Metrics.passes}/${p2Metrics.totalDispatches} Pass)`;
+  const p3PillStr = `P3 Freight Leak: ${formatCurrency(p3Metrics.totals.totalLeak)} (${p3Metrics.totals.totalTrips} Trips)`;
+  const p4PillStr = `P4 Bin Accuracy: ${p4AccuracyPct}% (${formatCurrency(p4Summary.shelfShortRupees)} Ghost Stock)`;
+
+  return {
+    sandbox_20: {
+      id: 'sandbox_20',
+      badge: 'LIVE 20-SKU SANDBOX DATASET • EXACT ENGINE MATCH',
+      badgeLabel: 'LIVE 20-SKU SANDBOX DATASET • EXACT ENGINE MATCH',
+      shortLabel: '20-SKU Platform Sandbox',
+      buttonLabel: 'Mode A: Live 20-SKU Sandbox Dataset (Exact Match to Platform & Walkthrough)',
+      subtitle:
+        'Dynamically computed by the real P1–P4 calculation engines on the 20-SKU Ambattur Fabrication sample dataset.',
+      totalBookValueFormatted: formatCurrency(p1Owner.totalStockValue),
+      skusEvaluatedText: `${p1Owner.totalItemCount} SKUs Evaluated`,
+      deadStockValueFormatted: formatCurrency(p1Owner.deadCash),
+      deadStockSubtext: `>180d Inactive (${p1Owner.deadItemCount} SKUs · ${p1Owner.deadCashPercent}%)`,
+      slowMovingValueFormatted: formatCurrency(p1Owner.slowCash),
+      slowMovingSubtext: `90–179d (${p1Owner.slowItemCount} SKUs · ${p1Owner.slowCashPercent}%)`,
+      prioritySkusHeadline: `${prioritySkusCount} Priority SKUs`,
+      prioritySkusSubtext: `${p1Owner.deadItemCount} Dead + ${p1Owner.slowItemCount} Slow Items`,
+      topCategoryName: topCatName,
+      topCategorySubtext: `${formatCurrency(topCatVal)} Non-Moving Exposure`,
+      p2OtifPill: p2PillStr,
+      p3FreightPill: p3PillStr,
+      p4BinPill: p4PillStr,
+      inventoryAnalysedValue: formatCurrency(p1Owner.totalStockValue),
+      inventoryAnalysedSub: `Total Book Value (${p1Owner.totalItemCount} Sandbox SKUs)`,
+      itemsReviewedValue: `${p1Owner.totalItemCount} SKUs Evaluated`,
+      itemsReviewedSub: '100% 5-Column Ledger Coverage',
+      nonMovingValue: `${formatCurrency(p1Owner.deadCash)} (>180d)`,
+      nonMovingSub: `${p1Owner.deadItemCount} SKUs (${p1Owner.deadCashPercent}% of Book Value)`,
+      slowMovingValue: `${formatCurrency(p1Owner.slowCash)} (90–179d)`,
+      slowMovingSub: `${p1Owner.slowItemCount} SKUs (${p1Owner.slowCashPercent}% of Book Value)`,
+      priorityReviewValue: `${prioritySkusCount} Priority SKUs`,
+      priorityReviewSub: `${p1Owner.deadItemCount} Dead + ${p1Owner.slowItemCount} Slow Items`,
+      highestCategoryValue: topCatName,
+      highestCategorySub: `${formatCurrency(topCatVal)} Non-Moving Exposure`,
+      connectedPillarPills: [
+        {
+          pillarCode: 'P2',
+          label: 'P2 OTIF',
+          value: `${p2Metrics.otifPercent.toFixed(1)}% (${p2Metrics.passes}/${p2Metrics.totalDispatches} Pass)`,
+          detail: `${p2Metrics.fails} Failed (${p2Metrics.failsLateOnly} Late, ${p2Metrics.failsShortOnly} Short, ${p2Metrics.failsLateAndShort} Both)`,
+        },
+        {
+          pillarCode: 'P3',
+          label: 'P3 Freight Leak',
+          value: `${formatCurrency(p3Metrics.totals.totalLeak)} (${p3Metrics.totals.totalTrips} Trips)`,
+          detail: `${formatCurrency(p3Metrics.totals.rateLeak)} Rate Variance + ${formatCurrency(p3Metrics.totals.detention)} Detention`,
+        },
+        {
+          pillarCode: 'P4',
+          label: 'P4 Bin Accuracy',
+          value: `${p4AccuracyPct}% (${formatCurrency(p4Summary.shelfShortRupees)} Ghost Stock)`,
+          detail: `${p4Summary.linesMatched}/${p4Summary.skusCounted} Bins Matched • ${formatCurrency(p4Summary.shelfShortRupees + p4Summary.foundStockRupees)} Abs Variance`,
+        },
+      ],
+    },
+    illustrative_12400: {
+      id: 'illustrative_12400',
+      badge: 'ILLUSTRATIVE CASE • MID-SIZED AUTO-COMPONENT PLANT (12,400 LINE ITEMS)',
+      badgeLabel: 'ILLUSTRATIVE CASE • MID-SIZED AUTO-COMPONENT PLANT (12,400 LINE ITEMS)',
+      shortLabel: '12,400-Line Auto-Component Plant',
+      buttonLabel: 'Mode B: Mid-Sized Auto-Component Plant Illustrative Case (12,400 Line Items)',
+      subtitle:
+        'Reconciled 100% with the Hero benchmark card showing a typical mid-sized Tier-2 automotive component plant.',
+      totalBookValueFormatted: '₹4,82,50,000',
+      skusEvaluatedText: '12,400 Line Items',
+      deadStockValueFormatted: '₹18,42,000',
+      deadStockSubtext: '>180 Days Inactive (24 SKUs)',
+      slowMovingValueFormatted: '₹32,60,000',
+      slowMovingSubtext: '90–180d Velocity Deceleration (41 SKUs)',
+      prioritySkusHeadline: '18 Priority SKUs',
+      prioritySkusSubtext: '76% of Stagnant Capital Concentrated Here',
+      topCategoryName: 'Precision Machined Castings & Sub-Assemblies',
+      topCategorySubtext: '₹8,42,000 Dormant Casting & Forging Exposure',
+      p2OtifPill: p2PillStr,
+      p3FreightPill: p3PillStr,
+      p4BinPill: p4PillStr,
+      inventoryAnalysedValue: '₹4,82,50,000',
+      inventoryAnalysedSub: 'Total Book Value (Quarterly Stock Dump)',
+      itemsReviewedValue: '12,400 Line Items',
+      itemsReviewedSub: 'Raw Material, WIP, Sub-Assemblies & Spares',
+      nonMovingValue: '₹18,42,000 (>180d)',
+      nonMovingSub: '24 SKUs Inactive >180 Days',
+      slowMovingValue: '₹32,60,000 (90–180d)',
+      slowMovingSub: '41 SKUs with Velocity Deceleration',
+      priorityReviewValue: '18 Priority SKUs',
+      priorityReviewSub: '76% of Stagnant Capital Concentrated Here',
+      highestCategoryValue: 'Precision Machined Castings & Sub-Assemblies',
+      highestCategorySub: '₹8,42,000 Dormant Casting & Forging Exposure',
+      connectedPillarPills: [
+        {
+          pillarCode: 'P2',
+          label: 'P2 OTIF',
+          value: '50.0% (9/18 Pass)',
+          detail: 'Connected Plant Dispatch Gate Benchmark',
+        },
+        {
+          pillarCode: 'P3',
+          label: 'P3 Freight Leak',
+          value: '₹13,944 (12 Trips)',
+          detail: 'Carrier Rate Card & Gate Detention Audit',
+        },
+        {
+          pillarCode: 'P4',
+          label: 'P4 Bin Accuracy',
+          value: '60.0% (₹24,240 Ghost Stock)',
+          detail: 'Pre-Shift Cycle Count & Slotting Verification',
+        },
+      ],
+    },
+  };
+}
+
+
 

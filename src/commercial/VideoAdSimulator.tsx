@@ -138,7 +138,7 @@ const STORY_BEATS: StoryBeat[] = [
     screenVisual: 'High-contrast CTA card: Accepting 3 Pilot Audits for Founder Review',
     hookLine: 'Request Free Factory Audit (3 Pilot Spots Available)',
     voiceoverScript:
-      '"Founder Jonez Snowin is accepting 3 factory audits this month for direct personal review. Upload your data or request a confidential audit today."',
+      '"Founder C. Jones Snowin is accepting 3 factory audits this month for direct personal review. Upload your data or request a confidential audit today."',
     visualDetails: {
       title: 'Accepting 3 Pilot Factory Audits for Founder Review',
       description: 'Founder personally reviews your inventory file and presents the 1-on-1 audit report.',

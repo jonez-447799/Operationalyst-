@@ -1,4 +1,4 @@
-import { AuditItem, AuditRules, AuditSummary, PredictiveShortage } from '../types/audit';
+import type { AuditItem, AuditRules, AuditSummary, PredictiveShortage } from '../types/audit.ts';
 
 export function calculateItemFields(item: AuditItem, rules: AuditRules): AuditItem {
   const gapQty = item.physicalQty - item.systemQty;

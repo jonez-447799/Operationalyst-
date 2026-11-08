@@ -36,6 +36,12 @@ import { AuditDossierModal } from './components/AuditDossierModal';
 import { TrialDataLoaderModal } from './components/TrialDataLoaderModal';
 import { TrialDataset } from './data/trialDatasets';
 import { CashRecoveryEngineV2 } from './components/CashRecoveryEngineV2';
+import {
+  PlantId,
+  getActivePlantIdFromStorage,
+  readPlantDatasetFromBrowser,
+  writePlantDatasetToBrowser,
+} from '../data/multiPlantBaselines';
 
 export default function App() {
   // Navigation & UI state
@@ -46,27 +52,18 @@ export default function App() {
   const [isDrillOpen, setIsDrillOpen] = useState<boolean>(false);
   const [isAuditDossierOpen, setIsAuditDossierOpen] = useState<boolean>(false);
   const [isTrialModalOpen, setIsTrialModalOpen] = useState<boolean>(false);
+  const [activePlantId, setActivePlantId] = useState<PlantId>(() => getActivePlantIdFromStorage());
   const [activeDatasetId, setActiveDatasetId] = useState<string>('ambattur-baseline');
   const [gdprPrivacyMode, setGdprPrivacyMode] = useState<boolean>(false);
   const [isSessionLocked, setIsSessionLocked] = useState<boolean>(false);
 
-  // Core Data State (Loaded from localStorage or initialized with Ambattur fabrication unit sample)
+  // Core Data State (Loaded from plant-scoped storage or initialized with active plant baseline)
   const [items, setItems] = useState<StockItem[]>(() => {
-    try {
-      const saved = localStorage.getItem('p1_stock_items');
-      return saved ? JSON.parse(saved) : AMBATTUR_FABRICATION_SAMPLE;
-    } catch {
-      return AMBATTUR_FABRICATION_SAMPLE;
-    }
+    return readPlantDatasetFromBrowser(getActivePlantIdFromStorage()).p1Items;
   });
 
   const [rules, setRules] = useState<RulesConfig>(() => {
-    try {
-      const saved = localStorage.getItem('p1_stock_rules');
-      return saved ? JSON.parse(saved) : DEFAULT_RULES;
-    } catch {
-      return DEFAULT_RULES;
-    }
+    return readPlantDatasetFromBrowser(getActivePlantIdFromStorage()).p1Rules;
   });
 
   const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>(() => {
@@ -77,6 +74,21 @@ export default function App() {
       return INITIAL_AUDIT_LOGS;
     }
   });
+
+  // Listen for plant changes in storage
+  useEffect(() => {
+    const handleStorage = () => {
+      const currentPlant = getActivePlantIdFromStorage();
+      if (currentPlant !== activePlantId) {
+        setActivePlantId(currentPlant);
+        const ds = readPlantDatasetFromBrowser(currentPlant);
+        setItems(ds.p1Items);
+        setRules(ds.p1Rules);
+      }
+    };
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
+  }, [activePlantId]);
 
   // System Performance Metrics State
   const [metrics, setMetrics] = useState<SystemMetrics>({
@@ -97,10 +109,10 @@ export default function App() {
     }
   }, [darkMode]);
 
-  // Persist items & update SKU metric
+  // Persist items & update SKU metric (Plant-isolated)
   useEffect(() => {
     try {
-      localStorage.setItem('p1_stock_items', JSON.stringify(items));
+      writePlantDatasetToBrowser(activePlantId, { p1Items: items });
       setMetrics((prev) => ({
         ...prev,
         activeSkuCount: items.length,
@@ -109,16 +121,16 @@ export default function App() {
     } catch (e) {
       console.warn('Storage quota exceeded', e);
     }
-  }, [items]);
+  }, [items, activePlantId]);
 
-  // Persist rules
+  // Persist rules (Plant-isolated)
   useEffect(() => {
     try {
-      localStorage.setItem('p1_stock_rules', JSON.stringify(rules));
+      writePlantDatasetToBrowser(activePlantId, { p1Rules: rules });
     } catch (e) {
       console.warn('Storage quota exceeded', e);
     }
-  }, [rules]);
+  }, [rules, activePlantId]);
 
   // Persist audit logs
   useEffect(() => {
@@ -224,30 +236,33 @@ export default function App() {
     logAction('RULES_RESET', 'Reset rules to factory defaults (180d dead, 90d slow, 18% holding cost).');
   };
 
-  // Export encrypted backup
+  // Export local demonstration snapshot
   const handleExportBackup = () => {
     const backupData = {
+      exportType: 'LOCAL_DEMONSTRATION_EXPORT',
+      notice:
+        'Local demonstration export only. Operational information is stored only in this browser.',
       version: '1.0.0',
       timestamp: new Date().toISOString(),
       facility: 'Ambattur Fabrication Unit',
       rules,
       items,
       auditLogs,
-      checksum: generateHash(JSON.stringify(items)),
+      localRef: generateHash(JSON.stringify(items)),
     };
     const jsonStr = JSON.stringify(backupData, null, 2);
     const blob = new Blob([jsonStr], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `factory_cash_audit_backup_${new Date().toISOString().slice(0, 10)}.json`;
+    a.download = `local_demonstration_export_${new Date().toISOString().slice(0, 10)}.json`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
-    logAction('BACKUP_EXPORTED', 'Exported encrypted offline JSON snapshot.');
+    logAction('LOCAL_EXPORT', 'Downloaded local demonstration JSON export.');
   };
 
-  // Restore backup
+  // Restore local JSON snapshot
   const handleRestoreBackup = (jsonContent: string) => {
     try {
       const parsed = JSON.parse(jsonContent);
@@ -260,10 +275,9 @@ export default function App() {
       if (parsed.auditLogs && Array.isArray(parsed.auditLogs)) {
         setAuditLogs(parsed.auditLogs);
       }
-      logAction('BACKUP_RESTORED', `Restored backup snapshot containing ${parsed.items?.length || 0} SKUs.`);
-      alert('Backup snapshot restored successfully!');
+      logAction('LOCAL_RESTORE', `Loaded local demonstration JSON containing ${parsed.items?.length || 0} SKUs.`);
     } catch (e: any) {
-      alert(`Invalid backup file: ${e.message}`);
+      console.warn(`Invalid JSON file: ${e.message}`);
     }
   };
 
@@ -273,7 +287,7 @@ export default function App() {
     logAction('PRINT_DELIVERABLE', 'Printed 1-Page Owner Report for factory executive review.');
   };
 
-  // Privacy-filtered items (if GDPR mode enabled)
+  // Privacy-filtered items (if screen-share display masking enabled)
   const displayItems = gdprPrivacyMode
     ? items.map((item, idx) => ({
         ...item,
@@ -282,36 +296,9 @@ export default function App() {
       }))
     : items;
 
-  // Auto-lock after 15 minutes of inactivity
-  useEffect(() => {
-    let timer: any;
-    const resetInactivity = () => {
-      clearTimeout(timer);
-      timer = setTimeout(() => {
-        setIsSessionLocked(true);
-        logAction('SESSION_AUTOLOCKED', 'Factory vault auto-locked due to 15min inactivity.');
-      }, 15 * 60 * 1000);
-    };
-
-    window.addEventListener('mousemove', resetInactivity);
-    window.addEventListener('keydown', resetInactivity);
-    resetInactivity();
-
-    return () => {
-      clearTimeout(timer);
-      window.removeEventListener('mousemove', resetInactivity);
-      window.removeEventListener('keydown', resetInactivity);
-    };
-  }, []);
-
-  const handleUnlockSession = (pin: string): boolean => {
-    if (pin === '2026' || pin === '1234' || pin === '9999') {
-      setIsSessionLocked(false);
-      logAction('VAULT_UNLOCKED', 'Factory vault session unlocked via master PIN.');
-      return true;
-    }
-    logAction('VAULT_AUTH_FAILED', 'Failed PIN attempt on factory vault.');
-    return false;
+  const handleUnlockSession = (_pin: string): boolean => {
+    setIsSessionLocked(false);
+    return true;
   };
 
   return (

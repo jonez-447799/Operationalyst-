@@ -47,6 +47,12 @@ import {
   formatINR 
 } from './utils/auditCalculations';
 import { getPartImageUrl } from './utils/partImages';
+import {
+  PlantId,
+  getActivePlantIdFromStorage,
+  readPlantDatasetFromBrowser,
+  writePlantDatasetToBrowser,
+} from '../data/multiPlantBaselines';
 
 import { 
   LayoutDashboard, 
@@ -63,28 +69,40 @@ import {
 } from 'lucide-react';
 
 export default function App() {
-  // Persistence in localStorage
+  const [activePlantId, setActivePlantId] = useState<PlantId>(() => getActivePlantIdFromStorage());
+
+  // Persistence in plant-isolated localStorage
   const [items, setItems] = useState<AuditItem[]>(() => {
-    try {
-      const saved = localStorage.getItem('binaudit_skus_v1');
-      if (saved) {
-        const parsed: AuditItem[] = JSON.parse(saved);
-        return parsed.map((it) => ({
-          ...it,
-          imageUrl: it.imageUrl || getPartImageUrl(it.code),
-        }));
-      }
-    } catch {}
-    return INITIAL_SAMPLE_SKUS;
+    const raw = readPlantDatasetFromBrowser(getActivePlantIdFromStorage()).p4Bins || INITIAL_SAMPLE_SKUS;
+    return raw.map((it) => ({
+      ...it,
+      imageUrl: it.imageUrl || getPartImageUrl(it.code),
+    }));
   });
 
   const [rules, setRules] = useState<AuditRules>(() => {
-    try {
-      const saved = localStorage.getItem('binaudit_rules_v1');
-      if (saved) return JSON.parse(saved);
-    } catch {}
-    return DEFAULT_RULES;
+    return readPlantDatasetFromBrowser(getActivePlantIdFromStorage()).p4Rules || DEFAULT_RULES;
   });
+
+  // Listen for plant changes in storage
+  useEffect(() => {
+    const handleStorage = () => {
+      const currentPlant = getActivePlantIdFromStorage();
+      if (currentPlant !== activePlantId) {
+        setActivePlantId(currentPlant);
+        const ds = readPlantDatasetFromBrowser(currentPlant);
+        setItems(
+          ds.p4Bins.map((it) => ({
+            ...it,
+            imageUrl: it.imageUrl || getPartImageUrl(it.code),
+          }))
+        );
+        setRules(ds.p4Rules);
+      }
+    };
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
+  }, [activePlantId]);
 
   const [activeRole, setActiveRole] = useState<UserRole>('owner');
   const [filterMode, setFilterMode] = useState<string>('all');
@@ -113,7 +131,7 @@ export default function App() {
         user: 'System Boot',
         role: 'auditor',
         action: 'AUDIT_INITIALIZED',
-        details: 'Pre-shutter morning bin audit initialized with 15 baseline SKUs.',
+        details: 'Pre-shutter morning bin audit initialized with plant baseline SKUs.',
       },
       {
         id: 'log-rules',
@@ -126,18 +144,18 @@ export default function App() {
     ];
   });
 
-  // Keep items synced to localStorage
+  // Keep items synced to plant-isolated localStorage
   useEffect(() => {
     try {
-      localStorage.setItem('binaudit_skus_v1', JSON.stringify(items));
+      writePlantDatasetToBrowser(activePlantId, { p4Bins: items });
     } catch {}
-  }, [items]);
+  }, [items, activePlantId]);
 
   useEffect(() => {
     try {
-      localStorage.setItem('binaudit_rules_v1', JSON.stringify(rules));
+      writePlantDatasetToBrowser(activePlantId, { p4Rules: rules });
     } catch {}
-  }, [rules]);
+  }, [rules, activePlantId]);
 
   // Log an event helper
   const addLog = (action: string, details: string, itemCode?: string) => {

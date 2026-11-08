@@ -33,15 +33,23 @@ import { INITIAL_WORKSPACES, INITIAL_SECURITY_CONFIG, INITIAL_AUDIT_LOGS } from 
 import { DispatchRow, RulesConfig, UserRole } from './types/otif';
 import { FactoryWorkspace, AuditLogEntry, SecurityConfig } from './types/database';
 import { calculateOTIFMetrics } from './utils/otifCalculator';
+import { getActiveP2WorkspaceId, STORAGE_KEY_P2_ACTIVE_WS } from '../utils/importValidation';
+import {
+  PlantId,
+  getActivePlantIdFromStorage,
+  readPlantDatasetFromBrowser,
+  writePlantDatasetToBrowser,
+} from '../data/multiPlantBaselines';
 
 const STORAGE_KEY_WORKSPACES = 'otif_workspaces_v2';
-const STORAGE_KEY_ACTIVE_WS = 'otif_active_workspace_id_v2';
+const STORAGE_KEY_ACTIVE_WS = STORAGE_KEY_P2_ACTIVE_WS;
 const STORAGE_KEY_SECURITY = 'otif_security_config_v2';
 const STORAGE_KEY_AUDIT = 'otif_audit_logs_v2';
 
 export default function App() {
   const [currentTab, setCurrentTab] = useState<'report' | 'sheet' | 'gate' | 'drill' | 'register' | 'rules' | 'guide' | 'rnd'>('report');
   const [currentRole, setCurrentRole] = useState<UserRole>('owner');
+  const [activePlantId, setActivePlantId] = useState<PlantId>(() => getActivePlantIdFromStorage());
   
   // Sheet drill-down filters when clicking from Owner Report
   const [sheetCustomerFilter, setSheetCustomerFilter] = useState<string>('');
@@ -79,13 +87,7 @@ export default function App() {
   });
 
   const [activeWorkspaceId, setActiveWorkspaceId] = useState<string>(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY_ACTIVE_WS);
-      if (saved) return saved;
-    } catch {
-      // ignore
-    }
-    return INITIAL_WORKSPACES[0]?.id || 'ws_apex_01';
+    return getActiveP2WorkspaceId(INITIAL_WORKSPACES[0]?.id || 'ws_apex_01');
   });
 
   // Security Configuration
@@ -99,7 +101,7 @@ export default function App() {
     return INITIAL_SECURITY_CONFIG;
   });
 
-  // Tamper-Proof Audit Trail
+  // Local Activity History
   const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY_AUDIT);
@@ -115,20 +117,35 @@ export default function App() {
     return workspaces.find(w => w.id === activeWorkspaceId) || workspaces[0] || INITIAL_WORKSPACES[0];
   }, [workspaces, activeWorkspaceId]);
 
-  // Current dispatches & rules tied to the active workspace
-  const [rules, setRules] = useState<RulesConfig>(activeWorkspace.rules || INITIAL_RULES);
-  const [dispatches, setDispatches] = useState<DispatchRow[]>(activeWorkspace.dispatches || INITIAL_DISPATCHES);
+  // Current dispatches & rules tied to the active plant dataset
+  const [rules, setRules] = useState<RulesConfig>(() => {
+    return readPlantDatasetFromBrowser(getActivePlantIdFromStorage()).p2Rules || INITIAL_RULES;
+  });
+  const [dispatches, setDispatches] = useState<DispatchRow[]>(() => {
+    return readPlantDatasetFromBrowser(getActivePlantIdFromStorage()).p2Dispatches || INITIAL_DISPATCHES;
+  });
 
-  // Keep rules and dispatches in sync when active workspace changes
+  // Listen for plant changes in storage
   useEffect(() => {
-    if (activeWorkspace) {
-      setRules(activeWorkspace.rules);
-      setDispatches(activeWorkspace.dispatches);
-    }
-  }, [activeWorkspaceId]);
+    const handleStorage = () => {
+      const currentPlant = getActivePlantIdFromStorage();
+      if (currentPlant !== activePlantId) {
+        setActivePlantId(currentPlant);
+        const ds = readPlantDatasetFromBrowser(currentPlant);
+        setRules(ds.p2Rules);
+        setDispatches(ds.p2Dispatches);
+      }
+    };
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
+  }, [activePlantId]);
 
-  // Save changes to active workspace within workspaces list & localStorage
+  // Save changes to plant-isolated storage and active workspace
   useEffect(() => {
+    writePlantDatasetToBrowser(activePlantId, {
+      p2Rules: rules,
+      p2Dispatches: dispatches,
+    });
     setWorkspaces(prev =>
       prev.map(w =>
         w.id === activeWorkspaceId
@@ -142,7 +159,7 @@ export default function App() {
           : w
       )
     );
-  }, [rules, dispatches, activeWorkspaceId]);
+  }, [rules, dispatches, activeWorkspaceId, activePlantId]);
 
   // Save workspaces to localStorage
   useEffect(() => {
@@ -192,9 +209,9 @@ export default function App() {
     return false;
   }, [dispatches, rules]);
 
-  // Security Audit Logging Helper
+  // Local Activity History Logging Helper (Browser demonstration only)
   const logAuditAction = (action: AuditLogEntry['action'], details: string, recordId?: string) => {
-    const randomHex = Math.random().toString(36).substring(2, 8) + Math.random().toString(36).substring(2, 8);
+    const randomRef = Math.random().toString(36).substring(2, 8);
     const newEntry: AuditLogEntry = {
       id: `aud-${Date.now()}`,
       timestamp: new Date().toISOString(),
@@ -208,8 +225,8 @@ export default function App() {
           : 'Stores Dispatch Clerk',
       details,
       recordId,
-      digitalSignature: `SHA256:${randomHex}`,
-      ipHash: `192.168.1.${Math.floor(Math.random() * 200 + 10)} [Gate Terminal]`,
+      digitalSignature: `local_ref_${randomRef}`,
+      ipHash: 'Local Browser Session',
     };
     setAuditLogs(prev => [newEntry, ...prev.slice(0, 99)]);
   };

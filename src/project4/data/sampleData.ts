@@ -1,5 +1,5 @@
-import { AuditItem, AuditRules } from '../types/audit';
-import { PART_PLACEHOLDER_IMAGES } from '../utils/partImages';
+import type { AuditItem, AuditRules } from '../types/audit.ts';
+import { PART_PLACEHOLDER_IMAGES } from '../utils/partImages.ts';
 
 export const DEFAULT_RULES: AuditRules = {
   countDate: '2026-10-01',

@@ -6,35 +6,56 @@
 import React, { useState } from 'react';
 import {
   X,
-  FileSpreadsheet,
-  Download,
-  AlertTriangle,
-  CheckCircle2,
-  HelpCircle,
   ShieldAlert,
   ArrowRight,
-  TrendingDown,
-  Layers,
   Info,
-  Calendar,
-  Building2,
-  FileCheck2,
+  Printer,
+  ExternalLink,
+  Package,
+  Truck,
+  IndianRupee,
+  Warehouse,
 } from 'lucide-react';
+import { getReconciledSampleAuditModes } from './homepageConfig';
 
 interface SampleAuditReportModalProps {
   isOpen: boolean;
   onClose: () => void;
   onRequestAudit: () => void;
+  onOpenLiveWalkthrough?: () => void;
 }
 
 export const SampleAuditReportModal: React.FC<SampleAuditReportModalProps> = ({
   isOpen,
   onClose,
   onRequestAudit,
+  onOpenLiveWalkthrough,
 }) => {
-  const [activeTab, setActiveTab] = useState<'summary' | 'sku_list' | 'methodology' | 'limitations'>('summary');
+  const [activeTab, setActiveTab] = useState<
+    'summary' | 'sku_list' | 'methodology' | 'briefing_2page' | 'limitations'
+  >('summary');
 
   if (!isOpen) return null;
+
+  const modes = getReconciledSampleAuditModes();
+  const sandboxMode = modes.sandbox_20;
+  const illustrativeMode = modes.illustrative_12400;
+
+  const handlePrintBriefing = () => {
+    setActiveTab('briefing_2page');
+    setTimeout(() => {
+      window.print();
+    }, 80);
+  };
+
+  const handleLaunchWalkthrough = () => {
+    if (onOpenLiveWalkthrough) {
+      onOpenLiveWalkthrough();
+      return;
+    }
+    window.location.href =
+      '/?view=pilot-findings&id=AUDIT-DEMO-P1P4&token=operationalyst-public-demo-token';
+  };
 
   return (
     <div
@@ -44,17 +65,34 @@ export const SampleAuditReportModal: React.FC<SampleAuditReportModalProps> = ({
       aria-labelledby="sample-report-title"
     >
       <div className="bg-slate-900 text-slate-100 rounded-2xl max-w-5xl w-full p-4 sm:p-6 md:p-8 shadow-2xl border border-slate-750 relative space-y-6 my-6 max-h-[92vh] overflow-y-auto font-sans">
-        {/* Top Watermark & Disclaimer Banner */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-mono">
+        {/* Top Watermark & Action Bar */}
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-mono no-print">
           <div className="flex items-center gap-2">
             <Info className="w-4 h-4 text-amber-400 shrink-0" />
             <span className="font-bold uppercase tracking-wider">
-              ILLUSTRATIVE EXAMPLE • DEMONSTRATION DATA
+              ILLUSTRATIVE EXAMPLE • RECONCILED DEMONSTRATION DATA
             </span>
           </div>
-          <span className="text-[11px] text-slate-400">
-            Example demonstration scenario based on standard industrial machining &amp; assembly data
-          </span>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              data-testid="sample-modal-print-briefing-btn"
+              onClick={handlePrintBriefing}
+              className="px-3 py-1.5 rounded-lg bg-slate-950 hover:bg-slate-800 border border-slate-700 text-slate-200 font-bold text-[11px] inline-flex items-center gap-1.5 cursor-pointer transition"
+            >
+              <Printer className="w-3.5 h-3.5 text-sky-400" />
+              <span>Print / Save 2-Page Executive PDF Briefing</span>
+            </button>
+            <button
+              type="button"
+              data-testid="sample-modal-open-walkthrough-btn"
+              onClick={handleLaunchWalkthrough}
+              className="px-3 py-1.5 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-300 font-bold text-[11px] inline-flex items-center gap-1.5 cursor-pointer transition"
+            >
+              <ExternalLink className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Open Live 4-Pillar Interactive Walkthrough (P1–P4)</span>
+            </button>
+          </div>
         </div>
 
         {/* Header */}
@@ -62,7 +100,7 @@ export const SampleAuditReportModal: React.FC<SampleAuditReportModalProps> = ({
           <div className="space-y-1">
             <div className="flex items-center gap-2">
               <span className="text-xs font-mono text-emerald-400 font-bold uppercase tracking-wider">
-                Forensic Deliverable Preview
+                Forensic Deliverable Preview (P1–P4)
               </span>
               <span className="text-slate-600">·</span>
               <span className="text-xs font-mono text-slate-400">File: Stock_Register_Q3_Dump.xlsx</span>
@@ -71,13 +109,13 @@ export const SampleAuditReportModal: React.FC<SampleAuditReportModalProps> = ({
               Factory Inventory Risk &amp; Working Capital Audit
             </h2>
             <p className="text-xs sm:text-sm text-slate-400">
-              Audit Date: 12 October 2026 · Total Records Analyzed: 12,400 SKUs · Inventory Value: ₹4,82,50,000
+              Prepared by: C. Jones Snowin (Operationalyst / Snowin Ventures, Chennai) · Case B: 12,400 Line Items (₹4,82,50,000) &amp; Case A: Live 20-SKU Sandbox (₹6,45,650)
             </p>
           </div>
 
           <button
             onClick={onClose}
-            className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition cursor-pointer"
+            className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition cursor-pointer no-print"
             aria-label="Close modal"
           >
             <X className="w-5 h-5" />
@@ -85,7 +123,7 @@ export const SampleAuditReportModal: React.FC<SampleAuditReportModalProps> = ({
         </div>
 
         {/* Tab Navigation */}
-        <div className="flex items-center gap-2 border-b border-slate-800 pb-2 overflow-x-auto scrollbar-none">
+        <div className="flex items-center gap-2 border-b border-slate-800 pb-2 overflow-x-auto scrollbar-none no-print">
           <button
             onClick={() => setActiveTab('summary')}
             className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition cursor-pointer ${
@@ -104,7 +142,7 @@ export const SampleAuditReportModal: React.FC<SampleAuditReportModalProps> = ({
                 : 'text-slate-400 hover:text-slate-200'
             }`}
           >
-            2. High-Priority SKUs (Top 15)
+            2. High-Priority SKUs
           </button>
           <button
             onClick={() => setActiveTab('methodology')}
@@ -117,6 +155,17 @@ export const SampleAuditReportModal: React.FC<SampleAuditReportModalProps> = ({
             3. Investigation Sequence
           </button>
           <button
+            data-testid="sample-modal-tab-2page"
+            onClick={() => setActiveTab('briefing_2page')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition cursor-pointer ${
+              activeTab === 'briefing_2page'
+                ? 'bg-sky-500/20 text-sky-300 border border-sky-500/40'
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            4. 2-Page Executive PDF Briefing
+          </button>
+          <button
             onClick={() => setActiveTab('limitations')}
             className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition cursor-pointer ${
               activeTab === 'limitations'
@@ -124,60 +173,105 @@ export const SampleAuditReportModal: React.FC<SampleAuditReportModalProps> = ({
                 : 'text-slate-400 hover:text-slate-200'
             }`}
           >
-            4. Scope &amp; Limitations
+            5. Scope &amp; Limitations
           </button>
         </div>
 
-        {/* Tab 1: Executive Summary */}
+        {/* Tab 1: Executive Summary (Reconciled with Hero Card & 20-SKU Sandbox) */}
         {activeTab === 'summary' && (
           <div className="space-y-6">
-            {/* Top 4 Metric Cards */}
+            {/* Top 4 Reconciled Metric Cards (Mid-Sized Auto-Component Plant Case) */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 font-mono">
+              <div className="p-4 rounded-xl bg-slate-950 border border-slate-700">
+                <div className="text-[10px] text-slate-400 uppercase font-bold">Total Book Value</div>
+                <div className="text-xl sm:text-2xl font-black text-white mt-1">
+                  {illustrativeMode.totalBookValueFormatted}
+                </div>
+                <div className="text-[10px] text-slate-400 mt-0.5">
+                  {illustrativeMode.skusEvaluatedText}
+                </div>
+              </div>
+
               <div className="p-4 rounded-xl bg-slate-950 border border-rose-500/30">
                 <div className="text-[10px] text-slate-400 uppercase font-bold">Non-Moving Stock (&gt;180d)</div>
-                <div className="text-xl sm:text-2xl font-black text-rose-300 mt-1">₹18,50,000</div>
-                <div className="text-[10px] text-slate-400 mt-0.5">142 SKUs (3.8% of inventory)</div>
+                <div className="text-xl sm:text-2xl font-black text-rose-300 mt-1">
+                  {illustrativeMode.deadStockValueFormatted}
+                </div>
+                <div className="text-[10px] text-slate-400 mt-0.5">
+                  {illustrativeMode.deadStockSubtext}
+                </div>
               </div>
 
               <div className="p-4 rounded-xl bg-slate-950 border border-amber-500/30">
-                <div className="text-[10px] text-slate-400 uppercase font-bold">Slow-Moving (90-180d)</div>
-                <div className="text-xl sm:text-2xl font-black text-amber-300 mt-1">₹42,10,000</div>
-                <div className="text-[10px] text-slate-400 mt-0.5">318 SKUs requiring review</div>
+                <div className="text-[10px] text-slate-400 uppercase font-bold">Slow-Moving (90–180d)</div>
+                <div className="text-xl sm:text-2xl font-black text-amber-300 mt-1">
+                  {illustrativeMode.slowMovingValueFormatted}
+                </div>
+                <div className="text-[10px] text-slate-400 mt-0.5">
+                  {illustrativeMode.slowMovingSubtext}
+                </div>
               </div>
 
               <div className="p-4 rounded-xl bg-slate-950 border border-emerald-500/40 bg-emerald-950/10">
-                <div className="text-[10px] text-emerald-300 uppercase font-bold">Recoverable Working Capital</div>
-                <div className="text-xl sm:text-2xl font-black text-emerald-400 mt-1">₹14,80,000</div>
-                <div className="text-[10px] text-slate-400 mt-0.5">80% estimated recovery potential</div>
-              </div>
-
-              <div className="p-4 rounded-xl bg-slate-950 border border-cyan-500/30">
-                <div className="text-[10px] text-slate-400 uppercase font-bold">Pareto Concentration</div>
-                <div className="text-xl sm:text-2xl font-black text-cyan-300 mt-1">78.4%</div>
-                <div className="text-[10px] text-slate-400 mt-0.5">Held in top 15 non-moving SKUs</div>
+                <div className="text-[10px] text-emerald-300 uppercase font-bold">Pareto Priority Focus</div>
+                <div className="text-xl sm:text-2xl font-black text-emerald-400 mt-1">
+                  {illustrativeMode.prioritySkusHeadline}
+                </div>
+                <div className="text-[10px] text-slate-400 mt-0.5">
+                  {illustrativeMode.prioritySkusSubtext}
+                </div>
               </div>
             </div>
 
-            {/* Data Quality Overview */}
-            <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-3">
-              <div className="flex items-center justify-between border-b border-slate-850 pb-2">
-                <span className="text-xs font-mono font-bold text-white uppercase tracking-wider">
-                  Data-Quality &amp; Ingestion Validation
+            {/* Connected Multi-Pillar Summary (P1-P4 Live Sandbox Verification) */}
+            <div className="p-4 rounded-xl bg-slate-950 border border-emerald-500/30 space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-2">
+                <span className="text-xs font-mono font-bold text-emerald-300 uppercase tracking-wider">
+                  Live 20-SKU Sandbox Verification (Exact Match to Platform P1–P4 Engines)
                 </span>
-                <span className="text-[11px] font-mono text-emerald-400 font-bold">99.8% Match Health</span>
+                <span className="text-[11px] font-mono text-slate-400">
+                  As-Of Date: 2026-03-31 · Deterministic Engine Output
+                </span>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs text-slate-300 font-mono">
-                <div>
-                  <span className="text-slate-400 block text-[10px]">TOTAL ROWS PARSED:</span>
-                  <span className="font-bold text-white">12,400 Line Items</span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs font-mono">
+                <div className="p-3 rounded-lg bg-slate-900 border border-slate-800 space-y-1">
+                  <div className="text-[10px] text-emerald-400 font-bold flex items-center gap-1">
+                    <Package className="w-3.5 h-3.5" />
+                    <span>P1 • DEAD STOCK &amp; CASH</span>
+                  </div>
+                  <div className="font-bold text-white">
+                    {sandboxMode.deadStockValueFormatted} Dead / {sandboxMode.slowMovingValueFormatted} Slow
+                  </div>
+                  <div className="text-[11px] text-slate-400">
+                    {sandboxMode.totalBookValueFormatted} across 20 SKUs
+                  </div>
                 </div>
-                <div>
-                  <span className="text-slate-400 block text-[10px]">SYNTAX / ENCODING ERRORS:</span>
-                  <span className="font-bold text-emerald-400">0 Critical Errors</span>
+
+                <div className="p-3 rounded-lg bg-slate-900 border border-slate-800 space-y-1">
+                  <div className="text-[10px] text-sky-400 font-bold flex items-center gap-1">
+                    <Truck className="w-3.5 h-3.5" />
+                    <span>P2 • GATE OTIF DISPATCH</span>
+                  </div>
+                  <div className="font-bold text-white">{sandboxMode.p2OtifPill}</div>
+                  <div className="text-[11px] text-slate-400">Dual-Gate On-Time &amp; In-Full</div>
                 </div>
-                <div>
-                  <span className="text-slate-400 block text-[10px]">MISSING MOVEMENT DATES:</span>
-                  <span className="font-bold text-amber-300">14 Items (Isolated in Log)</span>
+
+                <div className="p-3 rounded-lg bg-slate-900 border border-slate-800 space-y-1">
+                  <div className="text-[10px] text-amber-400 font-bold flex items-center gap-1">
+                    <IndianRupee className="w-3.5 h-3.5" />
+                    <span>P3 • FREIGHT AUDIT</span>
+                  </div>
+                  <div className="font-bold text-white">{sandboxMode.p3FreightPill}</div>
+                  <div className="text-[11px] text-slate-400">Rate Overcharge + Detention</div>
+                </div>
+
+                <div className="p-3 rounded-lg bg-slate-900 border border-slate-800 space-y-1">
+                  <div className="text-[10px] text-purple-400 font-bold flex items-center gap-1">
+                    <Warehouse className="w-3.5 h-3.5" />
+                    <span>P4 • BIN ACCURACY</span>
+                  </div>
+                  <div className="font-bold text-white">{sandboxMode.p4BinPill}</div>
+                  <div className="text-[11px] text-slate-400">10 Warehouse Bins Audited</div>
                 </div>
               </div>
             </div>
@@ -185,29 +279,29 @@ export const SampleAuditReportModal: React.FC<SampleAuditReportModalProps> = ({
             {/* Category Level Breakdown */}
             <div className="space-y-3">
               <h4 className="text-sm font-bold text-white font-mono uppercase tracking-wider">
-                Category-Level Stagnancy Breakdown
+                Category-Level Stagnancy Breakdown (₹18,42,000 Non-Moving Exposure)
               </h4>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs font-mono">
                 <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-1">
-                  <div className="text-slate-400 text-[10px] uppercase font-bold">Castings &amp; Forgings</div>
-                  <div className="text-base font-bold text-rose-300">₹8,40,000</div>
-                  <div className="text-[10px] text-slate-400">45% of total non-moving cash</div>
+                  <div className="text-slate-400 text-[10px] uppercase font-bold">Precision Machined Castings</div>
+                  <div className="text-base font-bold text-rose-300">₹8,42,000</div>
+                  <div className="text-[10px] text-slate-400">45.7% of non-moving capital</div>
                 </div>
 
                 <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-1">
-                  <div className="text-slate-400 text-[10px] uppercase font-bold">Specialty Fasteners</div>
-                  <div className="text-base font-bold text-amber-300">₹4,20,000</div>
+                  <div className="text-slate-400 text-[10px] uppercase font-bold">Specialty Fasteners &amp; Kits</div>
+                  <div className="text-base font-bold text-amber-300">₹4,15,000</div>
                   <div className="text-[10px] text-slate-400">MOQ bulk order excess</div>
                 </div>
 
                 <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-1">
-                  <div className="text-slate-400 text-[10px] uppercase font-bold">Raw Steel Bars (EN8)</div>
-                  <div className="text-base font-bold text-amber-300">₹3,90,000</div>
-                  <div className="text-[10px] text-slate-400">Customer drawing revision cancelled</div>
+                  <div className="text-slate-400 text-[10px] uppercase font-bold">Raw Steel Bars (EN8 / EN24)</div>
+                  <div className="text-base font-bold text-amber-300">₹3,85,000</div>
+                  <div className="text-[10px] text-slate-400">Customer drawing revision obsolete</div>
                 </div>
 
                 <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-1">
-                  <div className="text-slate-400 text-[10px] uppercase font-bold">Packaging &amp; Consumables</div>
+                  <div className="text-slate-400 text-[10px] uppercase font-bold">Packaging &amp; Maintenance Spares</div>
                   <div className="text-base font-bold text-slate-300">₹2,00,000</div>
                   <div className="text-[10px] text-slate-400">Slow rotation in Bay 4</div>
                 </div>
@@ -220,7 +314,7 @@ export const SampleAuditReportModal: React.FC<SampleAuditReportModalProps> = ({
         {activeTab === 'sku_list' && (
           <div className="space-y-4">
             <div className="flex items-center justify-between text-xs font-mono text-slate-400">
-              <span>Top 5 of 142 Stagnant SKUs (Pareto Ranked by Rupee Exposure)</span>
+              <span>Top 5 Priority Stagnant SKUs (Pareto Ranked by Rupee Exposure)</span>
               <span className="text-amber-400">Sorted by Total Value Locked</span>
             </div>
 
@@ -286,10 +380,6 @@ export const SampleAuditReportModal: React.FC<SampleAuditReportModalProps> = ({
                 </tbody>
               </table>
             </div>
-
-            <p className="text-[11px] text-slate-400 font-mono italic">
-              *Full audit deliverable contains complete spreadsheet of all 142 stagnant SKUs with bin numbers and vendor codes.
-            </p>
           </div>
         )}
 
@@ -303,7 +393,7 @@ export const SampleAuditReportModal: React.FC<SampleAuditReportModalProps> = ({
               <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-2">
                 <span className="text-[10px] text-amber-400 font-bold">WEEK 01 · PHYSICAL VERIFICATION</span>
                 <p className="text-slate-300 leading-relaxed font-sans">
-                  Audit top 15 SKUs (accounting for ₹14.5L) on warehouse racks to verify physical existence and condition before initiating accounting adjustments.
+                  Audit top 18 priority SKUs on warehouse racks to verify physical existence and condition before initiating accounting adjustments.
                 </p>
               </div>
 
@@ -331,7 +421,145 @@ export const SampleAuditReportModal: React.FC<SampleAuditReportModalProps> = ({
           </div>
         )}
 
-        {/* Tab 4: Scope & Limitations */}
+        {/* Tab 4: 2-Page Executive Print / PDF Briefing */}
+        {activeTab === 'briefing_2page' && (
+          <div className="space-y-6" data-testid="executive-2page-briefing-layout">
+            {/* Page 1 */}
+            <div className="p-5 sm:p-6 rounded-2xl bg-slate-950 border border-slate-800 space-y-5 print-page print-page-break">
+              <div className="flex flex-wrap items-start justify-between gap-2 border-b border-slate-800 pb-3">
+                <div>
+                  <div className="text-[10px] font-mono font-bold text-emerald-400 uppercase tracking-widest">
+                    PAGE 1 OF 2 — EXECUTIVE WORKING CAPITAL &amp; OPERATIONAL LEAKAGE SUMMARY
+                  </div>
+                  <h3 className="text-base sm:text-lg font-black text-white mt-0.5">
+                    Operationalyst 4-Pillar Manufacturing Audit Briefing
+                  </h3>
+                  <p className="text-xs text-slate-400 font-mono">
+                    Prepared by C. Jones Snowin (Operationalyst / Snowin Ventures, Chennai) · As-Of Date: 2026-03-31
+                  </p>
+                </div>
+                <span className="px-2.5 py-1 rounded bg-slate-900 border border-slate-700 text-[11px] font-mono text-slate-300">
+                  Ref: AUDIT-DEMO-P1P4
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-xs font-mono">
+                <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-1.5">
+                  <div className="text-emerald-400 font-bold uppercase">
+                    P1 • Dead Stock &amp; Cash Release (20 SKUs)
+                  </div>
+                  <div className="text-slate-200">
+                    Total Stock Value: <strong>{sandboxMode.totalBookValueFormatted}</strong>
+                  </div>
+                  <div className="text-rose-300">
+                    Dead Stock (&gt;180d): <strong>{sandboxMode.deadStockValueFormatted}</strong> ({sandboxMode.deadStockSubtext})
+                  </div>
+                  <div className="text-amber-300">
+                    Slow-Moving (90–179d): <strong>{sandboxMode.slowMovingValueFormatted}</strong> ({sandboxMode.slowMovingSubtext})
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-1.5">
+                  <div className="text-sky-400 font-bold uppercase">
+                    P2 • Dual-Gate OTIF Dispatch Audit (18 Dispatches)
+                  </div>
+                  <div className="text-slate-200">
+                    Strict Dual-Gate Pass Rate: <strong>50.0% (9 / 18 Passed)</strong>
+                  </div>
+                  <div className="text-rose-300">
+                    Failures: <strong>3 Late Only · 2 Short Only · 4 Late &amp; Short</strong>
+                  </div>
+                  <div className="text-slate-400">
+                    Primary Root Cause: Raw Material Stockout &amp; Bay Congestion
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-1.5">
+                  <div className="text-amber-400 font-bold uppercase">
+                    P3 • Freight Rate &amp; Detention Audit (12 Trips)
+                  </div>
+                  <div className="text-slate-200">
+                    Total Billed Carrier Spend: <strong>₹1,82,200</strong>
+                  </div>
+                  <div className="text-rose-300">
+                    Verified Leakage: <strong>₹13,944 (₹6,444 Rate Overcharge + ₹7,500 Detention)</strong>
+                  </div>
+                  <div className="text-slate-400">
+                    Flagged Trips: 9 of 12 trips exceeded lane benchmark
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-1.5">
+                  <div className="text-purple-400 font-bold uppercase">
+                    P4 • Warehouse Blind Bin Variance (10 Bins)
+                  </div>
+                  <div className="text-slate-200">
+                    Bin Match Accuracy: <strong>60.0% (6 Matched / 4 Mismatched)</strong>
+                  </div>
+                  <div className="text-rose-300">
+                    Ghost Stock Shortage: <strong>₹24,240</strong> · Unrecorded Surplus: <strong>₹2,100</strong>
+                  </div>
+                  <div className="text-slate-400">
+                    Slotting Exceptions: 2 fast movers hidden in back racks
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Page 2 */}
+            <div className="p-5 sm:p-6 rounded-2xl bg-slate-950 border border-slate-800 space-y-5 print-page">
+              <div className="flex flex-wrap items-start justify-between gap-2 border-b border-slate-800 pb-3">
+                <div>
+                  <div className="text-[10px] font-mono font-bold text-amber-400 uppercase tracking-widest">
+                    PAGE 2 OF 2 — TOP PRIORITY ACTION SCHEDULE &amp; AUDIT GOVERNANCE
+                  </div>
+                  <h3 className="text-base sm:text-lg font-black text-white mt-0.5">
+                    Immediate Shop-Floor Verification &amp; Analytical Boundaries
+                  </h3>
+                </div>
+                <span className="text-xs font-mono text-slate-400">
+                  Operationalyst · C. Jones Snowin
+                </span>
+              </div>
+
+              <div className="space-y-2 text-xs font-mono">
+                <div className="font-bold text-slate-200 uppercase">
+                  1. Priority Dead-Stock &amp; Bin Exceptions to Verify First:
+                </div>
+                <ul className="space-y-1.5 text-slate-300 list-disc list-inside font-sans">
+                  <li>
+                    <strong>P1 Dead Stock Top Exposure:</strong> Verify physical rack status and supplier contra-return eligibility on top Class-A non-moving Raw Material &amp; Spare Part lines (&gt;180 days idle).
+                  </li>
+                  <li>
+                    <strong>P3 Carrier Debit Notes:</strong> Audit flagged transporter invoices exceeding lowest clean lane rate per tonne and enforce gate-in/gate-out timestamp logging to curb ₹7,500 detention drain.
+                  </li>
+                  <li>
+                    <strong>P4 Ghost Stock Reconciliation:</strong> Recount mismatched bins (₹24,240 shortage exposure) before releasing replenishment POs.
+                  </li>
+                </ul>
+              </div>
+
+              <div className="p-4 rounded-xl bg-slate-900 border border-amber-500/30 space-y-2 text-xs">
+                <div className="font-mono font-bold text-amber-300 uppercase">
+                  2. Documented Assumptions &amp; Analytical Boundaries:
+                </div>
+                <ul className="space-y-1 text-slate-300 font-sans list-disc list-inside">
+                  <li>
+                    <strong>Deterministic Formulas:</strong> Ageing is computed strictly from last movement date to audit as-of date; carrying drain uses 22% p.a. configurable cost of capital.
+                  </li>
+                  <li>
+                    <strong>Managerial Discretion:</strong> Critical insurance spares and statutory safety stock must be reviewed by plant engineering before liquidation or scrap disposal.
+                  </li>
+                  <li>
+                    <strong>Data Governance:</strong> Read-only analysis with zero automated ERP write-back. Prepared by C. Jones Snowin (Snowin Ventures, Chennai · joneszz2004@gmail.com).
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Tab 5: Scope & Limitations */}
         {activeTab === 'limitations' && (
           <div className="space-y-4">
             <div className="p-4 rounded-xl bg-slate-950 border border-amber-500/30 space-y-3 text-xs text-slate-300 font-sans">
@@ -361,15 +589,15 @@ export const SampleAuditReportModal: React.FC<SampleAuditReportModalProps> = ({
         )}
 
         {/* Footer CTAs */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-slate-800">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-slate-800 no-print">
           <div className="text-xs font-mono text-slate-400 text-center sm:text-left">
             <span>Want a report like this generated for your factory&apos;s inventory?</span>
           </div>
 
-          <div className="flex items-center gap-2 w-full sm:w-auto">
+          <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-end">
             <button
               onClick={onClose}
-              className="w-full sm:w-auto px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-mono cursor-pointer transition"
+              className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-mono cursor-pointer transition"
             >
               Close Preview
             </button>
@@ -378,7 +606,7 @@ export const SampleAuditReportModal: React.FC<SampleAuditReportModalProps> = ({
                 onClose();
                 onRequestAudit();
               }}
-              className="w-full sm:w-auto px-5 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 text-slate-950 font-black text-xs font-mono flex items-center justify-center gap-1.5 cursor-pointer transition shadow-md touch-manipulation active:scale-95"
+              className="px-5 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 text-slate-950 font-black text-xs font-mono flex items-center justify-center gap-1.5 cursor-pointer transition shadow-md touch-manipulation active:scale-95"
             >
               <span>Request Free Pilot Audit</span>
               <ArrowRight className="w-3.5 h-3.5" />

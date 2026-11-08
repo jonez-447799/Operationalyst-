@@ -379,4 +379,2616 @@ test('Phase 2 Campaign Studio: 6 Ad Variations, Founder Teleprompter, LinkedIn P
   assert.ok(adF.founderHook.length > 20);
 });
 
+test('Platform Redesign: Plain-language navigation preserves P1-P5 as secondary codes', async () => {
+  const { PLATFORM_NAVIGATION, DEMO_ENVIRONMENT_CONFIG } = await import(
+    '../dashboard/dashboardConfig'
+  );
+  assert.equal(PLATFORM_NAVIGATION.length, 9);
+  assert.equal(PLATFORM_NAVIGATION[0].id, 'overview');
+  assert.equal(PLATFORM_NAVIGATION[0].label, 'Overview');
+  assert.equal(PLATFORM_NAVIGATION[1].label, 'Inventory');
+  assert.equal(PLATFORM_NAVIGATION[1].secondaryCode, 'P1 • Cash Recovery');
+  assert.equal(PLATFORM_NAVIGATION[2].label, 'Delivery');
+  assert.equal(PLATFORM_NAVIGATION[2].secondaryCode, 'P2 • Customer Promise');
+  assert.equal(PLATFORM_NAVIGATION[3].label, 'Profit & Risk');
+  assert.equal(PLATFORM_NAVIGATION[3].secondaryCode, 'P3 • Profit Protection');
+  assert.equal(PLATFORM_NAVIGATION[4].label, 'Warehouse');
+  assert.equal(PLATFORM_NAVIGATION[4].secondaryCode, 'P4 • Warehouse Trust');
+  assert.equal(PLATFORM_NAVIGATION[5].label, 'Executive Reports');
+  assert.equal(PLATFORM_NAVIGATION[5].secondaryCode, 'P5 • CEO Briefing');
+  assert.equal(DEMO_ENVIRONMENT_CONFIG.badgeLabel, 'DEMONSTRATION ENVIRONMENT');
+  assert.equal(DEMO_ENVIRONMENT_CONFIG.organizationName, 'Illustrative Manufacturing Company');
+});
+
+test('Platform Redesign: Live snapshot enforces max 3 priority cards, 5 KPI cards with denominators, and Dual-Gate math', async () => {
+  const { buildLivePlatformSnapshot } = await import('../dashboard/dashboardConfig');
+  const snapshot = buildLivePlatformSnapshot(PLANTS.ambattur, PERIODS.fortnight_sep);
+
+  // Max 3 priority cards in opening viewport
+  assert.equal(snapshot.priorities.length, 3);
+  assert.equal(snapshot.priorities[0].domain, 'delivery');
+  assert.equal(snapshot.priorities[1].domain, 'inventory');
+  assert.equal(snapshot.priorities[2].domain, 'profit_risk');
+
+  // Max 5 KPI strip cards with explicit numerator/denominator context
+  assert.equal(snapshot.kpiStrip.length, 5);
+  const deliveryKpi = snapshot.kpiStrip.find((k) => k.id === 'kpi-delivery');
+  assert.ok(deliveryKpi);
+  assert.ok(deliveryKpi.contextSubtext.includes('9 of 18 dispatch lines passed'));
+
+  // Dual-Gate breakdown sums exactly to totalDispatches
+  const dg = snapshot.p2DualGate;
+  assert.equal(dg.totalDispatches, 18);
+  assert.equal(dg.passedBoth, 9);
+  assert.equal(dg.failedTotal, 9);
+  assert.equal(dg.passedBoth + dg.lateOnly + dg.shortOnly + dg.lateAndShort, dg.totalDispatches);
+  assert.equal(dg.otifPercent, 50);
+
+  // Methodologies populated for Right-Side Drawer
+  assert.ok(snapshot.methodologies.delivery_otif);
+  assert.ok(snapshot.methodologies.inventory_exposure);
+  assert.ok(snapshot.methodologies.profit_freight_variance);
+  assert.ok(snapshot.methodologies.warehouse_bin_accuracy);
+});
+
+test('Phase 0 Remediation: Date validation handles ISO, DD/MM/YYYY, missing, invalid, and ambiguous dates without silent fallback', async () => {
+  const { validateImportDate } = await import('../utils/importValidation');
+
+  // Valid ISO date
+  const validIso = validateImportDate('2026-09-15');
+  assert.equal(validIso.status, 'VALID');
+  assert.equal(validIso.normalized, '2026-09-15');
+
+  // Valid unambiguous DD/MM/YYYY date (day > 12)
+  const validDmy = validateImportDate('18/09/2026');
+  assert.equal(validDmy.status, 'VALID');
+  assert.equal(validDmy.normalized, '2026-09-18');
+
+  // Missing date -> MISSING_DATE (never defaults to 2026-09-20 or 2026-09-25)
+  const missingEmpty = validateImportDate('');
+  assert.equal(missingEmpty.status, 'MISSING_DATE');
+  assert.equal(missingEmpty.normalized, undefined);
+
+  const missingNull = validateImportDate(null);
+  assert.equal(missingNull.status, 'MISSING_DATE');
+
+  // Invalid date -> INVALID_DATE
+  const invalidText = validateImportDate('not-a-date');
+  assert.equal(invalidText.status, 'INVALID_DATE');
+
+  const invalidCalendar = validateImportDate('2026-02-31');
+  assert.equal(invalidCalendar.status, 'INVALID_DATE');
+
+  // Ambiguous slash date (both first and second parts <= 12 and unequal) -> AMBIGUOUS_DATE
+  const ambiguous = validateImportDate('04/05/2026');
+  assert.equal(ambiguous.status, 'AMBIGUOUS_DATE');
+});
+
+test('Phase 0 Remediation: Numeric validation handles plain numbers, INR currency strings, missing, invalid text, and negatives without silent 0 coercion', async () => {
+  const { validateImportNumber } = await import('../utils/importValidation');
+
+  // Valid numeric string
+  const validPlain = validateImportNumber('12500');
+  assert.equal(validPlain.status, 'VALID_NUMBER');
+  assert.equal(validPlain.value, 12500);
+
+  // Valid INR currency-formatted string
+  const validCurrency = validateImportNumber('₹1,45,000.50');
+  assert.equal(validCurrency.status, 'VALID_NUMBER');
+  assert.equal(validCurrency.value, 145000.5);
+
+  // Blank required numeric field -> MISSING_NUMBER (never coerced to 0)
+  const missingBlank = validateImportNumber('');
+  assert.equal(missingBlank.status, 'MISSING_NUMBER');
+  assert.equal(missingBlank.value, undefined);
+
+  // Invalid text in numeric field -> INVALID_NUMBER (never coerced to 0)
+  const invalidText = validateImportNumber('PENDING_QUOTE');
+  assert.equal(invalidText.status, 'INVALID_NUMBER');
+  assert.equal(invalidText.value, undefined);
+
+  // Negative quantity/rate -> NEGATIVE_NUMBER when allowNegative is false
+  const negativeQty = validateImportNumber('-45', { allowNegative: false });
+  assert.equal(negativeQty.status, 'NEGATIVE_NUMBER');
+});
+
+test('Phase 0 Remediation: Spreadsheet formula sanitization neutralizes =, +, -, @ while preserving normal SKU codes', async () => {
+  const { sanitizeSpreadsheetCell, toSafeCsvCell } = await import('../utils/importValidation');
+
+  assert.equal(sanitizeSpreadsheetCell('=SUM(A1:A10)'), "'=SUM(A1:A10)");
+  assert.equal(sanitizeSpreadsheetCell("+cmd|' /C calc'!A0"), "'+cmd|' /C calc'!A0");
+  assert.equal(sanitizeSpreadsheetCell('-2+3'), "'-2+3");
+  assert.equal(sanitizeSpreadsheetCell('@HYPERLINK("http://evil.example")'), '\'@HYPERLINK("http://evil.example")');
+  assert.equal(sanitizeSpreadsheetCell('RM-CR-204'), 'RM-CR-204');
+  assert.equal(sanitizeSpreadsheetCell(4500), 4500);
+  assert.equal(toSafeCsvCell('=1+1'), '"\'=1+1"');
+  assert.equal(toSafeCsvCell('RM-CR-204'), '"RM-CR-204"');
+});
+
+test('Phase 0 Remediation: Workspace storage key alignment uses otif_active_workspace_id_v2 and migrates legacy key', async () => {
+  const {
+    STORAGE_KEY_P2_ACTIVE_WS,
+    LEGACY_STORAGE_KEY_P2_ACTIVE_WS,
+    getActiveP2WorkspaceId,
+  } = await import('../utils/importValidation');
+
+  assert.equal(STORAGE_KEY_P2_ACTIVE_WS, 'otif_active_workspace_id_v2');
+  assert.equal(LEGACY_STORAGE_KEY_P2_ACTIVE_WS, 'otif_active_ws_v2');
+
+  const store = new Map<string, string>();
+  const mockStorage = {
+    getItem: (k: string) => store.get(k) ?? null,
+    setItem: (k: string, v: string) => {
+      store.set(k, v);
+    },
+  };
+
+  // Fallback when empty
+  assert.equal(getActiveP2WorkspaceId('ws-default', mockStorage), 'ws-default');
+
+  // Legacy migration
+  store.set(LEGACY_STORAGE_KEY_P2_ACTIVE_WS, 'ws-legacy-plant');
+  assert.equal(getActiveP2WorkspaceId('ws-default', mockStorage), 'ws-legacy-plant');
+  assert.equal(store.get(STORAGE_KEY_P2_ACTIVE_WS), 'ws-legacy-plant');
+
+  // Canonical key takes precedence
+  store.set(STORAGE_KEY_P2_ACTIVE_WS, 'ws-canonical-plant');
+  assert.equal(getActiveP2WorkspaceId('ws-default', mockStorage), 'ws-canonical-plant');
+});
+
+test('Phase 0 Remediation: Dashboard snapshot and 6-sheet export dataset produce identical P1-P4 metrics with zero hidden multipliers', async () => {
+  const { buildLivePlatformSnapshot } = await import('../dashboard/dashboardConfig');
+  const { buildSixSheetDataset } = await import('../utils/excelCommandCenterExporter');
+
+  const ambatturSnap = buildLivePlatformSnapshot(PLANTS.ambattur, PERIODS.fortnight_sep);
+  const sriperumbudurSnap = buildLivePlatformSnapshot(PLANTS.sriperumbudur, PERIODS.fortnight_sep);
+  const hosurSnap = buildLivePlatformSnapshot(PLANTS.hosur, PERIODS.fortnight_sep);
+
+  // Verify all 3 plants load row-traceable datasets with zero synthetic multipliers
+  assert.equal(ambatturSnap.datasetLoaded, true);
+  assert.equal(sriperumbudurSnap.datasetLoaded, true);
+  assert.equal(hosurSnap.datasetLoaded, true);
+  assert.equal(ambatturSnap.p1DeadValue, 223110);
+  assert.notEqual(ambatturSnap.p1DeadValue, sriperumbudurSnap.p1DeadValue);
+  assert.notEqual(ambatturSnap.p1DeadValue, hosurSnap.p1DeadValue);
+
+  // Verify no fabricated 1150 order-value exposure
+  assert.equal(
+    ambatturSnap.p2DualGate.revenueAtRiskFormatted,
+    'Revenue exposure unavailable because order-value information was not provided.'
+  );
+
+  // Verify 100% alignment between Dashboard Snapshot and 6-Sheet Workbook Exporter (including when called with true)
+  const workbookDefault = buildSixSheetDataset(false);
+  const workbookWithFlag = buildSixSheetDataset(true);
+
+  assert.equal(workbookDefault.sheet1Summary.cashStuck, ambatturSnap.p1DeadValue);
+  assert.equal(workbookWithFlag.sheet1Summary.cashStuck, ambatturSnap.p1DeadValue);
+  assert.equal(
+    Math.round(workbookDefault.sheet1Summary.otifRatio * 100),
+    ambatturSnap.p2DualGate.otifPercent
+  );
+  assert.equal(workbookDefault.sheet1Summary.freightLeakage, ambatturSnap.p3LeakageValue);
+  assert.equal(
+    Math.round(workbookDefault.sheet1Summary.accuracyRatio * 100),
+    ambatturSnap.p4AccuracyPercent
+  );
+  assert.equal(workbookDefault.sheet1Summary.varianceValueTotal, ambatturSnap.p4VarianceAbsValue);
+  assert.equal(workbookDefault.sheet1Summary.revenueAtRisk, null);
+});
+
+test('Phase 1 Lead Capture: Lead payload validation accepts valid manufacturing pilot requests and trims whitespace', async () => {
+  const { validatePilotRequestPayload } = await import('../utils/leadValidation');
+
+  const result = validatePilotRequestPayload({
+    fullName: '  Rajesh Kumar  ',
+    workEmail: '  RAJESH@ApexEngineering.in  ',
+    phoneOrWhatsapp: '  +91 98400 12345  ',
+    companyName: '  Apex Auto Components Pvt Ltd  ',
+    plantLocation: '  Ambattur SIDCO, Chennai  ',
+    roleTitle: '  Plant Head  ',
+    erpSystem: '  Tally Prime  ',
+    approxSkuCount: '  3,200 SKUs  ',
+    primaryChallenge: '  Non-moving raw material and slow-moving spares  ',
+    consentConfirmed: true,
+    sourceView: '  landing_hero  ',
+  });
+
+  assert.equal(result.ok, true);
+  if (result.ok) {
+    assert.equal(result.isSpamTrap, false);
+    assert.equal(result.data.fullName, 'Rajesh Kumar');
+    assert.equal(result.data.workEmail, 'rajesh@apexengineering.in');
+    assert.equal(result.data.phoneOrWhatsapp, '+91 98400 12345');
+    assert.equal(result.data.companyName, 'Apex Auto Components Pvt Ltd');
+    assert.equal(result.data.plantLocation, 'Ambattur SIDCO, Chennai');
+    assert.equal(result.data.roleTitle, 'Plant Head');
+    assert.equal(result.data.erpSystem, 'Tally Prime');
+    assert.equal(result.data.approxSkuCount, '3,200 SKUs');
+    assert.equal(result.data.primaryChallenge, 'Non-moving raw material and slow-moving spares');
+    assert.equal(result.data.consentConfirmed, true);
+    assert.equal(result.data.sourceView, 'landing_hero');
+  }
+});
+
+test('Phase 1 Lead Capture: Lead payload validation rejects missing required fields with structured fieldErrors', async () => {
+  const { validatePilotRequestPayload } = await import('../utils/leadValidation');
+
+  const result = validatePilotRequestPayload({
+    fullName: 'R',
+    workEmail: '',
+    phoneOrWhatsapp: '123',
+    companyName: '',
+    plantLocation: 'A',
+    roleTitle: '',
+    consentConfirmed: false,
+  });
+
+  assert.equal(result.ok, false);
+  if (!result.ok) {
+    assert.equal(result.error, 'Validation failed');
+    assert.ok(result.fieldErrors.fullName);
+    assert.ok(result.fieldErrors.workEmail);
+    assert.ok(result.fieldErrors.phoneOrWhatsapp);
+    assert.ok(result.fieldErrors.companyName);
+    assert.ok(result.fieldErrors.plantLocation);
+    assert.ok(result.fieldErrors.roleTitle);
+    assert.ok(result.fieldErrors.consentConfirmed);
+  }
+});
+
+test('Phase 1 Lead Capture: Lead payload validation rejects invalid email formats and flags honeypot spam', async () => {
+  const { validatePilotRequestPayload } = await import('../utils/leadValidation');
+
+  const badEmailResult = validatePilotRequestPayload({
+    fullName: 'Suresh Menon',
+    workEmail: 'invalid-email-without-domain@',
+    phoneOrWhatsapp: '+91 98400 99999',
+    companyName: 'Menon Precision Gears',
+    plantLocation: 'Coimbatore',
+    roleTitle: 'Managing Director',
+    consentConfirmed: true,
+  });
+
+  assert.equal(badEmailResult.ok, false);
+  if (!badEmailResult.ok) {
+    assert.ok(badEmailResult.fieldErrors.workEmail);
+  }
+
+  const honeypotResult = validatePilotRequestPayload({
+    fullName: 'Bot User',
+    workEmail: 'bot@example.com',
+    phoneOrWhatsapp: '1234567890',
+    companyName: 'Spam Corp',
+    plantLocation: 'Nowhere',
+    roleTitle: 'Bot',
+    consentConfirmed: true,
+    websiteHoneypot: 'https://spam-link.example',
+  });
+
+  assert.equal(honeypotResult.ok, true);
+  if (honeypotResult.ok) {
+    assert.equal(honeypotResult.isSpamTrap, true);
+  }
+});
+
+test('Phase 1 Lead Capture: Lead persistence helper generates valid PILOT-... leadId, persists records, lists newest-first, and updates status + founderNotes', async () => {
+  const fs = await import('fs/promises');
+  const os = await import('os');
+  const path = await import('path');
+  const { createLeadRecord, listLeadRecords, updateLeadRecord } = await import(
+    '../utils/leadStore'
+  );
+
+  const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'operationalyst-leads-test-'));
+  const testFilePath = path.join(tmpDir, 'pilot_requests.json');
+
+  try {
+    const first = await createLeadRecord(
+      {
+        fullName: 'Vikram Iyer',
+        workEmail: 'vikram@iyerforgings.in',
+        phoneOrWhatsapp: '+91 98401 11111',
+        companyName: 'Iyer Industrial Forgings',
+        plantLocation: 'Sriperumbudur, TN',
+        roleTitle: 'Director Operations',
+        erpSystem: 'SAP B1',
+        approxSkuCount: '4,500',
+        primaryChallenge: 'High value non-moving die steel inventory',
+        consentConfirmed: true,
+        sourceView: 'landing_hero',
+      },
+      testFilePath
+    );
+
+    assert.match(first.leadId, /^PILOT-\d{8}-[0-9A-F]{4}$/);
+    assert.equal(first.status, 'NEW');
+    assert.equal(first.founderNotes, '');
+
+    // Ensure distinct timestamp for newest-first sort verification
+    await new Promise((r) => setTimeout(r, 15));
+
+    const second = await createLeadRecord(
+      {
+        fullName: 'Ananya Deshmukh',
+        workEmail: 'ananya@chakanvalves.co.in',
+        phoneOrWhatsapp: '+91 98220 22222',
+        companyName: 'Chakan Flow Control Valves',
+        plantLocation: 'Chakan MIDC, Pune',
+        roleTitle: 'VP Supply Chain',
+        erpSystem: 'Tally Prime',
+        approxSkuCount: '2,100',
+        primaryChallenge: 'Slow-moving machined castings',
+        consentConfirmed: true,
+        sourceView: 'buyer_persona',
+      },
+      testFilePath
+    );
+
+    const listed = await listLeadRecords(testFilePath);
+    assert.equal(listed.length, 2);
+    assert.equal(listed[0].leadId, second.leadId);
+    assert.equal(listed[1].leadId, first.leadId);
+
+    const updated = await updateLeadRecord(
+      first.leadId,
+      {
+        status: 'NDA_SENT',
+        founderNotes: 'Sent mutual NDA and 5-column Tally export guide on Monday.',
+      },
+      testFilePath
+    );
+
+    assert.ok(updated);
+    assert.equal(updated?.status, 'NDA_SENT');
+    assert.equal(
+      updated?.founderNotes,
+      'Sent mutual NDA and 5-column Tally export guide on Monday.'
+    );
+
+    const listedAfterUpdate = await listLeadRecords(testFilePath);
+    const reloadedFirst = listedAfterUpdate.find((r) => r.leadId === first.leadId);
+    assert.equal(reloadedFirst?.status, 'NDA_SENT');
+    assert.equal(
+      reloadedFirst?.founderNotes,
+      'Sent mutual NDA and 5-column Tally export guide on Monday.'
+    );
+  } finally {
+    await fs.rm(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('Phase 2 Founder Identity: Homepage config and campaign deliverables normalize founder identity to C. Jones Snowin', async () => {
+  const { DATA_TRUST_ITEMS, CUSTOMER_ANXIETY_MAP } = await import('../commercial/homepageConfig');
+
+  const accessTrustItem = DATA_TRUST_ITEMS.find((i) =>
+    i.question.includes('Who can access submitted information')
+  );
+  assert.ok(accessTrustItem);
+  assert.ok(accessTrustItem.answer.includes('C. Jones Snowin'));
+  assert.ok(!accessTrustItem.answer.includes('Jonez'));
+
+  const deletionTrustItem = DATA_TRUST_ITEMS.find((i) =>
+    i.question.includes('How can deletion be requested')
+  );
+  assert.ok(deletionTrustItem);
+  assert.ok(deletionTrustItem.answer.includes('joneszz2004@gmail.com'));
+
+  const findingsAnxietyStage = CUSTOMER_ANXIETY_MAP.find((s) =>
+    s.stage.includes('4. Findings Review')
+  );
+  assert.ok(findingsAnxietyStage);
+  assert.ok(findingsAnxietyStage.institutionalSafeguard.includes('C. Jones Snowin'));
+});
+
+test('Phase 2 Data Kit Exporter: Generates valid 5-column sample rows, guide instructions, CSV content, and Step 2 suitability reply', async () => {
+  const {
+    PILOT_DATA_KIT_COLUMNS,
+    buildPilotDataKitSampleRows,
+    buildPilotDataKitGuideRows,
+    buildPilotDataKitCsvContent,
+    buildStep2SuitabilityReplyTemplate,
+  } = await import('../utils/pilotDataKitExporter');
+
+  assert.deepEqual(PILOT_DATA_KIT_COLUMNS, [
+    'Part_ID',
+    'Part_Description',
+    'Closing_Stock_Qty',
+    'Unit_Cost_INR',
+    'Last_Movement_Date',
+  ]);
+
+  const sampleRows = buildPilotDataKitSampleRows();
+  assert.equal(sampleRows.length, 5);
+  assert.equal(sampleRows[0].Part_ID, 'SKU-CAST-001 (SAMPLE - DELETE BEFORE UPLOAD)');
+  assert.equal(sampleRows[4].Part_ID, 'SKU-VLV-005 (SAMPLE - DELETE BEFORE UPLOAD)');
+
+  const guideRows = buildPilotDataKitGuideRows();
+  assert.ok(guideRows.length >= 6);
+  const fullGuideText = guideRows
+    .map(
+      (r) =>
+        `${r.Topic} ${r.Step_Or_Rule} ${r.Practical_Instructions} ${r.Anonymization_And_Safety_Notes}`
+    )
+    .join(' ');
+  assert.ok(fullGuideText.includes('Tally Prime'));
+  assert.ok(fullGuideText.includes('SAP'));
+  assert.ok(fullGuideText.includes('Busy'));
+  assert.ok(fullGuideText.includes('C. Jones Snowin'));
+
+  const csvContent = buildPilotDataKitCsvContent();
+  const csvLines = csvContent.trim().split('\n');
+  assert.equal(
+    csvLines[0],
+    '"Part_ID","Part_Description","Closing_Stock_Qty","Unit_Cost_INR","Last_Movement_Date"'
+  );
+  assert.equal(csvLines.length, 6); // 1 header + 5 illustrative rows
+
+  const replyText = buildStep2SuitabilityReplyTemplate({
+    fullName: 'Rajesh Kumar',
+    companyName: 'Apex Auto Components Pvt Ltd',
+    erpSystem: 'Tally Prime',
+  });
+  assert.ok(replyText.includes('Hello Rajesh Kumar'));
+  assert.ok(replyText.includes('Apex Auto Components Pvt Ltd'));
+  assert.ok(replyText.includes('Tally Prime'));
+  assert.ok(replyText.includes('Part_ID'));
+  assert.ok(replyText.includes('Last_Movement_Date'));
+  assert.ok(replyText.includes('C. Jones Snowin'));
+});
+
+test('Phase 2 Pilot Workspace Store: Creates server-backed P1 audit snapshot (AUDIT-YYYYMMDD-XXXX), computes exact P1 metrics via evaluateStockEngine, enforces shareToken on read, and rejects invalid tokens', async () => {
+  const fs = await import('fs/promises');
+  const os = await import('os');
+  const path = await import('path');
+  const { AMBATTUR_FABRICATION_SAMPLE, DEFAULT_RULES } = await import(
+    '../project1/data/initialData'
+  );
+  const {
+    validatePilotWorkspacePayload,
+    createPilotWorkspaceSnapshot,
+    listPilotWorkspaceSnapshots,
+    getAuthorizedPilotWorkspaceSnapshot,
+  } = await import('../utils/pilotWorkspaceStore');
+
+  const validation = validatePilotWorkspacePayload({
+    companyName: 'Ambattur Fabrication Sample Plant',
+    plantLocation: 'Ambattur Industrial Estate, Chennai',
+    leadId: 'PILOT-20261105-A1B2',
+    preparedBy: 'C. Jones Snowin',
+    rules: DEFAULT_RULES,
+    skus: AMBATTUR_FABRICATION_SAMPLE,
+    executiveNotes: 'Verified 20-SKU baseline pilot workspace.',
+  });
+
+  assert.equal(validation.ok, true);
+  assert.ok(validation.data);
+
+  const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'operationalyst-workspaces-test-'));
+  const testFilePath = path.join(tmpDir, 'pilot_workspaces.json');
+
+  try {
+    const created = await createPilotWorkspaceSnapshot(validation.data!, testFilePath);
+
+    assert.match(created.workspaceId, /^AUDIT-\d{8}-[0-9A-F]{4}$/);
+    assert.ok(created.shareToken.length >= 24);
+    assert.equal(created.preparedBy, 'C. Jones Snowin');
+    assert.equal(created.leadId, 'PILOT-20261105-A1B2');
+
+    // Verify deterministic P1 calculation metrics on AMBATTUR_FABRICATION_SAMPLE
+    assert.equal(created.summaryMetrics.totalSkus, 20);
+    assert.equal(created.summaryMetrics.deadSkusCount, 8);
+    assert.equal(created.summaryMetrics.totalStockValue, 645650);
+    assert.equal(created.summaryMetrics.deadStockValue, 223110);
+    assert.equal(created.summaryMetrics.slowMovingValue, 63600);
+    assert.equal(created.summaryMetrics.annualCarryingCostDrain, 40160);
+    assert.equal(created.summaryMetrics.monthlyBurn, 3347);
+    assert.equal(created.summaryMetrics.targetCashRelease, 175257);
+    assert.equal(created.ownerReport.ageingBreakdown.range180_plus, 223110);
+    assert.equal(created.evaluatedSkus.length, 20);
+
+    // List snapshots
+    const allSnapshots = await listPilotWorkspaceSnapshots(testFilePath);
+    assert.equal(allSnapshots.length, 1);
+    assert.equal(allSnapshots[0].workspaceId, created.workspaceId);
+
+    // Authorized read with valid shareToken
+    const authorizedViaToken = await getAuthorizedPilotWorkspaceSnapshot(
+      created.workspaceId,
+      { shareToken: created.shareToken, isAdmin: false },
+      testFilePath
+    );
+    assert.equal(authorizedViaToken.status, 'OK');
+    if (authorizedViaToken.status === 'OK') {
+      assert.equal(authorizedViaToken.snapshot.workspaceId, created.workspaceId);
+    }
+
+    // Reject read with wrong shareToken
+    const rejectedBadToken = await getAuthorizedPilotWorkspaceSnapshot(
+      created.workspaceId,
+      { shareToken: 'invalid-token-attempt', isAdmin: false },
+      testFilePath
+    );
+    assert.equal(rejectedBadToken.status, 'UNAUTHORIZED');
+
+    // Reject read for non-existent workspaceId
+    const notFoundResult = await getAuthorizedPilotWorkspaceSnapshot(
+      'AUDIT-20261105-FFFF',
+      { shareToken: created.shareToken, isAdmin: false },
+      testFilePath
+    );
+    assert.equal(notFoundResult.status, 'NOT_FOUND');
+  } finally {
+    await fs.rm(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('Phase 3 Multi-Module Workspace Store: Computes accurate P1, P2, P3, and P4 summaries on the server', async () => {
+  const fs = await import('fs/promises');
+  const os = await import('os');
+  const path = await import('path');
+  const { AMBATTUR_FABRICATION_SAMPLE, DEFAULT_RULES } = await import(
+    '../project1/data/initialData'
+  );
+  const { INITIAL_DISPATCHES, INITIAL_RULES: DEFAULT_P2_RULES } = await import(
+    '../project2/data/initialData'
+  );
+  const { INITIAL_TRIPS, DEFAULT_RULES: DEFAULT_P3_RULES } = await import(
+    '../project3/data/defaultData'
+  );
+  const { INITIAL_SAMPLE_SKUS, DEFAULT_RULES: DEFAULT_P4_RULES } = await import(
+    '../project4/data/sampleData'
+  );
+  const {
+    validatePilotWorkspacePayload,
+    createPilotWorkspaceSnapshot,
+    getAuthorizedPilotWorkspaceSnapshot,
+  } = await import('../utils/pilotWorkspaceStore');
+
+  const validation = validatePilotWorkspacePayload({
+    companyName: 'Ambattur Multi-Pillar Plant',
+    plantLocation: 'Ambattur Industrial Estate, Chennai',
+    leadId: 'PILOT-20261105-P1P4',
+    preparedBy: 'C. Jones Snowin',
+    rules: DEFAULT_RULES,
+    skus: AMBATTUR_FABRICATION_SAMPLE,
+    p2Rules: DEFAULT_P2_RULES,
+    p2Dispatches: INITIAL_DISPATCHES,
+    p3Rules: DEFAULT_P3_RULES,
+    p3FreightTrips: INITIAL_TRIPS,
+    p4Rules: DEFAULT_P4_RULES,
+    p4WarehouseBins: INITIAL_SAMPLE_SKUS,
+    executiveNotes: 'Full 4-pillar diagnostic snapshot across P1, P2, P3, and P4.',
+  });
+
+  assert.equal(validation.ok, true);
+  assert.ok(validation.data);
+
+  const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'operationalyst-p3-multi-test-'));
+  const testFilePath = path.join(tmpDir, 'pilot_workspaces.json');
+
+  try {
+    const created = await createPilotWorkspaceSnapshot(validation.data!, testFilePath);
+
+    assert.ok(created.multiModuleSummary);
+    // P1 verification
+    assert.equal(created.multiModuleSummary.p1.totalSkus, 20);
+    assert.equal(created.multiModuleSummary.p1.deadSkusCount, 8);
+    assert.equal(created.multiModuleSummary.p1.deadStockValue, 223110);
+    assert.equal(created.multiModuleSummary.p1.targetCashRelease, 175257);
+
+    // P2 OTIF verification
+    assert.ok(created.multiModuleSummary.p2);
+    assert.equal(created.multiModuleSummary.p2!.totalDispatches, 18);
+    assert.equal(created.multiModuleSummary.p2!.passes, 9);
+    assert.equal(created.multiModuleSummary.p2!.fails, 9);
+    assert.equal(created.multiModuleSummary.p2!.otifPercent, 50);
+    assert.equal(created.multiModuleSummary.p2!.failsLateOnly, 6);
+    assert.equal(created.multiModuleSummary.p2!.failsShortOnly, 2);
+    assert.equal(created.multiModuleSummary.p2!.failsLateAndShort, 1);
+    assert.equal(created.evaluatedP2Dispatches?.length, 18);
+
+    // P3 Freight Audit verification
+    assert.ok(created.multiModuleSummary.p3);
+    assert.equal(created.multiModuleSummary.p3!.totalTrips, 12);
+    assert.equal(created.multiModuleSummary.p3!.flaggedTripsCount, 12);
+    assert.equal(created.multiModuleSummary.p3!.freightPaid, 58600);
+    assert.equal(created.multiModuleSummary.p3!.rateLeak, 9044);
+    assert.equal(created.multiModuleSummary.p3!.detention, 4900);
+    assert.equal(created.multiModuleSummary.p3!.totalLeak, 13944);
+    assert.equal(created.evaluatedP3Trips?.length, 12);
+
+    // P4 Warehouse Bin Variance verification
+    assert.ok(created.multiModuleSummary.p4);
+    assert.equal(created.multiModuleSummary.p4!.skusCounted, 15);
+    assert.equal(created.multiModuleSummary.p4!.linesMatched, 9);
+    assert.equal(created.multiModuleSummary.p4!.linesMismatch, 6);
+    assert.equal(created.multiModuleSummary.p4!.binAccuracyPercent, 60);
+    assert.equal(created.multiModuleSummary.p4!.shelfShortRupees, 24240);
+    assert.equal(created.multiModuleSummary.p4!.foundStockRupees, 560);
+    assert.equal(created.multiModuleSummary.p4!.absVarianceRupees, 24800);
+    assert.equal(created.multiModuleSummary.p4!.netGapRupees, -23680);
+    assert.equal(created.evaluatedP4Bins?.length, 15);
+
+    const fetched = await getAuthorizedPilotWorkspaceSnapshot(
+      created.workspaceId,
+      { shareToken: created.shareToken, isAdmin: false },
+      testFilePath
+    );
+    assert.equal(fetched.status, 'OK');
+    if (fetched.status === 'OK') {
+      assert.equal(fetched.snapshot.multiModuleSummary?.p2?.otifPercent, 50);
+      assert.equal(fetched.snapshot.multiModuleSummary?.p3?.totalLeak, 13944);
+      assert.equal(fetched.snapshot.multiModuleSummary?.p4?.binAccuracyPercent, 60);
+    }
+  } finally {
+    await fs.rm(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('Phase 3 Legal & Governance: Zero occurrences of Privacy Policy (Placeholder) or Terms of Service (Placeholder) remain in commercial UI and LegalGovernanceModal contains required B2B clauses', async () => {
+  const fs = await import('fs/promises');
+  const path = await import('path');
+
+  const commercialDir = path.join(process.cwd(), 'src', 'commercial');
+  const entries = await fs.readdir(commercialDir);
+
+  for (const file of entries) {
+    if (!file.endsWith('.ts') && !file.endsWith('.tsx')) continue;
+    const content = await fs.readFile(path.join(commercialDir, file), 'utf-8');
+    assert.equal(
+      content.includes('Privacy Policy (Placeholder)'),
+      false,
+      `Found "Privacy Policy (Placeholder)" in ${file}`
+    );
+    assert.equal(
+      content.includes('Terms of Service (Placeholder)'),
+      false,
+      `Found "Terms of Service (Placeholder)" in ${file}`
+    );
+  }
+
+  const legalModalContent = await fs.readFile(
+    path.join(commercialDir, 'LegalGovernanceModal.tsx'),
+    'utf-8'
+  );
+  assert.ok(legalModalContent.includes('C. Jones Snowin'));
+  assert.ok(legalModalContent.includes('Snowin Ventures'));
+  assert.ok(legalModalContent.includes('Chennai, Tamil Nadu, India'));
+  assert.ok(legalModalContent.includes('joneszz2004@gmail.com'));
+  assert.ok(legalModalContent.includes('Step 1 Zero-File Collection'));
+  assert.ok(legalModalContent.includes('Step 2 Data Minimization & Anonymization'));
+  assert.ok(legalModalContent.includes('Zero Third-Party AI Model Training'));
+  assert.ok(legalModalContent.includes('14-Day Post-Audit Purge & Deletion Rights'));
+  assert.ok(legalModalContent.includes('Decision-Support & Diagnostic Scope'));
+  assert.ok(legalModalContent.includes('No Automated Write-Offs or ERP Mutation'));
+  assert.ok(legalModalContent.includes('No Automatic Subscription Lock-In'));
+});
+
+test('Phase 4 Self-Assessment Scorer: Evaluates 5-question answers across all combinations into 0-100 readinessScore, riskBand, and identifiedGaps', async () => {
+  const { evaluateSelfAssessment } = await import('../utils/selfAssessmentScorer');
+
+  // 1. All Yes -> 100/100, STRUCTURED_BASELINE, 0 gaps
+  const allYes = evaluateSelfAssessment({
+    1: 'yes',
+    2: 'yes',
+    3: 'yes',
+    4: 'yes',
+    5: 'yes',
+  });
+  assert.equal(allYes.readinessScore, 100);
+  assert.equal(allYes.riskBand, 'STRUCTURED_BASELINE');
+  assert.equal(allYes.identifiedGaps.length, 0);
+
+  // 2. All No -> 0/100, CRITICAL_BLIND_SPOTS, 5 gaps
+  const allNo = evaluateSelfAssessment({
+    1: 'no',
+    2: 'no',
+    3: 'no',
+    4: 'no',
+    5: 'no',
+  });
+  assert.equal(allNo.readinessScore, 0);
+  assert.equal(allNo.riskBand, 'CRITICAL_BLIND_SPOTS');
+  assert.equal(allNo.identifiedGaps.length, 5);
+  assert.ok(allNo.recommendedChallengeText.includes('Self-Assessment 0/100'));
+
+  // 3. Mixed answers (2 Yes = 40, 1 Partially = 10, 1 Unsure = 5, 1 No = 0 -> 55/100, PARTIAL_VISIBILITY, 3 gaps)
+  const mixed = evaluateSelfAssessment({
+    1: 'yes',
+    2: 'partially',
+    3: 'unsure',
+    4: 'no',
+    5: 'yes',
+  });
+  assert.equal(mixed.readinessScore, 55);
+  assert.equal(mixed.riskBand, 'PARTIAL_VISIBILITY');
+  assert.equal(mixed.identifiedGaps.length, 3);
+  assert.ok(mixed.summaryText.includes('Diagnostic Score: 55/100'));
+});
+
+test('Phase 4 Lead Qualification Persistence: Validates, sanitizes, and persists buyerPersona, selfAssessmentScore, selfAssessmentBand, and selfAssessmentSummary', async () => {
+  const fs = await import('fs/promises');
+  const os = await import('os');
+  const path = await import('path');
+  const { validatePilotRequestPayload } = await import('../utils/leadValidation');
+  const { createLeadRecord, listLeadRecords } = await import('../utils/leadStore');
+
+  const validWithQualification = validatePilotRequestPayload({
+    fullName: 'Karthik Narayanan',
+    workEmail: 'karthik@narayananprecision.in',
+    phoneOrWhatsapp: '+91 98409 88776',
+    companyName: 'Narayanan Precision Castings Pvt Ltd',
+    plantLocation: 'Guindy Industrial Estate, Chennai',
+    roleTitle: 'Chief Financial Officer',
+    erpSystem: 'SAP (B1 / S4 / ECC)',
+    approxSkuCount: '6,800 SKUs',
+    primaryChallenge: 'Need dead stock audit before board meeting',
+    buyerPersona: 'ECONOMIC_BUYER',
+    selfAssessmentScore: 35,
+    selfAssessmentBand: 'CRITICAL_BLIND_SPOTS',
+    selfAssessmentSummary:
+      'Score 35/100 (CRITICAL_BLIND_SPOTS) · Gaps: No SKU-level review of non-moving stock',
+    consentConfirmed: true,
+    websiteHoneypot: '',
+    sourceView: 'stakeholder_economic_buyer',
+  });
+
+  assert.equal(validWithQualification.ok, true);
+  assert.ok(validWithQualification.data);
+  assert.equal(validWithQualification.data!.buyerPersona, 'ECONOMIC_BUYER');
+  assert.equal(validWithQualification.data!.selfAssessmentScore, 35);
+  assert.equal(validWithQualification.data!.selfAssessmentBand, 'CRITICAL_BLIND_SPOTS');
+
+  // Reject out-of-range selfAssessmentScore
+  const invalidScore = validatePilotRequestPayload({
+    fullName: 'Karthik Narayanan',
+    workEmail: 'karthik@narayananprecision.in',
+    phoneOrWhatsapp: '+91 98409 88776',
+    companyName: 'Narayanan Precision Castings Pvt Ltd',
+    plantLocation: 'Guindy Industrial Estate, Chennai',
+    roleTitle: 'Chief Financial Officer',
+    selfAssessmentScore: 150,
+    consentConfirmed: true,
+  });
+  assert.equal(invalidScore.ok, false);
+  assert.ok(invalidScore.fieldErrors?.selfAssessmentScore);
+
+  const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'operationalyst-p4-leads-test-'));
+  const testFilePath = path.join(tmpDir, 'pilot_requests.json');
+
+  try {
+    const saved = await createLeadRecord(validWithQualification.data!, testFilePath);
+    assert.equal(saved.buyerPersona, 'ECONOMIC_BUYER');
+    assert.equal(saved.selfAssessmentScore, 35);
+    assert.equal(saved.selfAssessmentBand, 'CRITICAL_BLIND_SPOTS');
+
+    const listed = await listLeadRecords(testFilePath);
+    assert.equal(listed.length, 1);
+    assert.equal(listed[0].buyerPersona, 'ECONOMIC_BUYER');
+    assert.equal(listed[0].selfAssessmentScore, 35);
+    assert.ok(listed[0].selfAssessmentSummary?.includes('Score 35/100'));
+  } finally {
+    await fs.rm(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('Phase 4 Commercial Data Reconciliation: Reconciles 2-Mode Sample Data Switcher with real P1-P4 engines and eliminates all ₹X / X SKUs / Example Category placeholders', async () => {
+  const fs = await import('fs/promises');
+  const path = await import('path');
+  const { getReconciledSampleAuditModes } = await import('../commercial/homepageConfig');
+  const {
+    PUBLIC_DEMO_WORKSPACE_ID,
+    PUBLIC_DEMO_SHARE_TOKEN,
+    getAuthorizedPilotWorkspaceSnapshot,
+  } = await import('../utils/pilotWorkspaceStore');
+
+  const modes = getReconciledSampleAuditModes();
+  // Mode A: Live 20-SKU Sandbox Dataset reconciled with P1-P4 engines
+  assert.equal(modes.sandbox_20.totalBookValueFormatted, '₹6,45,650');
+  assert.equal(modes.sandbox_20.skusEvaluatedText, '20 SKUs Evaluated');
+  assert.equal(modes.sandbox_20.deadStockValueFormatted, '₹2,23,110');
+  assert.equal(modes.sandbox_20.slowMovingValueFormatted, '₹63,600');
+  assert.equal(modes.sandbox_20.prioritySkusHeadline, '10 Priority SKUs');
+  assert.equal(modes.sandbox_20.topCategoryName, 'Finished Goods');
+  assert.ok(modes.sandbox_20.p2OtifPill.includes('50.0%'));
+  assert.ok(modes.sandbox_20.p3FreightPill.includes('₹13,944'));
+  assert.ok(modes.sandbox_20.p4BinPill.includes('60.0%'));
+
+  // Mode B: Illustrative 12,400-Line Auto-Component Plant Case reconciled with Hero Card
+  assert.equal(modes.illustrative_12400.totalBookValueFormatted, '₹4,82,50,000');
+  assert.equal(modes.illustrative_12400.skusEvaluatedText, '12,400 Line Items');
+  assert.equal(modes.illustrative_12400.deadStockValueFormatted, '₹18,42,000');
+  assert.equal(modes.illustrative_12400.slowMovingValueFormatted, '₹32,60,000');
+  assert.equal(modes.illustrative_12400.prioritySkusHeadline, '18 Priority SKUs');
+
+  // Verify public demo workspace AUDIT-DEMO-P1P4 returns authorized 4-pillar snapshot
+  const demoSnapshotRes = await getAuthorizedPilotWorkspaceSnapshot(
+    PUBLIC_DEMO_WORKSPACE_ID,
+    { shareToken: PUBLIC_DEMO_SHARE_TOKEN, isAdmin: false }
+  );
+  assert.equal(demoSnapshotRes.status, 'OK');
+  if (demoSnapshotRes.status === 'OK') {
+    assert.equal(demoSnapshotRes.snapshot.summaryMetrics.totalStockValue, 645650);
+    assert.equal(demoSnapshotRes.snapshot.multiModuleSummary?.p2?.otifPercent, 50);
+    assert.equal(demoSnapshotRes.snapshot.multiModuleSummary?.p3?.totalLeak, 13944);
+    assert.equal(demoSnapshotRes.snapshot.multiModuleSummary?.p4?.binAccuracyPercent, 60);
+  }
+
+  // Verify zero occurrences of ₹X, X SKUs Evaluated, X High-Impact Items, or Example Category in commercial files
+  const commercialDir = path.join(process.cwd(), 'src', 'commercial');
+  const filesToCheck = ['CommercialLandingPage.tsx', 'FactoryAuditPage.tsx', 'homepageConfig.ts'];
+  const forbiddenLiterals = [
+    '₹X',
+    'X SKUs Evaluated',
+    'X High-Impact Items',
+    'Example Category',
+    'Placeholder',
+  ];
+
+  for (const file of filesToCheck) {
+    const content = await fs.readFile(path.join(commercialDir, file), 'utf-8');
+    for (const token of forbiddenLiterals) {
+      assert.equal(
+        content.includes(token),
+        false,
+        `Found forbidden placeholder "${token}" in ${file}`
+      );
+    }
+  }
+});
+
+// ============================================================================
+// PHASE 5 TESTS: Multi-Plant Isolation, Server Workspaces, Lead Linkage,
+// Plant-Aware Excel Exports & Server Governance Audit Logs
+// ============================================================================
+
+test('Phase 5 Multi-Plant Baselines: 3 distinct plants (ambattur, sriperumbudur, hosur) have 100% disjoint itemCodes and deterministic P1-P4 metrics', async () => {
+  const {
+    MULTI_PLANT_BASELINES,
+    ALLOWED_PLANT_IDS,
+    isValidPlantId,
+    computePlantBaselineMetrics,
+  } = await import('../data/multiPlantBaselines');
+
+  assert.deepEqual(ALLOWED_PLANT_IDS, ['ambattur', 'sriperumbudur', 'hosur']);
+  assert.equal(isValidPlantId('ambattur'), true);
+  assert.equal(isValidPlantId('sriperumbudur'), true);
+  assert.equal(isValidPlantId('hosur'), true);
+  assert.equal(isValidPlantId('unknown_plant'), false);
+
+  const ambattur = MULTI_PLANT_BASELINES.ambattur;
+  const sriperumbudur = MULTI_PLANT_BASELINES.sriperumbudur;
+  const hosur = MULTI_PLANT_BASELINES.hosur;
+
+  // Verify row counts per plant
+  assert.equal(ambattur.p1Items.length, 20);
+  assert.equal(sriperumbudur.p1Items.length, 16);
+  assert.equal(hosur.p1Items.length, 15);
+
+  assert.equal(ambattur.p2Dispatches.length, 18);
+  assert.equal(sriperumbudur.p2Dispatches.length, 16);
+  assert.equal(hosur.p2Dispatches.length, 14);
+
+  assert.equal(ambattur.p3Trips.length, 12);
+  assert.equal(sriperumbudur.p3Trips.length, 10);
+  assert.equal(hosur.p3Trips.length, 10);
+
+  assert.equal(ambattur.p4Bins.length, 15);
+  assert.equal(sriperumbudur.p4Bins.length, 12);
+  assert.equal(hosur.p4Bins.length, 12);
+
+  // Verify 100% disjoint itemCodes across the 3 plants
+  const ambatturIds = new Set(ambattur.p1Items.map((s) => s.itemCode));
+  const sriIds = new Set(sriperumbudur.p1Items.map((s) => s.itemCode));
+  const hosurIds = new Set(hosur.p1Items.map((s) => s.itemCode));
+
+  for (const id of sriIds) {
+    assert.equal(ambatturIds.has(id), false, `Overlap found between ambattur and sriperumbudur: ${id}`);
+    assert.equal(hosurIds.has(id), false, `Overlap found between sriperumbudur and hosur: ${id}`);
+  }
+  for (const id of hosurIds) {
+    assert.equal(ambatturIds.has(id), false, `Overlap found between ambattur and hosur: ${id}`);
+  }
+
+  // Verify canonical Ambattur baseline metrics remain 100% intact
+  const ambatturMetrics = computePlantBaselineMetrics(ambattur);
+  assert.equal(ambatturMetrics.p1.totalBookValue, 645650);
+  assert.equal(ambatturMetrics.p1.deadStockValue, 223110);
+  assert.equal(ambatturMetrics.p1.deadSkusCount, 8);
+  assert.equal(ambatturMetrics.p1.slowMovingValue, 63600);
+  assert.equal(ambatturMetrics.p2.otifPercent, 50);
+  assert.equal(ambatturMetrics.p3.totalLeak, 13944);
+  assert.equal(ambatturMetrics.p4.binAccuracyPercent, 60);
+
+  // Verify Sriperumbudur and Hosur produce distinct, non-zero real metrics
+  const sriMetrics = computePlantBaselineMetrics(sriperumbudur);
+  const hosurMetrics = computePlantBaselineMetrics(hosur);
+
+  assert.ok(sriMetrics.p1.totalBookValue > 0 && sriMetrics.p1.totalBookValue !== 645650);
+  assert.ok(hosurMetrics.p1.totalBookValue > 0 && hosurMetrics.p1.totalBookValue !== 645650);
+  assert.notEqual(sriMetrics.p1.totalBookValue, hosurMetrics.p1.totalBookValue);
+  assert.ok(sriMetrics.p1.deadSkusCount >= 4);
+  assert.ok(hosurMetrics.p1.deadSkusCount >= 4);
+  assert.ok(sriMetrics.p3.totalLeak > 0);
+  assert.ok(hosurMetrics.p3.totalLeak > 0);
+});
+
+test('Phase 5 Plant Workspace Server Store: Isolates updates per plantId and resets an individual plant back to factory baseline without affecting other plants', async () => {
+  const fs = await import('fs/promises');
+  const os = await import('os');
+  const path = await import('path');
+  const {
+    listAllPlantWorkspacesSummary,
+    getPlantWorkspaceFromServer,
+    updatePlantWorkspaceOnServer,
+    resetPlantWorkspaceOnServer,
+    validatePlantWorkspaceUpdatePayload,
+  } = await import('../utils/plantWorkspaceServerStore');
+
+  const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'operationalyst-p5-plant-store-'));
+  const testFilePath = path.join(tmpDir, 'plant_workspaces.json');
+
+  try {
+    const initialSummaries = await listAllPlantWorkspacesSummary(testFilePath);
+    assert.equal(initialSummaries.length, 3);
+    assert.equal(initialSummaries.every((s) => s.isCustomized === false), true);
+
+    const sriInitial = await getPlantWorkspaceFromServer('sriperumbudur', testFilePath);
+    assert.equal(sriInitial.plantId, 'sriperumbudur');
+    assert.equal(sriInitial.isCustomized, false);
+    assert.equal(sriInitial.dataset.p1Items.length, 16);
+
+    // Modify Sriperumbudur P1 SKUs (reduce to 10 SKUs)
+    const trimmedSkus = sriInitial.dataset.p1Items.slice(0, 10);
+    const validation = validatePlantWorkspaceUpdatePayload({ p1Items: trimmedSkus });
+    assert.equal(validation.ok, true);
+
+    const updatedSri = await updatePlantWorkspaceOnServer(
+      'sriperumbudur',
+      validation.data!,
+      testFilePath
+    );
+    assert.equal(updatedSri.isCustomized, true);
+    assert.equal(updatedSri.dataset.p1Items.length, 10);
+    assert.equal(updatedSri.summary.p1.totalSkus, 10);
+
+    // Verify Ambattur and Hosur remain untouched
+    const ambatturCheck = await getPlantWorkspaceFromServer('ambattur', testFilePath);
+    const hosurCheck = await getPlantWorkspaceFromServer('hosur', testFilePath);
+    assert.equal(ambatturCheck.isCustomized, false);
+    assert.equal(ambatturCheck.dataset.p1Items.length, 20);
+    assert.equal(hosurCheck.isCustomized, false);
+    assert.equal(hosurCheck.dataset.p1Items.length, 15);
+
+    // Reset Sriperumbudur back to factory baseline
+    const resetSri = await resetPlantWorkspaceOnServer('sriperumbudur', testFilePath);
+    assert.equal(resetSri.isCustomized, false);
+    assert.equal(resetSri.dataset.p1Items.length, 16);
+    assert.equal(resetSri.summary.p1.totalSkus, 16);
+  } finally {
+    await fs.rm(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('Phase 5 Lead-to-Snapshot Linkage: Validates and persists linkedWorkspaceId, linkedWalkthroughUrl, and linkedPlantId on a PILOT lead record', async () => {
+  const fs = await import('fs/promises');
+  const os = await import('os');
+  const path = await import('path');
+  const { validatePilotRequestPayload, validateAdminLeadPatch } = await import(
+    '../utils/leadValidation'
+  );
+  const { createLeadRecord, updateLeadRecord, listLeadRecords } = await import(
+    '../utils/leadStore'
+  );
+
+  const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'operationalyst-p5-lead-link-'));
+  const testFilePath = path.join(tmpDir, 'pilot_requests.json');
+
+  try {
+    const createVal = validatePilotRequestPayload({
+      fullName: 'Senthil Murugan',
+      workEmail: 'senthil@sriperumbudur-stamping.in',
+      phoneOrWhatsapp: '+91 98401 11223',
+      companyName: 'Sriperumbudur Tier-1 Stampings Pvt Ltd',
+      plantLocation: 'Sriperumbudur SIPCOT, Tamil Nadu',
+      roleTitle: 'VP Operations',
+      consentConfirmed: true,
+    });
+    assert.equal(createVal.ok, true);
+    const lead = await createLeadRecord(createVal.data!, testFilePath);
+
+    const patchVal = validateAdminLeadPatch({
+      status: 'APPROVED_FOR_UPLOAD',
+      linkedWorkspaceId: 'AUDIT-20261106-9F8E',
+      linkedWalkthroughUrl: '/?view=pilot-walkthrough&workspaceId=AUDIT-20261106-9F8E&token=abc123token',
+      linkedPlantId: 'sriperumbudur',
+      founderNotes: 'Published Sriperumbudur 4-pillar walkthrough snapshot for review.',
+    });
+    assert.equal(patchVal.ok, true);
+
+    const updated = await updateLeadRecord(lead.leadId, patchVal.data!, testFilePath);
+    assert.ok(updated);
+    assert.equal(updated!.status, 'APPROVED_FOR_UPLOAD');
+    assert.equal(updated!.linkedWorkspaceId, 'AUDIT-20261106-9F8E');
+    assert.equal(
+      updated!.linkedWalkthroughUrl,
+      '/?view=pilot-walkthrough&workspaceId=AUDIT-20261106-9F8E&token=abc123token'
+    );
+    assert.equal(updated!.linkedPlantId, 'sriperumbudur');
+
+    const allLeads = await listLeadRecords(testFilePath);
+    assert.equal(allLeads.length, 1);
+    assert.equal(allLeads[0].linkedWorkspaceId, 'AUDIT-20261106-9F8E');
+    assert.equal(allLeads[0].linkedPlantId, 'sriperumbudur');
+  } finally {
+    await fs.rm(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('Phase 5 Durable Server Governance Audit Log: Persists structured events newest-first, normalizes plantId, and enforces maxRecords cap', async () => {
+  const fs = await import('fs/promises');
+  const os = await import('os');
+  const path = await import('path');
+  const {
+    recordServerAuditEvent,
+    listServerAuditEvents,
+    validateServerAuditEventPayload,
+  } = await import('../utils/serverAuditLog');
+
+  const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'operationalyst-p5-audit-log-'));
+  const testFilePath = path.join(tmpDir, 'audit_events.json');
+
+  try {
+    const val = validateServerAuditEventPayload({
+      actor: 'C. Jones Snowin',
+      category: 'PILOT_WALKTHROUGH',
+      action: 'WORKSPACE_SNAPSHOT_PUBLISHED',
+      plantId: 'hosur',
+      details: 'Published AUDIT-20261106-HOS1 from Hosur Auto Components Unit.',
+    });
+    assert.equal(val.ok, true);
+
+    await recordServerAuditEvent(val.data!, testFilePath, 3);
+    await recordServerAuditEvent(
+      {
+        actor: 'Plant Operator',
+        category: 'PLANT_WORKSPACE',
+        action: 'PLANT_WORKSPACE_UPDATED',
+        plantId: 'sriperumbudur',
+        details: 'Updated Sriperumbudur P1 rules.',
+      },
+      testFilePath,
+      3
+    );
+    await recordServerAuditEvent(
+      {
+        actor: 'Prospective Buyer',
+        category: 'LEAD_FUNNEL',
+        action: 'PILOT_LEAD_SUBMITTED',
+        details: 'Submitted lead PILOT-20261106-ABCD.',
+      },
+      testFilePath,
+      3
+    );
+    await recordServerAuditEvent(
+      {
+        actor: 'C. Jones Snowin',
+        category: 'PLANT_WORKSPACE',
+        action: 'PLANT_WORKSPACE_RESET_TO_BASELINE',
+        plantId: 'hosur',
+        details: 'Reset Hosur back to factory baseline.',
+      },
+      testFilePath,
+      3
+    );
+
+    // Because maxRecords is 3, only the 3 newest events remain
+    const allEvents = await listServerAuditEvents(testFilePath);
+    assert.equal(allEvents.length, 3);
+    assert.equal(allEvents[0].action, 'PLANT_WORKSPACE_RESET_TO_BASELINE');
+    assert.equal(allEvents[0].plantId, 'hosur');
+
+    const hosurOnly = allEvents.filter((e) => e.plantId === 'hosur');
+    assert.equal(hosurOnly.length, 1);
+    assert.equal(hosurOnly[0].plantId, 'hosur');
+  } finally {
+    await fs.rm(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('Phase 5 Plant-Aware Excel Command Center Exporter: Generates distinct 6-sheet datasets for ambattur, sriperumbudur, and hosur with plant stamping', async () => {
+  const { buildSixSheetDataset } = await import('../utils/excelCommandCenterExporter');
+
+  const ambatturSheets = buildSixSheetDataset('ambattur');
+  const sriSheets = buildSixSheetDataset('sriperumbudur');
+  const hosurSheets = buildSixSheetDataset('hosur');
+
+  assert.equal(ambatturSheets.sheet1Summary.plantId, 'ambattur');
+  assert.equal(sriSheets.sheet1Summary.plantId, 'sriperumbudur');
+  assert.equal(hosurSheets.sheet1Summary.plantId, 'hosur');
+
+  assert.equal(ambatturSheets.sheet2P1.length, 20);
+  assert.equal(sriSheets.sheet2P1.length, 16);
+  assert.equal(hosurSheets.sheet2P1.length, 15);
+
+  assert.equal(ambatturSheets.sheet2P1[0].sku, 'FG-PBX-G1');
+  assert.equal(sriSheets.sheet2P1[0].sku, 'SRI-STAMP-101');
+  assert.equal(hosurSheets.sheet2P1[0].sku, 'HOS-FORG-201');
+
+  // Verify Executive Summary sheet stamps the plant name
+  assert.ok(sriSheets.sheet1Summary.plantName.includes('Sriperumbudur'));
+  assert.ok(hosurSheets.sheet1Summary.plantName.includes('Hosur'));
+});
+
+test('Phase 5 Dashboard Snapshot Isolation: buildLivePlatformSnapshot returns plant-isolated SKUs, dispatches, freight trips, bins, and CAPA actions with datasetLoaded=true for all 3 plants', async () => {
+  const { buildLivePlatformSnapshot } = await import('../dashboard/dashboardConfig');
+
+  const ambatturSnap = buildLivePlatformSnapshot(PLANTS.ambattur, PERIODS.fortnight_sep);
+  const sriSnap = buildLivePlatformSnapshot(PLANTS.sriperumbudur, PERIODS.fortnight_sep);
+  const hosurSnap = buildLivePlatformSnapshot(PLANTS.hosur, PERIODS.fortnight_sep);
+
+  assert.equal(ambatturSnap.datasetLoaded, true);
+  assert.equal(sriSnap.datasetLoaded, true);
+  assert.equal(hosurSnap.datasetLoaded, true);
+
+  assert.equal(ambatturSnap.p1TotalSkuCount, 20);
+  assert.equal(sriSnap.p1TotalSkuCount, 16);
+  assert.equal(hosurSnap.p1TotalSkuCount, 15);
+
+  assert.equal(ambatturSnap.p2DualGate.totalDispatches, 18);
+  assert.equal(sriSnap.p2DualGate.totalDispatches, 16);
+  assert.equal(hosurSnap.p2DualGate.totalDispatches, 14);
+
+  assert.equal(ambatturSnap.p3TotalTripCount, 12);
+  assert.equal(sriSnap.p3TotalTripCount, 10);
+  assert.equal(hosurSnap.p3TotalTripCount, 10);
+
+  assert.equal(ambatturSnap.p4TotalBins, 15);
+  assert.equal(sriSnap.p4TotalBins, 12);
+  assert.equal(hosurSnap.p4TotalBins, 12);
+
+  assert.equal(ambatturSnap.capaItems[0].id, 'AMB-CAPA-01');
+  assert.equal(sriSnap.capaItems[0].id, 'SRI-CAPA-01');
+  assert.equal(hosurSnap.capaItems[0].id, 'HOS-CAPA-01');
+});
+
+// ============================================================================
+// PHASE 6 TESTS: Token-Gated Step-2 Upload Portal, Tally/SAP/Busy Header
+// Alias Resolver, 4-Pillar Quarantine Engine, Client-Side Anonymizer,
+// Machine Reserve Spares Exclusion (Item 07), and ImportRun Ledger
+// ============================================================================
+
+test('Phase 6 ERP Header Alias Resolver: Maps Tally Prime, SAP (MATNR/MAKTX/LABST/VERPR/BUDAT), and Busy headers to canonical P1-P4 columns', async () => {
+  const {
+    resolveP1InventoryColumns,
+    resolveP2DispatchColumns,
+    resolveP3FreightColumns,
+    resolveP4WarehouseBinColumns,
+  } = await import('../utils/columnAliasResolver');
+
+  const sapP1Rows = [
+    {
+      MATNR: 'SAP-VALVE-900',
+      MAKTX: 'High Pressure CNC Machined Valve Body',
+      MATKL: 'Finished Goods',
+      LABST: '45',
+      VERPR: '3200',
+      BUDAT: '2026-01-10',
+      CRITICAL_SPARE: 'NO',
+    },
+  ];
+  const resolvedP1 = resolveP1InventoryColumns(sapP1Rows);
+  assert.equal(resolvedP1.mappedRows[0].Part_ID, 'SAP-VALVE-900');
+  assert.equal(resolvedP1.mappedRows[0].Part_Description, 'High Pressure CNC Machined Valve Body');
+  assert.equal(resolvedP1.mappedRows[0].Category, 'Finished Goods');
+  assert.equal(resolvedP1.mappedRows[0].Closing_Stock_Qty, '45');
+  assert.equal(resolvedP1.mappedRows[0].Unit_Cost_INR, '3200');
+  assert.equal(resolvedP1.mappedRows[0].Last_Movement_Date, '2026-01-10');
+  assert.equal(resolvedP1.columnMappingUsed.Part_ID, 'MATNR');
+  assert.equal(resolvedP1.columnMappingUsed.Unit_Cost_INR, 'VERPR');
+
+  const tallyP2Rows = [
+    {
+      Challan_No: 'DC-881',
+      Party_Name: 'Ashok Leyland Ennore',
+      Order_Qty: '120',
+      Billed_Qty: '110',
+      Due_Date: '12-09-2026',
+      Gate_Out_Date: '14-09-2026',
+    },
+  ];
+  const resolvedP2 = resolveP2DispatchColumns(tallyP2Rows);
+  assert.equal(resolvedP2.mappedRows[0].Dispatch_ID, 'DC-881');
+  assert.equal(resolvedP2.mappedRows[0].Customer_Name, 'Ashok Leyland Ennore');
+  assert.equal(resolvedP2.mappedRows[0].Ordered_Qty, '120');
+  assert.equal(resolvedP2.mappedRows[0].Dispatched_Qty, '110');
+
+  const tallyP3Rows = [
+    {
+      Bilty_No: 'LR-4410',
+      Carrier_Name: 'TVS Industrial Logistics',
+      Tonnage: '9.5',
+      Route_Km: '180',
+      Invoice_Amount: '16500',
+      Halting_Charges: '1200',
+    },
+  ];
+  const resolvedP3 = resolveP3FreightColumns(tallyP3Rows);
+  assert.equal(resolvedP3.mappedRows[0].LR_Number, 'LR-4410');
+  assert.equal(resolvedP3.mappedRows[0].Transporter, 'TVS Industrial Logistics');
+  assert.equal(resolvedP3.mappedRows[0].Weight_Ton, '9.5');
+  assert.equal(resolvedP3.mappedRows[0].Billed_Amount_INR, '16500');
+
+  const tallyP4Rows = [
+    {
+      Rack_Location: 'BIN-C-09',
+      Item_Code: 'AMB-RM-101',
+      Tally_Qty: '200',
+      Actual_Qty: '188',
+      Rate_INR: '185',
+    },
+  ];
+  const resolvedP4 = resolveP4WarehouseBinColumns(tallyP4Rows);
+  assert.equal(resolvedP4.mappedRows[0].Bin_ID, 'BIN-C-09');
+  assert.equal(resolvedP4.mappedRows[0].Part_ID, 'AMB-RM-101');
+  assert.equal(resolvedP4.mappedRows[0].Book_Qty, '200');
+  assert.equal(resolvedP4.mappedRows[0].Physical_Count_Qty, '188');
+});
+
+test('Phase 6 4-Pillar Quarantine Engine: Strictly quarantines corrupted Tally Prime rows without silent fallback to 2026-09-20 or 0', async () => {
+  const {
+    validateP1InventoryRows,
+    validateP2DispatchRows,
+    validateP3FreightRows,
+    validateP4WarehouseBinRows,
+    buildSampleDirtyTallyPrimeExportDataset,
+  } = await import('../utils/importValidation');
+
+  const dirtySample = buildSampleDirtyTallyPrimeExportDataset();
+  const p1Res = validateP1InventoryRows(dirtySample.p1Rows, { excludeReserveSpares: true });
+
+  // 22 submitted rows -> 18 valid accepted + 4 quarantined rejected
+  assert.equal(p1Res.qualitySummary.totalSubmitted, 22);
+  assert.equal(p1Res.qualitySummary.validAccepted, 18);
+  assert.equal(p1Res.qualitySummary.quarantinedRejected, 4);
+  assert.equal(p1Res.validRows.length, 18);
+  assert.equal(p1Res.quarantinedRows.length, 4);
+
+  // Verify the 4 specific quarantine errors (missing Part_ID, negative qty, non-numeric rate, invalid date)
+  assert.ok(p1Res.quarantinedRows[0].fieldErrors.Part_ID);
+  assert.ok(p1Res.quarantinedRows[1].fieldErrors.Closing_Stock_Qty);
+  assert.ok(p1Res.quarantinedRows[2].fieldErrors.Unit_Cost_INR);
+  assert.ok(p1Res.quarantinedRows[3].fieldErrors.Last_Movement_Date);
+
+  // Verify P2, P3, P4 quarantine behavior on invalid rows
+  const p2Res = validateP2DispatchRows([
+    ...dirtySample.p2Rows,
+    { Dispatch_ID: '', Customer_Name: 'Bad Row', Ordered_Qty: '-5', Dispatched_Qty: '10', Promised_Date: 'bad-date', Dispatch_Date: '2026-09-15' },
+  ]);
+  assert.equal(p2Res.validRows.length, 3);
+  assert.equal(p2Res.quarantinedRows.length, 1);
+
+  const p3Res = validateP3FreightRows([
+    ...dirtySample.p3Rows,
+    { LR_Number: 'LR-BAD', Transporter: '', Weight_Ton: '-2', Distance_Km: '100', Billed_Amount_INR: 'NaN_BILL' },
+  ]);
+  assert.equal(p3Res.validRows.length, 2);
+  assert.equal(p3Res.quarantinedRows.length, 1);
+
+  const p4Res = validateP4WarehouseBinRows([
+    ...dirtySample.p4Rows,
+    { Bin_ID: '', Part_ID: 'AMB-1', Book_Qty: '-10', Physical_Count_Qty: '5', Unit_Cost_INR: '0' },
+  ]);
+  assert.equal(p4Res.validRows.length, 2);
+  assert.equal(p4Res.quarantinedRows.length, 1);
+});
+
+test('Phase 6 Machine Reserve Spares Exclusion (Item 07): Flags critical CNC/insurance spares and retains them instead of liquidating', async () => {
+  const { validateP1InventoryRows, buildSampleDirtyTallyPrimeExportDataset } = await import(
+    '../utils/importValidation'
+  );
+  const { computePilotWorkspaceAnalytics } = await import('../utils/pilotWorkspaceStore');
+
+  const dirtySample = buildSampleDirtyTallyPrimeExportDataset();
+  const p1Res = validateP1InventoryRows(dirtySample.p1Rows, { excludeReserveSpares: true });
+
+  // 2 reserve spares: AMB-SP-901 (₹68,500) + AMB-SP-902 (₹44,000) = ₹1,12,500
+  assert.equal(p1Res.qualitySummary.reserveSparesCount, 2);
+  assert.equal(p1Res.qualitySummary.reserveSparesValueINR, 112500);
+
+  const analytics = computePilotWorkspaceAnalytics(p1Res.validRows, undefined, {
+    excludeReserveSpares: true,
+  });
+  const spindleSpare = analytics.evaluatedSkus.find((s) => s.itemCode === 'AMB-SP-901');
+  assert.ok(spindleSpare);
+  assert.equal(
+    spindleSpare!.actionStatus,
+    'Retain as Critical Machine / Insurance Spare (Item 07 Excluded from Liquidation)'
+  );
+});
+
+test('Phase 6 Client-Side Pre-Upload Anonymizer: Masks Part_Description, Customer_Name, and Transporter in browser while preserving 100% of ₹ math', async () => {
+  const {
+    anonymizeP1ToP4DatasetClientSide,
+    validateP1InventoryRows,
+    buildSampleDirtyTallyPrimeExportDataset,
+  } = await import('../utils/importValidation');
+  const { computePilotWorkspaceAnalytics } = await import('../utils/pilotWorkspaceStore');
+
+  const rawSample = buildSampleDirtyTallyPrimeExportDataset();
+  const maskedSample = anonymizeP1ToP4DatasetClientSide(rawSample);
+
+  assert.match(String(maskedSample.p1Rows[0].Part_Description), /^MASKED-PART-001/);
+  assert.equal(maskedSample.p2Rows[0].Customer_Name, 'MASKED-OEM-01');
+  assert.equal(maskedSample.p3Rows[0].Transporter, 'CARRIER-01');
+
+  // Verify mathematical totals before and after anonymization are 100% identical
+  const rawValid = validateP1InventoryRows(rawSample.p1Rows).validRows;
+  const maskedValid = validateP1InventoryRows(maskedSample.p1Rows).validRows;
+
+  const rawAnalytics = computePilotWorkspaceAnalytics(rawValid);
+  const maskedAnalytics = computePilotWorkspaceAnalytics(maskedValid);
+
+  assert.equal(maskedAnalytics.summaryMetrics.totalStockValue, rawAnalytics.summaryMetrics.totalStockValue);
+  assert.equal(maskedAnalytics.summaryMetrics.deadStockValue, rawAnalytics.summaryMetrics.deadStockValue);
+  assert.equal(maskedAnalytics.summaryMetrics.slowMovingValue, rawAnalytics.summaryMetrics.slowMovingValue);
+  assert.equal(maskedAnalytics.summaryMetrics.targetCashRelease, rawAnalytics.summaryMetrics.targetCashRelease);
+});
+
+test('Phase 6 5-Sheet Pilot Data Kit & Quarantined CSV Exporter: Generates all 5 sheets and formula-guarded quarantine CSV', async () => {
+  const {
+    PILOT_DATA_KIT_FIVE_SHEET_NAMES,
+    buildFiveSheetPilotDataKitDataset,
+    buildQuarantinedRowsCsvContent,
+  } = await import('../utils/pilotDataKitExporter');
+  const { validateP1InventoryRows, buildSampleDirtyTallyPrimeExportDataset } = await import(
+    '../utils/importValidation'
+  );
+
+  assert.equal(PILOT_DATA_KIT_FIVE_SHEET_NAMES.length, 5);
+  const sheets = buildFiveSheetPilotDataKitDataset();
+  assert.ok(sheets['1_P1_Inventory_Template'].length >= 5);
+  assert.ok(sheets['2_P2_OTIF_Template'].length >= 3);
+  assert.ok(sheets['3_P3_Freight_Template'].length >= 3);
+  assert.ok(sheets['4_P4_Warehouse_Bin_Template'].length >= 3);
+  assert.ok(sheets['5_ERP_Export_&_Anonymization_Guide'].length >= 5);
+
+  const dirty = buildSampleDirtyTallyPrimeExportDataset();
+  const p1Validation = validateP1InventoryRows(dirty.p1Rows);
+  const csv = buildQuarantinedRowsCsvContent(p1Validation.quarantinedRows, 'P1');
+  assert.ok(csv.includes('Row_Number'));
+  assert.ok(csv.includes('Error_Reasons'));
+  assert.ok(csv.includes('AMB-DIRTY-NEG'));
+  assert.ok(csv.includes('AMB-DIRTY-DATE'));
+});
+
+test('Phase 6 Lead Upload Token & Portal URL: Generates cryptographic uploadToken (upl_...) and uploadPortalUrl on lead creation', async () => {
+  const fs = await import('fs/promises');
+  const os = await import('os');
+  const path = await import('path');
+  const { validatePilotRequestPayload } = await import('../utils/leadValidation');
+  const { createLeadRecord, getLeadRecordById } = await import('../utils/leadStore');
+
+  const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'operationalyst-p6-lead-token-'));
+  const testFilePath = path.join(tmpDir, 'pilot_requests.json');
+
+  try {
+    const val = validatePilotRequestPayload({
+      fullName: 'Ramesh Sundaram',
+      workEmail: 'ramesh@ambatturvalves.in',
+      phoneOrWhatsapp: '+91 98402 55667',
+      companyName: 'Ambattur Industrial Valves Pvt Ltd',
+      plantLocation: 'Ambattur Industrial Estate, Chennai',
+      roleTitle: 'Managing Director',
+      consentConfirmed: true,
+    });
+    assert.equal(val.ok, true);
+
+    const created = await createLeadRecord(val.data!, testFilePath);
+    assert.ok(created.uploadToken && created.uploadToken.startsWith('upl_'));
+    assert.ok(
+      created.uploadPortalUrl &&
+        created.uploadPortalUrl.includes(`?view=pilot-upload&leadId=${created.leadId}&token=`)
+    );
+
+    const retrieved = await getLeadRecordById(created.leadId, testFilePath);
+    assert.ok(retrieved);
+    assert.equal(retrieved!.uploadToken, created.uploadToken);
+  } finally {
+    await fs.rm(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('Phase 6 End-to-End Step-2 Ingestion & ImportRun Ledger: Persists IMPRUN record with 64-char SHA-256 digest, creates AUDIT snapshot with Item 01 & Item 07 metadata, and updates Lead record', async () => {
+  const fs = await import('fs/promises');
+  const os = await import('os');
+  const path = await import('path');
+  const { validatePilotRequestPayload } = await import('../utils/leadValidation');
+  const { createLeadRecord, getLeadRecordById } = await import('../utils/leadStore');
+  const { buildSampleDirtyTallyPrimeExportDataset } = await import('../utils/importValidation');
+  const { executeStep2PilotIngestion, listImportRunRecords } = await import(
+    '../utils/importRunStore'
+  );
+  const { listServerAuditEvents } = await import('../utils/serverAuditLog');
+
+  const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'operationalyst-p6-ingest-'));
+  const leadsFile = path.join(tmpDir, 'pilot_requests.json');
+  const workspacesFile = path.join(tmpDir, 'pilot_workspaces.json');
+  const importRunsFile = path.join(tmpDir, 'import_runs.json');
+  const auditEventsFile = path.join(tmpDir, 'audit_events.json');
+
+  try {
+    const val = validatePilotRequestPayload({
+      fullName: 'Vikram Natarajan',
+      workEmail: 'vikram@hosurdrivetrain.in',
+      phoneOrWhatsapp: '+91 98405 99881',
+      companyName: 'Hosur Precision Drivetrain Pvt Ltd',
+      plantLocation: 'Hosur SIPCOT Phase II',
+      roleTitle: 'Plant Head',
+      consentConfirmed: true,
+    });
+    const lead = await createLeadRecord(val.data!, leadsFile);
+    const dirtyDataset = buildSampleDirtyTallyPrimeExportDataset();
+
+    const ingestRes = await executeStep2PilotIngestion(
+      {
+        leadId: lead.leadId,
+        plantId: 'ambattur',
+        p1Rows: dirtyDataset.p1Rows,
+        p2Rows: dirtyDataset.p2Rows,
+        p3Rows: dirtyDataset.p3Rows,
+        p4Rows: dirtyDataset.p4Rows,
+        excludeReserveSpares: true,
+        anonymizationApplied: true,
+      },
+      {
+        leadsFilePath: leadsFile,
+        workspacesFilePath: workspacesFile,
+        importRunsFilePath: importRunsFile,
+        auditEventsFilePath: auditEventsFile,
+      }
+    );
+
+    assert.equal(ingestRes.ok, true);
+    assert.ok(ingestRes.importRun);
+    assert.ok(ingestRes.snapshot);
+
+    // Verify IMPRUN-YYYYMMDD-XXXX & 64-char SHA-256 digest
+    assert.match(ingestRes.importRun!.importRunId, /^IMPRUN-\d{8}-[0-9A-F]{4}$/);
+    assert.equal(ingestRes.importRun!.datasetSha256.length, 64);
+    assert.equal(ingestRes.importRun!.p1Quality.totalSubmitted, 22);
+    assert.equal(ingestRes.importRun!.p1Quality.validAccepted, 18);
+    assert.equal(ingestRes.importRun!.p1Quality.quarantinedRejected, 4);
+    assert.equal(ingestRes.importRun!.p1Quality.reserveSparesCount, 2);
+    assert.equal(ingestRes.importRun!.p1Quality.reserveSparesValueINR, 112500);
+
+    // Verify Snapshot Item 01 (dataQualityOverview) & Item 07 (assumptionsAndExclusions)
+    assert.equal(ingestRes.snapshot!.importRunId, ingestRes.importRun!.importRunId);
+    assert.equal(ingestRes.snapshot!.datasetSha256, ingestRes.importRun!.datasetSha256);
+    assert.equal(ingestRes.snapshot!.dataQualityOverview?.p1Quality.validAccepted, 18);
+    assert.equal(ingestRes.snapshot!.dataQualityOverview?.p1Quality.quarantinedRejected, 4);
+    assert.equal(ingestRes.snapshot!.assumptionsAndExclusions?.excludeReserveSpares, true);
+    assert.equal(ingestRes.snapshot!.assumptionsAndExclusions?.reserveSparesExcludedCount, 2);
+    assert.equal(ingestRes.snapshot!.assumptionsAndExclusions?.reserveSparesExcludedValue, 112500);
+
+    // Verify Lead record was updated with lastImportRunId & dataQualityOverview
+    const updatedLead = await getLeadRecordById(lead.leadId, leadsFile);
+    assert.ok(updatedLead);
+    assert.equal(updatedLead!.status, 'APPROVED_FOR_UPLOAD');
+    assert.equal(updatedLead!.lastImportRunId, ingestRes.importRun!.importRunId);
+    assert.equal(updatedLead!.linkedWorkspaceId, ingestRes.snapshot!.workspaceId);
+    assert.equal(updatedLead!.dataQualityOverview?.quarantinedRejected, 4);
+
+    // Verify ImportRun ledger persistence & Governance Audit Event
+    const savedRuns = await listImportRunRecords(importRunsFile);
+    assert.equal(savedRuns.length, 1);
+    assert.equal(savedRuns[0].importRunId, ingestRes.importRun!.importRunId);
+
+    const auditEvents = await listServerAuditEvents(auditEventsFile);
+    assert.equal(auditEvents.length, 1);
+    assert.equal(auditEvents[0].action, 'PILOT_DATA_INGESTED');
+  } finally {
+    await fs.rm(tmpDir, { recursive: true, force: true });
+  }
+});
+
+// ============================================================================
+// PHASE 7 TESTS: 4-Pillar Row-Traceable Sensitivity Simulator (with Item 07
+// Reserve Spares & Server Scenario Lock), Closed-Loop CAPA Financial Ledger
+// (with .XLSX Export Parity), and Cryptographically Bound 8-Field Verified
+// Proof Registry
+// ============================================================================
+
+test('Phase 7 4-Pillar Sensitivity Simulator: Deterministically computes P1-P4 deltas and row-traceable reclassifications across STRICT_CFO_AUDIT, STANDARD_BASELINE, and LENIENT_PLANT_FLOOR presets', async () => {
+  const { runFourPillarSensitivity } = await import('../utils/sensitivitySimulator');
+  const { getPlantBaseline } = await import('../data/multiPlantBaselines');
+
+  const ambattur = getPlantBaseline('ambattur');
+
+  // 1. Standard Baseline compared against itself (with excludeReserveSpares: false on both) produces 0 deltas
+  const identityResult = runFourPillarSensitivity({
+    skus: ambattur.p1Items,
+    p1Rules: ambattur.p1Rules,
+    p2Dispatches: ambattur.p2Dispatches,
+    p2Rules: ambattur.p2Rules,
+    p3FreightTrips: ambattur.p3Trips,
+    p3Rules: ambattur.p3Rules,
+    p4WarehouseBins: ambattur.p4Bins,
+    p4Rules: ambattur.p4Rules,
+    baselineConfig: { excludeReserveSpares: false },
+    scenarioConfig: { excludeReserveSpares: false },
+  });
+
+  assert.equal(identityResult.p1.baselineDeadStockInr, 223110);
+  assert.equal(identityResult.p1.scenarioDeadStockInr, 223110);
+  assert.equal(identityResult.p1.deadStockDeltaInr, 0);
+  assert.equal(identityResult.p2.otifPctDelta, 0);
+  assert.equal(identityResult.p3.leakDeltaInr, 0);
+  assert.equal(identityResult.p4.highRiskBinsDelta, 0);
+  assert.equal(identityResult.reclassifiedSkus.length, 0);
+  assert.equal(identityResult.reclassifiedDispatches.length, 0);
+  assert.equal(identityResult.reclassifiedBins.length, 0);
+
+  // 2. Strict CFO Audit (slowDays=120, normalDays=60, gracePeriodDays=0, maxOverchargePercent=5)
+  const strictResult = runFourPillarSensitivity({
+    skus: ambattur.p1Items,
+    p1Rules: ambattur.p1Rules,
+    p2Dispatches: ambattur.p2Dispatches,
+    p2Rules: ambattur.p2Rules,
+    p3FreightTrips: ambattur.p3Trips,
+    p3Rules: ambattur.p3Rules,
+    p4WarehouseBins: ambattur.p4Bins,
+    p4Rules: ambattur.p4Rules,
+    preset: 'STRICT_CFO_AUDIT',
+  });
+
+  assert.ok(strictResult.p1.scenarioDeadStockInr > strictResult.p1.baselineDeadStockInr);
+  assert.equal(
+    strictResult.p1.deadStockDeltaInr,
+    strictResult.p1.scenarioDeadStockInr - strictResult.p1.baselineDeadStockInr
+  );
+  assert.ok(strictResult.reclassifiedSkus.length >= 2);
+  const slowToDead = strictResult.reclassifiedSkus.filter(
+    (s) => s.fromBucket === 'Slow' && s.toBucket === 'Dead'
+  );
+  assert.ok(slowToDead.length >= 1);
+
+  // 3. Lenient Plant Floor (slowDays=270, gracePeriodDays=2, shortageTolerancePct=10, highRiskValueThreshold=12000)
+  const lenientResult = runFourPillarSensitivity({
+    skus: ambattur.p1Items,
+    p1Rules: ambattur.p1Rules,
+    p2Dispatches: ambattur.p2Dispatches,
+    p2Rules: ambattur.p2Rules,
+    p3FreightTrips: ambattur.p3Trips,
+    p3Rules: ambattur.p3Rules,
+    p4WarehouseBins: ambattur.p4Bins,
+    p4Rules: ambattur.p4Rules,
+    preset: 'LENIENT_PLANT_FLOOR',
+  });
+
+  assert.ok(lenientResult.p1.scenarioDeadStockInr < lenientResult.p1.baselineDeadStockInr);
+  assert.ok(lenientResult.p2.scenarioOtifPct > lenientResult.p2.baselineOtifPct);
+  assert.ok(lenientResult.reclassifiedDispatches.length >= 1);
+  assert.ok(lenientResult.p3.scenarioLeakInr <= lenientResult.p3.baselineLeakInr);
+  assert.ok(
+    lenientResult.p4.scenarioHighRiskBinsCount <= lenientResult.p4.baselineHighRiskBinsCount
+  );
+});
+
+test('Phase 7 Sensitivity Simulator Item 07 Reserve Spares Protection: Correctly separates liquidatableDeadStockInr from reserveSparesProtectedInr', async () => {
+  const { runFourPillarSensitivity } = await import('../utils/sensitivitySimulator');
+  const { validateP1InventoryRows, buildSampleDirtyTallyPrimeExportDataset } = await import(
+    '../utils/importValidation'
+  );
+  const { getPlantBaseline } = await import('../data/multiPlantBaselines');
+
+  const ambattur = getPlantBaseline('ambattur');
+  const dirty = buildSampleDirtyTallyPrimeExportDataset();
+  const validated = validateP1InventoryRows(dirty.p1Rows, { excludeReserveSpares: true });
+
+  // When excludeReserveSpares = true, reserveSparesProtectedInr is ₹1,12,500 (2 CNC spares)
+  const protectedRun = runFourPillarSensitivity({
+    skus: validated.validRows,
+    p1Rules: ambattur.p1Rules,
+    p2Dispatches: ambattur.p2Dispatches,
+    p3FreightTrips: ambattur.p3Trips,
+    p4WarehouseBins: ambattur.p4Bins,
+    baselineConfig: { excludeReserveSpares: true },
+    scenarioConfig: { excludeReserveSpares: true },
+  });
+
+  assert.equal(protectedRun.p1.reserveSparesProtectedCount, 2);
+  assert.equal(protectedRun.p1.reserveSparesProtectedInr, 112500);
+  assert.equal(
+    protectedRun.p1.liquidatableDeadStockInr + protectedRun.p1.reserveSparesProtectedInr,
+    protectedRun.p1.scenarioDeadStockInr
+  );
+
+  // When excludeReserveSpares = false on scenario, all dead stock is marked liquidatable and the 2 spares reclassify from Protected Reserve Spare to Dead
+  const unprotectedRun = runFourPillarSensitivity({
+    skus: validated.validRows,
+    p1Rules: ambattur.p1Rules,
+    p2Dispatches: ambattur.p2Dispatches,
+    p3FreightTrips: ambattur.p3Trips,
+    p4WarehouseBins: ambattur.p4Bins,
+    baselineConfig: { excludeReserveSpares: true },
+    scenarioConfig: { excludeReserveSpares: false },
+  });
+
+  assert.equal(unprotectedRun.p1.reserveSparesProtectedInr, 0);
+  assert.equal(
+    unprotectedRun.p1.liquidatableDeadStockInr,
+    unprotectedRun.p1.scenarioDeadStockInr
+  );
+  assert.equal(unprotectedRun.reclassifiedSkus.length, 2);
+  assert.equal(unprotectedRun.reclassifiedSkus[0].toBucket, 'Dead');
+});
+
+test('Phase 7 Closed-Loop CAPA Financial Ledger: Backward-compatibly normalizes legacy CAPA items and computes financial realization across all 3 plants', async () => {
+  const { normalizeCapaItem, computeCapaFinancialSummary } = await import('../utils/capaLedger');
+  const { getPlantBaseline } = await import('../data/multiPlantBaselines');
+
+  // 1. Verify backward-compatible normalizer on legacy CAPA item
+  const legacyItem = normalizeCapaItem({
+    id: 'LEGACY-CAPA-99',
+    title: 'Unverified freight detention claim on LR-8810',
+    domain: 'profit_risk',
+    domainLabel: 'Freight & Detention Audit',
+    priority: 'Critical',
+    evidenceRef: 'LR-8810',
+    owner: 'Logistics Lead',
+    dueDate: '2026-10-15',
+    status: 'Resolved',
+    notes: 'Audit gate register and deduct ₹14,500 from carrier bill',
+  });
+
+  assert.equal(legacyItem.pillar, 'P3_FREIGHT');
+  assert.equal(legacyItem.dispositionType, 'FREIGHT_DEBIT_NOTE');
+  assert.equal(legacyItem.verificationStage, 'VERIFIED_REALIZED');
+
+  // 2. Verify Ambattur, Sriperumbudur, and Hosur CAPA Financial Summaries
+  const ambSummary = computeCapaFinancialSummary(getPlantBaseline('ambattur').capaItems);
+  const sriSummary = computeCapaFinancialSummary(getPlantBaseline('sriperumbudur').capaItems);
+  const hosSummary = computeCapaFinancialSummary(getPlantBaseline('hosur').capaItems);
+
+  assert.ok(ambSummary.totalIdentifiedExposureInr > 0);
+  assert.ok(ambSummary.totalTargetRecoveryInr > 0);
+  assert.ok(ambSummary.pendingFinanceSignOffInr > 0);
+  assert.ok(ambSummary.totalRealizedRecoveryInr > 0);
+  assert.ok(ambSummary.realizationRatePct > 0 && ambSummary.realizationRatePct <= 100);
+
+  assert.ok(sriSummary.totalTargetRecoveryInr > 0);
+  assert.ok(sriSummary.totalRealizedRecoveryInr > 0);
+  assert.ok(hosSummary.totalTargetRecoveryInr > 0);
+  assert.ok(hosSummary.totalRealizedRecoveryInr > 0);
+});
+
+test('Phase 7 Excel Command Center CAPA Financial Parity: Sheet 6 Action Tracker exports Pillar, Linked_Record_ID, Disposition_Type, Exposure, Target, Realized, and Verification_Stage', async () => {
+  const { buildSixSheetDataset } = await import('../utils/excelCommandCenterExporter');
+
+  const ambSheets = buildSixSheetDataset('ambattur');
+  assert.equal(ambSheets.sheet6Actions.length, 4);
+
+  const firstAction = ambSheets.sheet6Actions[0];
+  assert.equal(firstAction.issueId, 'AMB-CAPA-01');
+  assert.equal(firstAction.Pillar, 'P1_INVENTORY');
+  assert.equal(firstAction.Linked_Record_ID, 'FG-PBX-G1');
+  assert.equal(firstAction.Disposition_Type, 'B2B_LIQUIDATION_SCRAP');
+  assert.equal(firstAction.Identified_Exposure_INR, 223110);
+  assert.equal(firstAction.Target_Recovery_INR, 156177);
+  assert.equal(firstAction.Realized_Recovery_INR, 68500);
+  assert.equal(firstAction.Verification_Stage, 'IN_EXECUTION');
+});
+
+test('Phase 7 Server Scenario Lock: updatePilotWorkspaceSnapshotRules locks agreed scenario rules into server AUDIT-... snapshot and updates Item 07 assumptions', async () => {
+  const fs = await import('fs/promises');
+  const os = await import('os');
+  const path = await import('path');
+  const { SENSITIVITY_PRESETS } = await import('../utils/sensitivitySimulator');
+  const { getPlantBaseline } = await import('../data/multiPlantBaselines');
+  const {
+    validatePilotWorkspacePayload,
+    createPilotWorkspaceSnapshot,
+    updatePilotWorkspaceSnapshotRules,
+  } = await import('../utils/pilotWorkspaceStore');
+
+  const ambattur = getPlantBaseline('ambattur');
+  const val = validatePilotWorkspacePayload({
+    companyName: 'Ambattur Scenario Lock Test Plant',
+    plantLocation: 'Ambattur Industrial Estate',
+    preparedBy: 'C. Jones Snowin',
+    rules: ambattur.p1Rules,
+    skus: ambattur.p1Items,
+    p2Rules: ambattur.p2Rules,
+    p2Dispatches: ambattur.p2Dispatches,
+    p3Rules: ambattur.p3Rules,
+    p3FreightTrips: ambattur.p3Trips,
+    p4Rules: ambattur.p4Rules,
+    p4WarehouseBins: ambattur.p4Bins,
+  });
+  assert.equal(val.ok, true);
+
+  const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'operationalyst-p7-lock-'));
+  const wsFile = path.join(tmpDir, 'pilot_workspaces.json');
+
+  try {
+    const created = await createPilotWorkspaceSnapshot(val.data!, wsFile);
+    assert.equal(created.summaryMetrics.deadStockValue, 223110);
+
+    const strictCfg = SENSITIVITY_PRESETS.STRICT_CFO_AUDIT.config;
+    const lockedRes = await updatePilotWorkspaceSnapshotRules(
+      created.workspaceId,
+      {
+        slowDays: strictCfg.slowDays,
+        normalDays: strictCfg.normalDays,
+        fastDays: strictCfg.fastDays,
+        annualCarryingCostPercent: strictCfg.annualCarryingCostPercent,
+        targetRecoveryPercent: strictCfg.targetRecoveryPercent,
+        excludeReserveSpares: true,
+        gracePeriodDays: strictCfg.gracePeriodDays,
+        shortageTolerancePct: strictCfg.shortageTolerancePct,
+        highRiskPercentThreshold: strictCfg.highRiskPercentThreshold,
+      },
+      wsFile
+    );
+
+    assert.equal(lockedRes.status, 'OK');
+    if (lockedRes.status === 'OK') {
+      assert.equal(lockedRes.snapshot.rules.deadThresholdDays, 120);
+      assert.ok(lockedRes.snapshot.summaryMetrics.deadStockValue > 223110);
+      assert.equal(
+        lockedRes.snapshot.assumptionsAndExclusions?.deadThresholdDaysUsed,
+        120
+      );
+    }
+  } finally {
+    await fs.rm(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('Phase 7 Verified Proof Registry Guardrails: Rejects publishing when clientSignOffConfirmed !== true or when linkedWorkspaceId does not exist', async () => {
+  const fs = await import('fs/promises');
+  const os = await import('os');
+  const path = await import('path');
+  const { publishVerifiedProofRecord } = await import('../utils/verifiedProofRegistryStore');
+
+  const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'operationalyst-p7-proof-guard-'));
+  const registryFile = path.join(tmpDir, 'verified_proof_registry.json');
+  const wsFile = path.join(tmpDir, 'pilot_workspaces.json');
+  const auditFile = path.join(tmpDir, 'audit_events.json');
+
+  try {
+    // 1. Reject when clientSignOffConfirmed is false
+    const noSignOff = await publishVerifiedProofRecord(
+      {
+        linkedWorkspaceId: 'AUDIT-DEMO-P1P4',
+        industrySector: 'Precision Castings',
+        initialChallenge: 'High dormant stock',
+        analysisPerformed: '4-Pillar Audit',
+        actionTaken: 'Froze reorders',
+        clientSignOffConfirmed: false,
+      },
+      registryFile,
+      wsFile,
+      auditFile
+    );
+    assert.equal(noSignOff.ok, false);
+    assert.ok(noSignOff.error?.includes('clientSignOffConfirmed'));
+
+    // 2. Reject when linkedWorkspaceId does not exist in pilotWorkspaceStore
+    const missingSnapshot = await publishVerifiedProofRecord(
+      {
+        linkedWorkspaceId: 'AUDIT-20269999-NONEXISTENT',
+        industrySector: 'Precision Castings',
+        initialChallenge: 'High dormant stock',
+        analysisPerformed: '4-Pillar Audit',
+        actionTaken: 'Froze reorders',
+        clientSignOffConfirmed: true,
+      },
+      registryFile,
+      wsFile,
+      auditFile
+    );
+    assert.equal(missingSnapshot.ok, false);
+    assert.ok(missingSnapshot.error?.includes('not found'));
+  } finally {
+    await fs.rm(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('Phase 7 Verified Proof Registry Cryptographic Binding: Pulls verifiedFindings from server AUDIT-... snapshot, persists 8-field PROOF-... record with 16-char SHA-256 prefix, and supports unpublishing', async () => {
+  const fs = await import('fs/promises');
+  const os = await import('os');
+  const path = await import('path');
+  const { validatePilotRequestPayload } = await import('../utils/leadValidation');
+  const { createLeadRecord } = await import('../utils/leadStore');
+  const { buildSampleDirtyTallyPrimeExportDataset } = await import('../utils/importValidation');
+  const { executeStep2PilotIngestion } = await import('../utils/importRunStore');
+  const {
+    publishVerifiedProofRecord,
+    listVerifiedProofRecords,
+    deleteVerifiedProofRecord,
+  } = await import('../utils/verifiedProofRegistryStore');
+
+  const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'operationalyst-p7-proof-e2e-'));
+  const leadsFile = path.join(tmpDir, 'pilot_requests.json');
+  const wsFile = path.join(tmpDir, 'pilot_workspaces.json');
+  const importRunsFile = path.join(tmpDir, 'import_runs.json');
+  const auditEventsFile = path.join(tmpDir, 'audit_events.json');
+  const registryFile = path.join(tmpDir, 'verified_proof_registry.json');
+
+  try {
+    const val = validatePilotRequestPayload({
+      fullName: 'Karthik Subramanian',
+      workEmail: 'karthik@sriperumbudurstamping.in',
+      phoneOrWhatsapp: '+91 98401 77889',
+      companyName: 'Sriperumbudur Stamping Systems Pvt Ltd',
+      plantLocation: 'Sriperumbudur SIPCOT',
+      roleTitle: 'CFO',
+      consentConfirmed: true,
+    });
+    const lead = await createLeadRecord(val.data!, leadsFile);
+    const dataset = buildSampleDirtyTallyPrimeExportDataset();
+
+    const ingestRes = await executeStep2PilotIngestion(
+      {
+        leadId: lead.leadId,
+        plantId: 'ambattur',
+        p1Rows: dataset.p1Rows,
+        p2Rows: dataset.p2Rows,
+        p3Rows: dataset.p3Rows,
+        p4Rows: dataset.p4Rows,
+        excludeReserveSpares: true,
+        anonymizationApplied: true,
+      },
+      {
+        leadsFilePath: leadsFile,
+        workspacesFilePath: wsFile,
+        importRunsFilePath: importRunsFile,
+        auditEventsFilePath: auditEventsFile,
+      }
+    );
+    assert.equal(ingestRes.ok, true);
+    const snapshot = ingestRes.snapshot!;
+
+    // Publish 8-field VerifiedProofRecord bound to snapshot.workspaceId
+    const pubRes = await publishVerifiedProofRecord(
+      {
+        linkedWorkspaceId: snapshot.workspaceId,
+        industrySector: 'Tier-1 Automotive Sheet-Metal Stamping (Sriperumbudur Cluster)',
+        initialChallenge: 'High working capital locked in slow-moving stamping dies and coils.',
+        analysisPerformed: 'Executed 4-pillar deterministic audit with Item 07 reserve spare exclusion.',
+        actionTaken: 'Protected 2 critical CNC spares (₹1,12,500) and scheduled vendor contra recovery.',
+        approvedQuotation: 'Every rupee in the audit report traced back to our Tally export.',
+        clientSignOffConfirmed: true,
+      },
+      registryFile,
+      wsFile,
+      auditEventsFile
+    );
+
+    assert.equal(pubRes.ok, true);
+    assert.ok(pubRes.proof);
+    const proof = pubRes.proof!;
+
+    assert.match(proof.proofId, /^PROOF-\d{8}-[0-9A-F]{4}$/);
+    assert.equal(proof.linkedWorkspaceId, snapshot.workspaceId);
+    assert.equal(proof.importRunId, snapshot.importRunId);
+    assert.equal(proof.datasetSha256Prefix, snapshot.datasetSha256?.slice(0, 16));
+    assert.equal(
+      proof.verifiedFindings.p1BookValueInr,
+      snapshot.summaryMetrics.totalStockValue
+    );
+    assert.equal(
+      proof.verifiedFindings.p1DeadStockInr,
+      snapshot.summaryMetrics.deadStockValue
+    );
+    assert.equal(
+      proof.verifiedFindings.p1ReserveSparesProtectedInr,
+      112500
+    );
+    assert.ok(proof.documentedLimitations.includes('1,12,500'));
+
+    // Verify list and delete
+    const listed = await listVerifiedProofRecords(registryFile);
+    assert.equal(listed.length, 1);
+    assert.equal(listed[0].proofId, proof.proofId);
+
+    const deleted = await deleteVerifiedProofRecord(proof.proofId, registryFile, auditEventsFile);
+    assert.equal(deleted.ok, true);
+
+    const listedAfterDelete = await listVerifiedProofRecords(registryFile);
+    assert.equal(listedAfterDelete.length, 0);
+  } finally {
+    await fs.rm(tmpDir, { recursive: true, force: true });
+  }
+});
+
+// ============================================================================
+// PHASE 8 TESTS: Multi-Store 14-Day Data Purge & Cryptographic Deletion
+// Certificate Engine (DELCERT-...), Purged Walkthrough Tombstone Continuity,
+// Cloud Run 7-Store Backup & Dry-Run Restore Bundle, and Timing-Safe Admin Auth
+// ============================================================================
+
+test('Phase 8 Multi-Store 14-Day Data Purge & Cryptographic Deletion Certificate Engine: Purges raw P1-P4 line items across pilot_workspaces, scrubs linked import_runs quarantined rows, closes linked lead and revokes uploadToken to PURGED_REVOKED, preserves prePurgeSnapshotIntegrityHash, and persists DELCERT-... certificate', async () => {
+  const fs = await import('fs/promises');
+  const os = await import('os');
+  const path = await import('path');
+  const { validatePilotRequestPayload } = await import('../utils/leadValidation');
+  const { createLeadRecord, getLeadRecordById } = await import('../utils/leadStore');
+  const { buildSampleDirtyTallyPrimeExportDataset } = await import('../utils/importValidation');
+  const { executeStep2PilotIngestion, listImportRunRecords } = await import(
+    '../utils/importRunStore'
+  );
+  const {
+    purgePilotWorkspace,
+    getDeletionCertificateById,
+    computeZeroedArraysVerificationHash,
+  } = await import('../utils/dataPurgeEngine');
+
+  const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'operationalyst-p8-purge-e2e-'));
+  const leadsFile = path.join(tmpDir, 'pilot_requests.json');
+  const wsFile = path.join(tmpDir, 'pilot_workspaces.json');
+  const importRunsFile = path.join(tmpDir, 'import_runs.json');
+  const auditEventsFile = path.join(tmpDir, 'audit_events.json');
+  const certsFile = path.join(tmpDir, 'deletion_certificates.json');
+
+  try {
+    const val = validatePilotRequestPayload({
+      fullName: 'Senthil Kumar',
+      workEmail: 'senthil@ambatturcastings.in',
+      phoneOrWhatsapp: '+91 98409 11223',
+      companyName: 'Ambattur Precision Castings Pvt Ltd',
+      plantLocation: 'Ambattur Industrial Estate, Chennai',
+      roleTitle: 'Plant Head',
+      consentConfirmed: true,
+    });
+    const lead = await createLeadRecord(val.data!, leadsFile);
+    const dataset = buildSampleDirtyTallyPrimeExportDataset();
+
+    const ingestRes = await executeStep2PilotIngestion(
+      {
+        leadId: lead.leadId,
+        plantId: 'ambattur',
+        p1Rows: dataset.p1Rows,
+        p2Rows: dataset.p2Rows,
+        p3Rows: dataset.p3Rows,
+        p4Rows: dataset.p4Rows,
+        excludeReserveSpares: true,
+        anonymizationApplied: true,
+      },
+      {
+        leadsFilePath: leadsFile,
+        workspacesFilePath: wsFile,
+        importRunsFilePath: importRunsFile,
+        auditEventsFilePath: auditEventsFile,
+      }
+    );
+    assert.equal(ingestRes.ok, true);
+    const snapshotBefore = ingestRes.snapshot!;
+    assert.equal(snapshotBefore.evaluatedSkus.length, 18);
+    assert.equal(snapshotBefore.retentionStatus, 'ACTIVE_RETENTION_WINDOW');
+    assert.equal(snapshotBefore.retentionPolicyDays, 14);
+
+    // Execute Multi-Store Purge
+    const purgeRes = await purgePilotWorkspace(
+      {
+        workspaceId: snapshotBefore.workspaceId,
+        purgedBy: 'CLIENT_WALKTHROUGH',
+        purgeReason: 'MANUAL_CLIENT_REQUEST',
+      },
+      {
+        workspacesFilePath: wsFile,
+        importRunsFilePath: importRunsFile,
+        leadsFilePath: leadsFile,
+        certificatesFilePath: certsFile,
+        auditEventsFilePath: auditEventsFile,
+      }
+    );
+
+    assert.equal(purgeRes.ok, true);
+    assert.equal(purgeRes.demoProtected, false);
+    assert.ok(purgeRes.certificate);
+    assert.ok(purgeRes.snapshot);
+
+    const cert = purgeRes.certificate!;
+    const purgedSnap = purgeRes.snapshot!;
+
+    // 1. Certificate ID & SHA-256 verification
+    assert.match(cert.certificateId, /^DELCERT-\d{8}-[0-9A-F]{4}$/);
+    assert.equal(cert.workspaceId, snapshotBefore.workspaceId);
+    assert.equal(cert.leadId, lead.leadId);
+    assert.equal(cert.importRunId, snapshotBefore.importRunId);
+    assert.equal(cert.recordsPurgedSummary.p1SkusPurged, 18);
+    assert.equal(cert.recordsPurgedSummary.p2DispatchesPurged, 3);
+    assert.equal(cert.recordsPurgedSummary.p3FreightTripsPurged, 2);
+    assert.equal(cert.recordsPurgedSummary.p4WarehouseBinsPurged, 2);
+    assert.equal(cert.recordsPurgedSummary.quarantinedRowsPurged, 4);
+    assert.equal(
+      cert.recordsPurgedSummary.p1BookValueInr,
+      snapshotBefore.summaryMetrics.totalStockValue
+    );
+    assert.equal(cert.prePurgeDatasetSha256, snapshotBefore.datasetSha256);
+    assert.equal(
+      cert.postPurgeVerificationHash,
+      computeZeroedArraysVerificationHash()
+    );
+
+    // 2. Snapshot raw line items are scrubbed to [] while summaryMetrics & prePurgeSnapshotIntegrityHash remain intact
+    assert.equal(purgedSnap.retentionStatus, 'PURGED');
+    assert.equal(purgedSnap.deletionCertificateId, cert.certificateId);
+    assert.equal(purgedSnap.evaluatedSkus.length, 0);
+    assert.equal((purgedSnap.evaluatedP2Dispatches || []).length, 0);
+    assert.equal((purgedSnap.evaluatedP3Trips || []).length, 0);
+    assert.equal((purgedSnap.evaluatedP4Bins || []).length, 0);
+    assert.equal(
+      purgedSnap.summaryMetrics.totalStockValue,
+      snapshotBefore.summaryMetrics.totalStockValue
+    );
+    assert.equal(
+      purgedSnap.prePurgeSnapshotIntegrityHash,
+      snapshotBefore.datasetSha256
+    );
+
+    // 3. Linked ImportRun quarantinedRows are scrubbed
+    const runsAfter = await listImportRunRecords(importRunsFile);
+    assert.equal(runsAfter.length, 1);
+    assert.equal(runsAfter[0].quarantinedRowsScrubbed, true);
+    assert.equal(runsAfter[0].deletionCertificateId, cert.certificateId);
+    assert.equal((runsAfter[0].quarantinedRows?.p1 || []).length, 0);
+
+    // 4. Linked Lead is closed and uploadToken is revoked to PURGED_REVOKED
+    const leadAfter = await getLeadRecordById(lead.leadId, leadsFile);
+    assert.ok(leadAfter);
+    assert.equal(leadAfter!.status, 'CLOSED');
+    assert.equal(leadAfter!.uploadToken, 'PURGED_REVOKED');
+    assert.equal(leadAfter!.deletionCertificateId, cert.certificateId);
+
+    // 5. Certificate is retrievable by ID from deletion_certificates.json
+    const fetchedCert = await getDeletionCertificateById(cert.certificateId, certsFile);
+    assert.ok(fetchedCert);
+    assert.equal(fetchedCert!.certificateId, cert.certificateId);
+  } finally {
+    await fs.rm(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('Phase 8 Public Demo Protection (AUDIT-DEMO-P1P4): Protects canonical 20-SKU sandbox from destructive deletion while returning sample certificate DELCERT-DEMO-P1P4', async () => {
+  const { purgePilotWorkspace, getDeletionCertificateById } = await import(
+    '../utils/dataPurgeEngine'
+  );
+  const { getAuthorizedPilotWorkspaceSnapshot } = await import('../utils/pilotWorkspaceStore');
+
+  const demoPurgeRes = await purgePilotWorkspace({
+    workspaceId: 'AUDIT-DEMO-P1P4',
+    purgedBy: 'CLIENT_WALKTHROUGH',
+    purgeReason: 'MANUAL_CLIENT_REQUEST',
+  });
+
+  assert.equal(demoPurgeRes.ok, true);
+  assert.equal(demoPurgeRes.demoProtected, true);
+  assert.ok(demoPurgeRes.certificate);
+  assert.equal(demoPurgeRes.certificate!.certificateId, 'DELCERT-DEMO-P1P4');
+  assert.equal(demoPurgeRes.certificate!.recordsPurgedSummary.p1SkusPurged, 20);
+  assert.equal(demoPurgeRes.certificate!.recordsPurgedSummary.p1BookValueInr, 645650);
+
+  // Verify AUDIT-DEMO-P1P4 still has all 20 SKUs intact
+  const demoCheck = await getAuthorizedPilotWorkspaceSnapshot(
+    'AUDIT-DEMO-P1P4',
+    { shareToken: 'operationalyst-public-demo-token', isAdmin: false }
+  );
+  assert.equal(demoCheck.status, 'OK');
+  if (demoCheck.status === 'OK') {
+    assert.equal(demoCheck.snapshot.evaluatedSkus.length, 20);
+    assert.equal(demoCheck.snapshot.summaryMetrics.totalStockValue, 645650);
+  }
+
+  // Verify DELCERT-DEMO-P1P4 is always resolvable via getDeletionCertificateById
+  const sampleCert = await getDeletionCertificateById('DELCERT-DEMO-P1P4');
+  assert.ok(sampleCert);
+  assert.equal(sampleCert!.certificateId, 'DELCERT-DEMO-P1P4');
+});
+
+test('Phase 8 Retention Extension (+30 Days) & Automated Expired (>14d) Sweep: Extends retention window for active client workspaces while sweeping expired workspaces and issuing DELCERT certificates', async () => {
+  const fs = await import('fs/promises');
+  const os = await import('os');
+  const path = await import('path');
+  const { getPlantBaseline } = await import('../data/multiPlantBaselines');
+  const {
+    validatePilotWorkspacePayload,
+    createPilotWorkspaceSnapshot,
+    listPilotWorkspaceSnapshots,
+  } = await import('../utils/pilotWorkspaceStore');
+  const { extendPilotWorkspaceRetention, sweepExpiredWorkspaces } = await import(
+    '../utils/dataPurgeEngine'
+  );
+
+  const ambattur = getPlantBaseline('ambattur');
+  const val = validatePilotWorkspacePayload({
+    companyName: 'Hosur Retention Sweep Test Unit',
+    plantLocation: 'Hosur SIPCOT',
+    preparedBy: 'C. Jones Snowin',
+    rules: ambattur.p1Rules,
+    skus: ambattur.p1Items,
+  });
+  assert.equal(val.ok, true);
+
+  const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'operationalyst-p8-sweep-'));
+  const wsFile = path.join(tmpDir, 'pilot_workspaces.json');
+  const importRunsFile = path.join(tmpDir, 'import_runs.json');
+  const leadsFile = path.join(tmpDir, 'pilot_requests.json');
+  const certsFile = path.join(tmpDir, 'deletion_certificates.json');
+  const auditFile = path.join(tmpDir, 'audit_events.json');
+
+  try {
+    const wsActive = await createPilotWorkspaceSnapshot(val.data!, wsFile);
+    const wsExpired = await createPilotWorkspaceSnapshot(
+      {
+        ...val.data!,
+        companyName: 'Expired 15-Day Old Factory Snapshot',
+      },
+      wsFile
+    );
+
+    // Extend wsActive by +30 days
+    const extendRes = await extendPilotWorkspaceRetention(
+      wsActive.workspaceId,
+      30,
+      'CLIENT_WALKTHROUGH',
+      { workspacesFilePath: wsFile, auditEventsFilePath: auditFile }
+    );
+    assert.equal(extendRes.ok, true);
+    assert.equal(extendRes.snapshot?.retentionStatus, 'EXTENDED_BY_CLIENT');
+    assert.equal(extendRes.snapshot?.retentionPolicyDays, 44);
+
+    // Backdate wsExpired's retentionExpiresAt to 2 days in the past
+    const allSnaps = await listPilotWorkspaceSnapshots(wsFile);
+    const modifiedSnaps = allSnaps.map((s) =>
+      s.workspaceId === wsExpired.workspaceId
+        ? {
+            ...s,
+            retentionExpiresAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+          }
+        : s
+    );
+    await fs.writeFile(wsFile, JSON.stringify(modifiedSnaps, null, 2), 'utf-8');
+
+    // Run sweepExpiredWorkspaces
+    const sweepRes = await sweepExpiredWorkspaces(new Date(), {
+      workspacesFilePath: wsFile,
+      importRunsFilePath: importRunsFile,
+      leadsFilePath: leadsFile,
+      certificatesFilePath: certsFile,
+      auditEventsFilePath: auditFile,
+    });
+
+    assert.equal(sweepRes.ok, true);
+    assert.equal(sweepRes.sweptCount, 1);
+    assert.deepEqual(sweepRes.sweptWorkspaceIds, [wsExpired.workspaceId]);
+    assert.equal(sweepRes.certificates.length, 1);
+    assert.equal(sweepRes.certificates[0].purgeReason, 'RETENTION_EXPIRED_14D');
+
+    // Verify wsActive was NOT purged while wsExpired IS purged
+    const afterSweep = await listPilotWorkspaceSnapshots(wsFile);
+    const activeCheck = afterSweep.find((s) => s.workspaceId === wsActive.workspaceId);
+    const expiredCheck = afterSweep.find((s) => s.workspaceId === wsExpired.workspaceId);
+    assert.equal(activeCheck?.retentionStatus, 'EXTENDED_BY_CLIENT');
+    assert.equal(activeCheck?.evaluatedSkus.length, 20);
+    assert.equal(expiredCheck?.retentionStatus, 'PURGED');
+    assert.equal(expiredCheck?.evaluatedSkus.length, 0);
+  } finally {
+    await fs.rm(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('Phase 8 Verified Proof Registry Post-Purge Continuity: Preserves prePurgeSnapshotIntegrityHash so PROOF-... records remain verifiable and publishable even after raw P1-P4 line items are purged', async () => {
+  const fs = await import('fs/promises');
+  const os = await import('os');
+  const path = await import('path');
+  const { getPlantBaseline } = await import('../data/multiPlantBaselines');
+  const { validatePilotWorkspacePayload, createPilotWorkspaceSnapshot } = await import(
+    '../utils/pilotWorkspaceStore'
+  );
+  const { purgePilotWorkspace } = await import('../utils/dataPurgeEngine');
+  const { publishVerifiedProofRecord } = await import('../utils/verifiedProofRegistryStore');
+
+  const ambattur = getPlantBaseline('ambattur');
+  const val = validatePilotWorkspacePayload({
+    companyName: 'Sriperumbudur Post-Purge Proof Plant',
+    plantLocation: 'Sriperumbudur SIPCOT',
+    preparedBy: 'C. Jones Snowin',
+    rules: ambattur.p1Rules,
+    skus: ambattur.p1Items,
+  });
+  assert.equal(val.ok, true);
+
+  const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'operationalyst-p8-postpurge-proof-'));
+  const wsFile = path.join(tmpDir, 'pilot_workspaces.json');
+  const certsFile = path.join(tmpDir, 'deletion_certificates.json');
+  const registryFile = path.join(tmpDir, 'verified_proof_registry.json');
+  const auditFile = path.join(tmpDir, 'audit_events.json');
+
+  try {
+    const created = await createPilotWorkspaceSnapshot(val.data!, wsFile);
+    const originalPrePurgeHash = created.prePurgeSnapshotIntegrityHash;
+    assert.ok(originalPrePurgeHash && originalPrePurgeHash.length === 64);
+
+    // Purge raw P1-P4 line items
+    const purgeRes = await purgePilotWorkspace(
+      {
+        workspaceId: created.workspaceId,
+        purgedBy: 'FOUNDER_INBOX',
+        purgeReason: 'MANUAL_FOUNDER_PURGE',
+      },
+      {
+        workspacesFilePath: wsFile,
+        certificatesFilePath: certsFile,
+        auditEventsFilePath: auditFile,
+      }
+    );
+    assert.equal(purgeRes.ok, true);
+    assert.equal(purgeRes.snapshot?.evaluatedSkus.length, 0);
+
+    // Publish Verified Proof from the purged workspace
+    const proofRes = await publishVerifiedProofRecord(
+      {
+        linkedWorkspaceId: created.workspaceId,
+        industrySector: 'Automotive Precision Components (Post-Purge Continuity)',
+        initialChallenge: 'Dormant stock and unverified bin counts.',
+        analysisPerformed: '4-Pillar Audit followed by 14-day raw row purge.',
+        actionTaken: 'Released working capital and issued DELCERT certificate.',
+        clientSignOffConfirmed: true,
+      },
+      registryFile,
+      wsFile,
+      auditFile
+    );
+
+    assert.equal(proofRes.ok, true);
+    assert.equal(
+      proofRes.proof?.datasetSha256Prefix,
+      originalPrePurgeHash!.slice(0, 16)
+    );
+    assert.equal(proofRes.proof?.verifiedFindings.p1BookValueInr, 645650);
+    assert.equal(proofRes.proof?.verifiedFindings.p1DeadStockInr, 223110);
+  } finally {
+    await fs.rm(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('Phase 8 Cloud Run 7-Store System Backup & Dry-Run Restore Bundle: Round-trips all 7 server stores with SHA-256 bundleIntegrityHash verification and supports dryRun validation', async () => {
+  const fs = await import('fs/promises');
+  const os = await import('os');
+  const path = await import('path');
+  const { exportSystemBackupBundle, restoreSystemBackupBundle } = await import(
+    '../utils/systemBackupBundle'
+  );
+
+  const tmpDirSource = await fs.mkdtemp(path.join(os.tmpdir(), 'operationalyst-p8-backup-src-'));
+  const tmpDirTarget = await fs.mkdtemp(path.join(os.tmpdir(), 'operationalyst-p8-backup-dst-'));
+
+  const srcPaths = {
+    pilotRequests: path.join(tmpDirSource, 'pilot_requests.json'),
+    pilotWorkspaces: path.join(tmpDirSource, 'pilot_workspaces.json'),
+    plantWorkspaces: path.join(tmpDirSource, 'plant_workspaces.json'),
+    importRuns: path.join(tmpDirSource, 'import_runs.json'),
+    verifiedProofs: path.join(tmpDirSource, 'verified_proof_registry.json'),
+    auditEvents: path.join(tmpDirSource, 'audit_events.json'),
+    deletionCertificates: path.join(tmpDirSource, 'deletion_certificates.json'),
+  };
+
+  const dstPaths = {
+    pilotRequests: path.join(tmpDirTarget, 'pilot_requests.json'),
+    pilotWorkspaces: path.join(tmpDirTarget, 'pilot_workspaces.json'),
+    plantWorkspaces: path.join(tmpDirTarget, 'plant_workspaces.json'),
+    importRuns: path.join(tmpDirTarget, 'import_runs.json'),
+    verifiedProofs: path.join(tmpDirTarget, 'verified_proof_registry.json'),
+    auditEvents: path.join(tmpDirTarget, 'audit_events.json'),
+    deletionCertificates: path.join(tmpDirTarget, 'deletion_certificates.json'),
+  };
+
+  try {
+    await fs.writeFile(srcPaths.pilotRequests, JSON.stringify([{ leadId: 'PILOT-TEST-1' }]), 'utf-8');
+    await fs.writeFile(
+      srcPaths.pilotWorkspaces,
+      JSON.stringify([{ workspaceId: 'AUDIT-TEST-1' }]),
+      'utf-8'
+    );
+    await fs.writeFile(
+      srcPaths.plantWorkspaces,
+      JSON.stringify({
+        ambattur: { plantId: 'ambattur', isCustomized: false },
+        sriperumbudur: { plantId: 'sriperumbudur', isCustomized: true },
+        hosur: { plantId: 'hosur', isCustomized: false },
+      }),
+      'utf-8'
+    );
+    await fs.writeFile(
+      srcPaths.importRuns,
+      JSON.stringify([{ importRunId: 'IMPRUN-TEST-1' }]),
+      'utf-8'
+    );
+    await fs.writeFile(
+      srcPaths.verifiedProofs,
+      JSON.stringify([{ proofId: 'PROOF-TEST-1' }]),
+      'utf-8'
+    );
+    await fs.writeFile(
+      srcPaths.auditEvents,
+      JSON.stringify([{ eventId: 'EVT-TEST-1' }]),
+      'utf-8'
+    );
+    await fs.writeFile(
+      srcPaths.deletionCertificates,
+      JSON.stringify([{ certificateId: 'DELCERT-TEST-1' }]),
+      'utf-8'
+    );
+
+    const bundle = await exportSystemBackupBundle(srcPaths);
+    assert.equal(bundle.bundleVersion, '1.0');
+    assert.equal(bundle.bundleIntegrityHash.length, 64);
+    assert.equal(bundle.storeCounts.pilotRequests, 1);
+    assert.equal(bundle.storeCounts.pilotWorkspaces, 1);
+    assert.equal(bundle.storeCounts.plantWorkspaces, 3);
+    assert.equal(bundle.storeCounts.importRuns, 1);
+    assert.equal(bundle.storeCounts.verifiedProofs, 1);
+    assert.equal(bundle.storeCounts.auditEvents, 1);
+    assert.equal(bundle.storeCounts.deletionCertificates, 1);
+
+    // 1. Dry-run restore validates without writing files
+    const dryRes = await restoreSystemBackupBundle(bundle, {
+      dryRun: true,
+      pathsOverride: dstPaths,
+    });
+    assert.equal(dryRes.ok, true);
+    assert.equal(dryRes.dryRun, true);
+    assert.equal(dryRes.integrityVerified, true);
+
+    // 2. Full restore writes all 7 stores to dstPaths
+    const fullRes = await restoreSystemBackupBundle(bundle, {
+      dryRun: false,
+      actor: 'TEST_HARNESS',
+      pathsOverride: dstPaths,
+    });
+    assert.equal(fullRes.ok, true);
+    assert.equal(fullRes.dryRun, false);
+    assert.equal(fullRes.storeCounts.pilotRequests, 1);
+    assert.equal(fullRes.storeCounts.plantWorkspaces, 3);
+    assert.equal(fullRes.storeCounts.deletionCertificates, 1);
+
+    // Verify plant_workspaces.json was restored as a keyed object for plantWorkspaceServerStore compatibility
+    const restoredPlantsRaw = JSON.parse(await fs.readFile(dstPaths.plantWorkspaces, 'utf-8'));
+    assert.ok(restoredPlantsRaw.ambattur);
+    assert.equal(restoredPlantsRaw.sriperumbudur.isCustomized, true);
+  } finally {
+    await fs.rm(tmpDirSource, { recursive: true, force: true });
+    await fs.rm(tmpDirTarget, { recursive: true, force: true });
+  }
+});
+
+test('Phase 8 System Restore Tamper Rejection: Rejects tampered backup bundles when bundleIntegrityHash does not match the 7-store SHA-256 payload', async () => {
+  const { exportSystemBackupBundle, restoreSystemBackupBundle } = await import(
+    '../utils/systemBackupBundle'
+  );
+
+  const bundle = await exportSystemBackupBundle();
+  const tamperedBundle = {
+    ...bundle,
+    stores: {
+      ...bundle.stores,
+      pilotRequests: [{ leadId: 'INJECTED-TAMPERED-LEAD' }],
+    },
+  };
+
+  const restoreRes = await restoreSystemBackupBundle(tamperedBundle, { dryRun: true });
+  assert.equal(restoreRes.ok, false);
+  assert.equal(restoreRes.integrityVerified, false);
+  assert.ok(restoreRes.error?.includes('Bundle integrity check failed'));
+});
+
+test('Phase 8 Timing-Safe Admin Guard (crypto.timingSafeEqual): Constant-time SHA-256 comparison accepts valid admin key and rejects invalid or empty keys', async () => {
+  const { verifyAdminKey, constantTimeSha256Equal } = await import('../utils/adminAuthGuard');
+
+  const validCheck = verifyAdminKey('operationalyst-local-dev-key');
+  assert.equal(validCheck.authorized, true);
+
+  const invalidCheck = verifyAdminKey('wrong-key-attempt-123');
+  assert.equal(invalidCheck.authorized, false);
+
+  const emptyCheck = verifyAdminKey('');
+  assert.equal(emptyCheck.authorized, false);
+
+  assert.equal(constantTimeSha256Equal('alpha-secret-99', 'alpha-secret-99'), true);
+  assert.equal(constantTimeSha256Equal('alpha-secret-99', 'alpha-secret-98'), false);
+});
+
+// ============================================================================
+// PHASE 9 TESTS: First-Party Server Funnel & Scroll-Depth Analytics
+// (/api/analytics/event) and High-Conversion B2B Landing Page Tightening
+// ============================================================================
+
+test('Phase 9 First-Party Funnel Analytics Store: Records canonical milestones, persists to JSON, and computes deterministic step-to-step retention and drop-off percentages', async () => {
+  const fs = await import('fs/promises');
+  const os = await import('os');
+  const path = await import('path');
+  const {
+    recordFunnelAnalyticsEvent,
+    getFunnelAnalyticsDropOffReport,
+    listFunnelAnalyticsEvents,
+  } = await import('../utils/funnelAnalyticsStore');
+
+  const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'operationalyst-p9-funnel-'));
+  const analyticsFile = path.join(tmpDir, 'funnel_analytics.json');
+
+  try {
+    // Record 4 landing page views
+    for (let i = 0; i < 4; i++) {
+      await recordFunnelAnalyticsEvent({ eventType: 'LANDING_PAGE_VIEW' }, analyticsFile);
+    }
+    // Record 3 50% scrolls
+    for (let i = 0; i < 3; i++) {
+      await recordFunnelAnalyticsEvent({ eventType: 'SCROLL_DEPTH_50_PCT' }, analyticsFile);
+    }
+    // Record 2 90% scrolls
+    for (let i = 0; i < 2; i++) {
+      await recordFunnelAnalyticsEvent({ eventType: 'SCROLL_DEPTH_90_PCT' }, analyticsFile);
+    }
+    // Record 2 sample report clicks, 1 self-assessment completion, 2 modal opens, 1 data kit download, 1 pilot audit submission
+    await recordFunnelAnalyticsEvent({ eventType: 'SAMPLE_REPORT_CLICKED' }, analyticsFile);
+    await recordFunnelAnalyticsEvent({ eventType: 'SAMPLE_REPORT_CLICKED' }, analyticsFile);
+    await recordFunnelAnalyticsEvent(
+      { eventType: 'SELF_ASSESSMENT_COMPLETED', metadata: { score: 65 } },
+      analyticsFile
+    );
+    await recordFunnelAnalyticsEvent({ eventType: 'AUDIT_MODAL_OPENED' }, analyticsFile);
+    await recordFunnelAnalyticsEvent({ eventType: 'AUDIT_MODAL_OPENED' }, analyticsFile);
+    await recordFunnelAnalyticsEvent({ eventType: 'DATA_KIT_DOWNLOADED' }, analyticsFile);
+    await recordFunnelAnalyticsEvent(
+      { eventType: 'PILOT_AUDIT_SUBMITTED', metadata: { leadId: 'PILOT-P9-TEST' } },
+      analyticsFile
+    );
+
+    const events = await listFunnelAnalyticsEvents(analyticsFile);
+    assert.equal(events.length, 16);
+
+    const report = await getFunnelAnalyticsDropOffReport(analyticsFile);
+    assert.equal(report.totalEventsRecorded, 16);
+    assert.equal(report.counts.LANDING_PAGE_VIEW, 4);
+    assert.equal(report.counts.SCROLL_DEPTH_50_PCT, 3);
+    assert.equal(report.counts.SCROLL_DEPTH_90_PCT, 2);
+    assert.equal(report.counts.SAMPLE_REPORT_CLICKED, 2);
+    assert.equal(report.counts.SELF_ASSESSMENT_COMPLETED, 1);
+    assert.equal(report.counts.AUDIT_MODAL_OPENED, 2);
+    assert.equal(report.counts.DATA_KIT_DOWNLOADED, 1);
+    assert.equal(report.counts.PILOT_AUDIT_SUBMITTED, 1);
+
+    // 4 views -> 3 50% scroll = 75.0% retention, 25.0% drop-off
+    const scroll50Step = report.stages.find((s) => s.stageId === 'SCROLL_DEPTH_50_PCT');
+    assert.ok(scroll50Step);
+    assert.equal(scroll50Step!.retentionFromPreviousPct, 75);
+    assert.equal(scroll50Step!.dropOffFromPreviousPct, 25);
+    assert.equal(report.rates.first5sHeroRetentionPct, 75);
+    assert.equal(report.rates.first5sHeroDropOffPct, 25);
+
+    // 4 views -> 2 modal opens = 50.0% modal open rate
+    assert.equal(report.rates.modalOpenRatePct, 50);
+    // 2 modal opens -> 1 submission = 50.0% modal-to-submit conversion
+    assert.equal(report.rates.modalToSubmissionConversionPct, 50);
+    // 4 views -> 1 submission = 25.0% overall pilot submit rate
+    assert.equal(report.rates.overallVisitorToLeadConversionPct, 25);
+  } finally {
+    await fs.rm(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('Phase 9 Funnel Analytics Payload Validation & Reset: Rejects invalid eventType values and cleanly resets funnel counters', async () => {
+  const fs = await import('fs/promises');
+  const os = await import('os');
+  const path = await import('path');
+  const {
+    validateFunnelEventPayload,
+    recordFunnelAnalyticsEvent,
+    resetFunnelAnalyticsEvents,
+    getFunnelAnalyticsDropOffReport,
+  } = await import('../utils/funnelAnalyticsStore');
+
+  const invalid1 = validateFunnelEventPayload({ eventType: 'UNKNOWN_EVENT' });
+  assert.equal(invalid1.ok, false);
+
+  const invalid2 = validateFunnelEventPayload(null);
+  assert.equal(invalid2.ok, false);
+
+  const valid = validateFunnelEventPayload({
+    eventType: 'SAMPLE_REPORT_CLICKED',
+    metadata: { sourceSection: 'hero_cta', buyerPersona: 'plant_head' },
+  });
+  assert.equal(valid.ok, true);
+  assert.equal(valid.data?.eventType, 'SAMPLE_REPORT_CLICKED');
+
+  const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'operationalyst-p9-reset-'));
+  const analyticsFile = path.join(tmpDir, 'funnel_analytics.json');
+
+  try {
+    await recordFunnelAnalyticsEvent({ eventType: 'LANDING_PAGE_VIEW' }, analyticsFile);
+    await recordFunnelAnalyticsEvent({ eventType: 'AUDIT_MODAL_OPENED' }, analyticsFile);
+
+    const beforeReset = await getFunnelAnalyticsDropOffReport(analyticsFile);
+    assert.equal(beforeReset.totalEventsRecorded, 2);
+
+    const afterReset = await resetFunnelAnalyticsEvents(analyticsFile);
+    assert.equal(afterReset.totalEventsRecorded, 0);
+    assert.equal(afterReset.counts.LANDING_PAGE_VIEW, 0);
+  } finally {
+    await fs.rm(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('Phase 9 Landing Page Conversion & Trust Tightening: Verifies 5-second hero sub-headline, Plain-English Privacy Guarantee banner, collapsible drawers, and Direct Founder Desk contact label', async () => {
+  const fs = await import('fs/promises');
+  const path = await import('path');
+
+  const landingSrc = await fs.readFile(
+    path.join(process.cwd(), 'src/commercial/CommercialLandingPage.tsx'),
+    'utf-8'
+  );
+  const selfAssessmentSrc = await fs.readFile(
+    path.join(process.cwd(), 'src/commercial/SelfAssessmentWidget.tsx'),
+    'utf-8'
+  );
+
+  // 1. Concrete 5-second Hero sub-headline
+  assert.ok(landingSrc.includes('data-testid="hero-subheadline"'));
+  assert.ok(
+    landingSrc.includes(
+      'Start with a 5-column Tally Prime, SAP, or Excel export. Get a ranked list of your non-moving SKUs, carrying-cost exposure, and priority floor investigation targets in 48 hours—reviewed directly by founder C. Jones Snowin.'
+    )
+  );
+
+  // 2. Collapsible Deep-Dive Drawers
+  assert.ok(selfAssessmentSrc.includes('data-testid="toggle-self-assessment-drawer"'));
+  assert.ok(
+    selfAssessmentSrc.includes(
+      'Take the 60-Second Inventory Visibility Check (5 Questions · Scored 0–100)'
+    )
+  );
+  assert.ok(landingSrc.includes('data-testid="toggle-methodology-stages-drawer"'));
+  assert.ok(landingSrc.includes('data-testid="toggle-governance-faq-drawer"'));
+
+  // 3. 1-Sentence Plain-English Privacy Banner
+  assert.ok(landingSrc.includes('data-testid="landing-plain-english-privacy-banner"'));
+  assert.ok(landingSrc.includes('Plain-English Privacy Guarantee:'));
+  assert.ok(
+    landingSrc.includes(
+      'Strip vendor and customer names before sending. Reviewed only by founder C. Jones Snowin and purged within 14 days (or immediately after your call) with a cryptographic Deletion Certificate'
+    )
+  );
+  assert.ok(landingSrc.includes('DELCERT-...'));
+
+  // 4. Professional Founder Contact Presentation
+  assert.ok(landingSrc.includes('data-testid="founder-contact-email-link"'));
+  assert.ok(landingSrc.includes('Direct Founder Desk (C. Jones Snowin)'));
+  assert.ok(landingSrc.includes('data-testid="founder-contact-linkedin-link"'));
+  assert.ok(landingSrc.includes('LinkedIn Profile (C. Jones Snowin)'));
+});
+
+test('Phase 9 Modal Plain-English Privacy Guarantee Banner: Verifies FactoryAuditModal contains Plain-English Privacy Guarantee and DELCERT reference', async () => {
+  const fs = await import('fs/promises');
+  const path = await import('path');
+
+  const modalSrc = await fs.readFile(
+    path.join(process.cwd(), 'src/commercial/FactoryAuditModal.tsx'),
+    'utf-8'
+  );
+
+  assert.ok(modalSrc.includes('data-testid="modal-plain-english-privacy-banner"'));
+  assert.ok(modalSrc.includes('Plain-English Privacy Guarantee:'));
+  assert.ok(
+    modalSrc.includes(
+      'Strip vendor and customer names before sending. Reviewed only by founder C. Jones Snowin and purged within 14 days (or immediately after your call) with a cryptographic Deletion Certificate'
+    )
+  );
+  assert.ok(modalSrc.includes('DELCERT-...'));
+  assert.ok(modalSrc.includes('Direct Founder Desk (C. Jones Snowin)'));
+});
 

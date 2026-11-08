@@ -1,4 +1,4 @@
-import { Trip, RulesConfig, ScaleProfile, CarrierCapacityProfile } from '../types/freight';
+import type { Trip, RulesConfig, ScaleProfile, CarrierCapacityProfile } from '../types/freight.ts';
 
 export const DEFAULT_RULES: RulesConfig = {
   detentionRatePerHour: 200,

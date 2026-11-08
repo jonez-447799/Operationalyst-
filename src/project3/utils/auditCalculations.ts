@@ -1,4 +1,4 @@
-import { Trip, CalculatedTrip, RulesConfig, LaneSummary, TransporterSummary, AuditTotals, AnomalyAlert } from '../types/freight';
+import type { Trip, CalculatedTrip, RulesConfig, LaneSummary, TransporterSummary, AuditTotals, AnomalyAlert } from '../types/freight.ts';
 
 export function calculateAuditMetrics(trips: Trip[], rules: RulesConfig) {
   // 1. Filter trips within audit date window if specified

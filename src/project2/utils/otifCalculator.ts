@@ -1,4 +1,4 @@
-import { DispatchRow, RulesConfig, OTIFMetrics, CustomerStats, ReasonStats, FailType, DelayReason } from '../types/otif';
+import type { DispatchRow, RulesConfig, OTIFMetrics, CustomerStats, ReasonStats, FailType, DelayReason } from '../types/otif.ts';
 
 export function calculateRowStatus(row: DispatchRow, rules: RulesConfig): DispatchRow {
   const promised = row.promisedDate ? new Date(row.promisedDate).getTime() : NaN;

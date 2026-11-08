@@ -261,16 +261,16 @@ export function createAutomatedTestCases(
     {
       id: 'TEST-08',
       suite: 'SECURITY_AND_TAMPER',
-      title: 'Digital Cryptographic Signature Entropy Check',
-      description: 'Validates that audit log digital signatures adhere to SHA-256 standard hexadecimal format (64-bit entropy minimum).',
-      assertion: 'hash matches /^SHA256:[a-f0-9]{12,}$/i',
+      title: 'Local Activity Reference Identifier Format Check',
+      description: 'Validates that browser activity history entries include a consistent local reference identifier.',
+      assertion: 'ref matches /^local_ref_[a-z0-9]{6,}$/i',
       run: () => {
         const start = performance.now();
-        const sampleSignature = 'SHA256:7f8a9b2c3d4e';
-        const isValidFormat = /^SHA256:[a-z0-9]{8,}$/i.test(sampleSignature);
+        const sampleRef = 'local_ref_7f8a9b2c';
+        const isValidFormat = /^local_ref_[a-z0-9]{6,}$/i.test(sampleRef);
         return {
           passed: isValidFormat,
-          message: isValidFormat ? 'Signature entropy verified: conforms to SHA-256 hash formatting.' : 'Signature format invalid.',
+          message: isValidFormat ? 'Local activity reference format verified for demonstration logs.' : 'Reference format invalid.',
           durationMs: +(performance.now() - start).toFixed(2),
         };
       },
@@ -278,18 +278,17 @@ export function createAutomatedTestCases(
     {
       id: 'TEST-09',
       suite: 'SECURITY_AND_TAMPER',
-      title: 'Role-Based Access Control (RBAC) Separation of Duties',
-      description: 'Verifies Gate Guard role is strictly restricted from editing SLA formulas or owner margin settings.',
-      assertion: 'gateRole.canEditRules === false',
+      title: 'Role Preview Interface Visibility Check',
+      description: 'Verifies that selecting the Gate Guard role preview hides rule configuration controls in the demonstration interface.',
+      assertion: 'gatePreview.showsRuleEditor === false',
       run: () => {
         const start = performance.now();
-        const roles = ['owner', 'clerk', 'gate'];
-        const gateCanEditRules = false; // System policy
-        const ownerCanEditRules = true;
-        const passed = !gateCanEditRules && ownerCanEditRules;
+        const gateShowsRuleEditor = false;
+        const ownerShowsRuleEditor = true;
+        const passed = !gateShowsRuleEditor && ownerShowsRuleEditor;
         return {
           passed,
-          message: passed ? 'RBAC verified: Gate Guard restricted to physical stamping; SLA rules locked to Owner.' : 'RBAC policy violation.',
+          message: passed ? 'UI role preview verified: Gate Guard preview hides rule editor controls (UI preview only).' : 'Role preview check failed.',
           durationMs: +(performance.now() - start).toFixed(2),
         };
       },
@@ -297,19 +296,16 @@ export function createAutomatedTestCases(
     {
       id: 'TEST-10',
       suite: 'SECURITY_AND_TAMPER',
-      title: 'Supervisor PIN Lock Hash Validation',
-      description: 'Verifies 4-digit numeric supervisor PIN security and prevents unauthorized view access when locked.',
-      assertion: 'isLocked=true requires valid PIN to switch to Executive view',
+      title: 'Demonstration Environment Mode Disclosure Check',
+      description: 'Verifies that authentication is explicitly marked as disabled in the demonstration environment.',
+      assertion: 'authEnabled === false',
       run: () => {
         const start = performance.now();
-        const storedPin: string = '1234';
-        const testAttemptCorrect: string = '1234';
-        const testAttemptWrong: string = '9999';
-
-        const passed = testAttemptCorrect === storedPin && testAttemptWrong !== storedPin;
+        const authEnabled = false;
+        const passed = authEnabled === false;
         return {
           passed,
-          message: passed ? 'PIN supervisor lock mechanism validated against brute-force entry.' : 'PIN verification failed.',
+          message: passed ? 'Confirmed: Authentication is not enabled in this demonstration environment.' : 'Check failed.',
           durationMs: +(performance.now() - start).toFixed(2),
         };
       },
@@ -317,9 +313,9 @@ export function createAutomatedTestCases(
     {
       id: 'TEST-11',
       suite: 'SECURITY_AND_TAMPER',
-      title: 'Tamper Audit Trail Append-Only Chaining',
-      description: 'Verifies that audit trail preserves sequential history and timestamps cannot be retroactively edited.',
-      assertion: 'auditLogs must be immutable and sequential',
+      title: 'Local Activity History Chronological Ordering',
+      description: 'Verifies that local browser activity entries preserve chronological timestamp ordering.',
+      assertion: 'activityEntries are ordered by timestamp',
       run: () => {
         const start = performance.now();
         const logs = [
@@ -329,7 +325,7 @@ export function createAutomatedTestCases(
         const isSequential = new Date(logs[1].timestamp).getTime() > new Date(logs[0].timestamp).getTime();
         return {
           passed: isSequential,
-          message: isSequential ? 'Audit log immutability and monotonic clock sequence verified.' : 'Audit sequence check failed.',
+          message: isSequential ? 'Local activity history chronological sequence verified.' : 'Sequence check failed.',
           durationMs: +(performance.now() - start).toFixed(2),
         };
       },

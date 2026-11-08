@@ -1475,10 +1475,10 @@ export const OperationalystLandingPage: React.FC<OperationalystLandingPageProps>
           <div className="rounded-3xl bg-slate-950 border border-slate-800 p-6 sm:p-10 grid grid-cols-1 md:grid-cols-12 gap-8 items-center">
             <div className="md:col-span-4 flex flex-col items-center text-center space-y-3">
               <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-emerald-400 via-teal-500 to-cyan-600 flex items-center justify-center text-slate-950 font-black text-3xl shadow-xl">
-                JS
+                CJ
               </div>
               <div>
-                <div className="text-lg font-black text-white">Jonez Snowin</div>
+                <div className="text-lg font-black text-white">C. Jones Snowin</div>
                 <div className="text-xs font-medium text-emerald-400">
                   Operations &amp; Manufacturing Analytics Builder
                 </div>
@@ -1488,7 +1488,7 @@ export const OperationalystLandingPage: React.FC<OperationalystLandingPageProps>
               </div>
               <div className="flex items-center gap-2 pt-1">
                 <a
-                  href="https://www.linkedin.com/search/results/all/?keywords=Jonez%20Snowin"
+                  href="https://linkedin.com/in/c-jones-snowin"
                   target="_blank"
                   rel="noreferrer"
                   className="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-xs font-semibold text-slate-200 flex items-center gap-1.5"
@@ -1499,7 +1499,7 @@ export const OperationalystLandingPage: React.FC<OperationalystLandingPageProps>
                   <span>LinkedIn</span>
                 </a>
                 <a
-                  href="mailto:jonez@operationalyst.in?subject=Free%20Factory%20Audit%20Request"
+                  href="mailto:joneszz2004@gmail.com?subject=Free%20Factory%20Audit%20Request"
                   className="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-xs font-semibold text-slate-200 flex items-center gap-1.5"
                 >
                   <Mail className="w-3.5 h-3.5 text-emerald-400" />
@@ -1516,7 +1516,7 @@ export const OperationalystLandingPage: React.FC<OperationalystLandingPageProps>
                 &ldquo;Help factories see problems before those problems become losses.&rdquo;
               </h3>
               <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-                Hi, I&apos;m <strong>Jonez Snowin</strong>. I built Operationalyst after seeing how much money mid-sized manufacturers lose through invisible operational inefficiencies — dead stock sitting untouched on racks, late dispatches discovered after customer escalations, and transporter bills paid without rate checks — all hidden inside everyday spreadsheets.
+                Hi, I&apos;m <strong>C. Jones Snowin</strong>. I built Operationalyst after seeing how much money mid-sized manufacturers lose through invisible operational inefficiencies — dead stock sitting untouched on racks, late dispatches discovered after customer escalations, and transporter bills paid without rate checks — all hidden inside everyday spreadsheets.
               </p>
               <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
                 Whether your factory manages 2,000 or 25,000+ SKUs, our Free Factory Audit shows you where working capital is trapped in your own data before you spend a rupee on software.
@@ -1760,11 +1760,11 @@ export const OperationalystLandingPage: React.FC<OperationalystLandingPageProps>
                       Audit Request Ready for {leadCompany}!
                     </h4>
                     <p className="text-xs sm:text-sm text-slate-300 max-w-md mx-auto">
-                      Click below to send your audit details directly to Jonez Snowin via email, or explore the live interactive platform right now.
+                      Click below to send your audit details directly to C. Jones Snowin via email, or explore the live interactive platform right now.
                     </p>
                     <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
                       <a
-                        href={`mailto:jonez@operationalyst.in?subject=${encodeURIComponent(
+                        href={`mailto:joneszz2004@gmail.com?subject=${encodeURIComponent(
                           `Factory Audit Request — ${leadCompany}`
                         )}&body=${encodeURIComponent(
                           `Name: ${leadName}\nCompany / Plant: ${leadCompany}\nContact: ${leadContact}\nInventory Scale: ${leadSkuScale}\n\nPlease share steps for our Free Factory Operational Audit.`

@@ -25,7 +25,9 @@ export interface StockItem {
   cumulativePercent?: number;
   abcClass?: ABCClass;
   action?: string;
+  actionStatus?: string;
   deadValue?: number;
+  isReserveSpare?: boolean;
 }
 
 export interface RulesConfig {

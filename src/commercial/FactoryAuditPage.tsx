@@ -31,75 +31,81 @@ import {
   Megaphone,
   Check,
   ChevronRight,
+  Download,
 } from 'lucide-react';
 import { SampleAuditReportModal } from './SampleAuditReportModal';
 import { InventoryChecklistModal } from './InventoryChecklistModal';
+import { FactoryAuditModal } from './FactoryAuditModal';
 import { CampaignAssetStudio } from './CampaignAssetStudio';
 import { trackEvent } from '../utils/analytics';
-import { submitPilotLead } from '../utils/submitPilotLead';
+import {
+  downloadPilotDataKitCsv,
+  downloadPilotDataKitXlsx,
+} from '../utils/pilotDataKitExporter';
+import { LegalGovernanceModal, LegalGovernanceTab } from './LegalGovernanceModal';
+import { getReconciledSampleAuditModes, type SampleAuditModeId } from './homepageConfig';
+import { SelfAssessmentWidget } from './SelfAssessmentWidget';
+import type { BuyerPersona } from '../utils/leadValidation';
+import type { SelfAssessmentEvaluation } from '../utils/selfAssessmentScorer';
 
 interface FactoryAuditPageProps {
   onBackToHome?: () => void;
   onLaunchLiveDemo: (engine?: string) => void;
   onOpenSmartMapper?: () => void;
-  isFounderMode?: boolean;
+  onOpenLeadInbox?: () => void;
 }
 
 export const FactoryAuditPage: React.FC<FactoryAuditPageProps> = ({
   onBackToHome,
   onLaunchLiveDemo,
-  isFounderMode = false,
+  onOpenSmartMapper,
+  onOpenLeadInbox,
 }) => {
   // Top Navigation View: Landing Page vs Persuasion Framework vs Testing Roadmap vs Campaign Studio
   const [activeSystemView, setActiveSystemView] = useState<'landing' | 'campaign' | 'framework' | 'roadmap'>('landing');
 
   // Active Hero Angle / Frame
+  // A: Loss frame ("How Much of Your Inventory Has Stopped Moving?")
+  // B: Money frame ("Find Working Capital Hidden Inside Inventory")
+  // C: Control frame ("Know Which Inventory Needs Attention Before Your Next Review")
   const [heroFrame, setHeroFrame] = useState<'A' | 'B' | 'C'>('A');
+  const [auditSampleModeId, setAuditSampleModeId] = useState<SampleAuditModeId>('sandbox_20');
+  const auditSampleModes = getReconciledSampleAuditModes();
+  const activeAuditSampleMode = auditSampleModes[auditSampleModeId] || auditSampleModes.sandbox_20;
 
   // Modal States
   const [isSampleReportOpen, setIsSampleReportOpen] = useState(false);
   const [isChecklistOpen, setIsChecklistOpen] = useState(false);
-
-  // Pilot Audit Request Form State
-  const [formState, setFormState] = useState({
-    name: '',
-    company: '',
-    email: '',
-    inventorySize: '₹1 Cr – ₹5 Cr',
-    primaryProblem: 'Dead stock & non-moving inventory',
-    agreedToPrivacy: true,
-  });
-  const [formSubmitted, setFormSubmitted] = useState<boolean>(false);
-  const [submitting, setSubmitting] = useState<boolean>(false);
-  const [mailtoHref, setMailtoHref] = useState<string>('mailto:joneszz2004@gmail.com');
+  const [isLegalModalOpen, setIsLegalModalOpen] = useState(false);
+  const [legalModalTab, setLegalModalTab] = useState<LegalGovernanceTab>('privacy');
+  const [isAuditModalOpen, setIsAuditModalOpen] = useState(false);
+  const [auditModalSource, setAuditModalSource] = useState<string>('factory_audit_page');
+  const [auditModalPersona, setAuditModalPersona] = useState<BuyerPersona | undefined>(undefined);
+  const [auditModalDiagnostic, setAuditModalDiagnostic] = useState<
+    SelfAssessmentEvaluation | undefined
+  >(undefined);
 
   const handleOpenSampleModal = () => {
     trackEvent('sample_report_clicked', { source: 'factory_audit_page' });
     setIsSampleReportOpen(true);
   };
 
-  const handleFormSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!formState.name || !formState.email) return;
-    setSubmitting(true);
-    const { mailtoHref: link } = await submitPilotLead({
-      name: formState.name,
-      email: formState.email,
-      company: formState.company,
-      inventorySize: formState.inventorySize,
-      primaryChallenge: formState.primaryProblem,
-      sourcePage: '/audit',
-    });
-    setMailtoHref(link);
-    trackEvent('pilot_form_completed', { company: formState.company });
-    setSubmitting(false);
-    setFormSubmitted(true);
+  const handleOpenAuditModal = (
+    source: string,
+    persona?: BuyerPersona,
+    diagnostic?: SelfAssessmentEvaluation
+  ) => {
+    trackEvent('pilot_form_started', { source, persona });
+    setAuditModalSource(source);
+    setAuditModalPersona(persona);
+    setAuditModalDiagnostic(diagnostic);
+    setIsAuditModalOpen(true);
   };
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-emerald-500/20 selection:text-emerald-300">
       {/* ===================================================================== */}
-      {/* TOP HEADER: CLEAN BUYER HEADER (FOUNDER TABS HIDDEN UNLESS /founder)  */}
+      {/* TOP SYSTEM NAV: UNIFIED CONTROL STRIP                                 */}
       {/* ===================================================================== */}
       <header className="sticky top-0 z-40 bg-slate-950/95 backdrop-blur-md border-b border-slate-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
@@ -107,10 +113,10 @@ export const FactoryAuditPage: React.FC<FactoryAuditPageProps> = ({
             {onBackToHome && (
               <button
                 onClick={onBackToHome}
-                className="min-h-[38px] px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 text-xs font-mono font-bold flex items-center gap-1.5 cursor-pointer transition touch-manipulation"
+                className="min-h-[40px] px-2.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-750 text-xs font-mono font-bold flex items-center gap-1.5 cursor-pointer transition touch-manipulation"
               >
                 <ArrowLeft className="w-3.5 h-3.5" />
-                <span>Homepage</span>
+                <span className="hidden sm:inline">Overview</span>
               </button>
             )}
 
@@ -119,79 +125,66 @@ export const FactoryAuditPage: React.FC<FactoryAuditPageProps> = ({
                 <FileCheck2 className="w-4 h-4 text-emerald-400" />
               </div>
               <div>
-                <span className="text-base font-black text-white tracking-tight font-mono uppercase">
-                  OPERATIONALYST
-                </span>
-                <span className="hidden md:inline-block ml-2 text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-300 border border-emerald-500/30">
+                <span className="text-base font-black text-white tracking-tight">
                   Factory Inventory Audit
+                </span>
+                <span className="hidden md:inline-block ml-2 text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+                  Ad Destination &amp; Conversion Hub
                 </span>
               </div>
             </div>
           </div>
 
-          {isFounderMode ? (
-            <div className="flex items-center gap-1 bg-slate-900 p-1 rounded-xl border border-slate-800 text-xs font-mono">
-              <button
-                onClick={() => setActiveSystemView('landing')}
-                className={`px-3 py-1.5 rounded-lg font-bold transition cursor-pointer flex items-center gap-1.5 ${
-                  activeSystemView === 'landing'
-                    ? 'bg-emerald-500 text-slate-950 font-black shadow-sm'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                <span>Audit Page</span>
-              </button>
-              <button
-                onClick={() => setActiveSystemView('campaign')}
-                className={`px-3 py-1.5 rounded-lg font-bold transition cursor-pointer flex items-center gap-1.5 ${
-                  activeSystemView === 'campaign'
-                    ? 'bg-amber-400 text-slate-950 font-black shadow-sm'
-                    : 'text-amber-400 hover:text-white'
-                }`}
-              >
-                <Megaphone className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Campaign Studio</span>
-              </button>
-              <button
-                onClick={() => setActiveSystemView('framework')}
-                className={`px-3 py-1.5 rounded-lg font-bold transition cursor-pointer flex items-center gap-1.5 ${
-                  activeSystemView === 'framework'
-                    ? 'bg-slate-800 text-white font-black shadow-sm'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                <Workflow className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Flow</span>
-              </button>
-              <button
-                onClick={() => setActiveSystemView('roadmap')}
-                className={`px-3 py-1.5 rounded-lg font-bold transition cursor-pointer flex items-center gap-1.5 ${
-                  activeSystemView === 'roadmap'
-                    ? 'bg-slate-800 text-white font-black shadow-sm'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                <FlaskConical className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Roadmap</span>
-              </button>
-            </div>
-          ) : (
-            <div className="flex items-center gap-2.5">
-              <button
-                onClick={handleOpenSampleModal}
-                className="hidden sm:inline-flex px-3.5 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-200 text-xs font-bold cursor-pointer transition"
-              >
-                Sample Audit
-              </button>
-              <a
-                href="#pilot-form"
-                className="px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs flex items-center gap-1.5 transition"
-              >
-                <span>Request Factory Audit</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </a>
-            </div>
-          )}
+          {/* 4-in-1 Unified Architecture Mode Selector */}
+          <div className="flex items-center gap-1 bg-slate-900 p-1 rounded-xl border border-slate-800 text-xs font-mono">
+            <button
+              onClick={() => setActiveSystemView('landing')}
+              className={`px-3 py-1.5 rounded-lg font-bold transition cursor-pointer flex items-center gap-1.5 ${
+                activeSystemView === 'landing'
+                  ? 'bg-emerald-500 text-slate-950 font-black shadow-sm'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <span>Audit Landing Page</span>
+            </button>
+
+            <button
+              onClick={() => setActiveSystemView('campaign')}
+              className={`px-3 py-1.5 rounded-lg font-bold transition cursor-pointer flex items-center gap-1.5 ${
+                activeSystemView === 'campaign'
+                  ? 'bg-amber-400 text-slate-950 font-black shadow-sm'
+                  : 'text-amber-400 hover:text-white'
+              }`}
+            >
+              <Megaphone className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Campaign Studio</span>
+              <span className="sm:hidden">Ads</span>
+            </button>
+
+            <button
+              onClick={() => setActiveSystemView('framework')}
+              className={`px-3 py-1.5 rounded-lg font-bold transition cursor-pointer flex items-center gap-1.5 ${
+                activeSystemView === 'framework'
+                  ? 'bg-slate-800 text-white font-black shadow-sm'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <Workflow className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Persuasion Flow</span>
+            </button>
+
+            <button
+              onClick={() => setActiveSystemView('roadmap')}
+              className={`px-3 py-1.5 rounded-lg font-bold transition cursor-pointer flex items-center gap-1.5 ${
+                activeSystemView === 'roadmap'
+                  ? 'bg-slate-800 text-white font-black shadow-sm'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <FlaskConical className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Roadmap</span>
+            </button>
+          </div>
         </div>
       </header>
 
@@ -225,14 +218,13 @@ export const FactoryAuditPage: React.FC<FactoryAuditPageProps> = ({
 
               {/* Primary & Secondary Call to Actions */}
               <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
-                <a
-                  href="#pilot-form"
-                  onClick={() => trackEvent('pilot_form_started', { source: 'audit_hero' })}
+                <button
+                  onClick={() => handleOpenAuditModal('audit_page_hero')}
                   className="w-full sm:w-auto min-h-[50px] px-8 py-3.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-sm sm:text-base flex items-center justify-center gap-2 cursor-pointer transition shadow-xl touch-manipulation active:scale-95"
                 >
                   <span>Request a Pilot Audit</span>
                   <ArrowRight className="w-4 h-4" />
-                </a>
+                </button>
 
                 <button
                   onClick={handleOpenSampleModal}
@@ -304,6 +296,16 @@ export const FactoryAuditPage: React.FC<FactoryAuditPageProps> = ({
                 </p>
               </div>
             </div>
+          </section>
+
+          {/* SECTION 2B: 5-QUESTION SELF-ASSESSMENT */}
+          <section className="px-4 sm:px-6 max-w-4xl mx-auto">
+            <SelfAssessmentWidget
+              onRequestAudit={(diagnostic) =>
+                handleOpenAuditModal('audit_page_self_assessment', 'GENERAL', diagnostic)
+              }
+              onViewSampleReport={handleOpenSampleModal}
+            />
           </section>
 
           {/* SECTION 3: HOW OPERATIONALYST WORKS (5 STEPS) */}
@@ -383,11 +385,11 @@ export const FactoryAuditPage: React.FC<FactoryAuditPageProps> = ({
             </div>
           </section>
 
-          {/* SECTION 5: SAMPLE AUDIT (ILLUSTRATIVE DEMO) */}
+          {/* SECTION 5: SAMPLE AUDIT (RECONCILED 2-MODE DEMO) */}
           <section className="px-4 sm:px-6 max-w-4xl mx-auto space-y-6">
             <div className="text-center space-y-2">
               <span className="text-xs font-mono font-bold text-amber-400 uppercase tracking-widest">
-                SAMPLE AUDIT
+                SAMPLE AUDIT • RECONCILED METRICS
               </span>
               <h2 className="text-2xl sm:text-3xl font-black text-white">
                 See What the Analysis Looks Like
@@ -395,46 +397,97 @@ export const FactoryAuditPage: React.FC<FactoryAuditPageProps> = ({
             </div>
 
             <div className="p-6 sm:p-8 rounded-2xl bg-slate-900 border border-slate-800 space-y-6 shadow-2xl">
-              {/* Prominent Label */}
-              <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              {/* Prominent Label & Mode Switcher */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-3">
                 <span className="text-xs font-mono font-bold text-amber-400 uppercase tracking-wider">
-                  ILLUSTRATIVE EXAMPLE • DEMONSTRATION DATA
+                  {activeAuditSampleMode.badge}
                 </span>
-                <span className="text-[10px] font-mono text-slate-500">
-                  Neutral Benchmark Schema
-                </span>
+                <div className="flex flex-wrap items-center gap-2 font-mono text-xs">
+                  <button
+                    type="button"
+                    onClick={() => setAuditSampleModeId('sandbox_20')}
+                    className={`px-3 py-1 rounded-lg border font-bold cursor-pointer transition ${
+                      auditSampleModeId === 'sandbox_20'
+                        ? 'bg-emerald-500/20 border-emerald-500 text-emerald-300'
+                        : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    Mode A: 20-SKU Sandbox
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAuditSampleModeId('illustrative_12400')}
+                    className={`px-3 py-1 rounded-lg border font-bold cursor-pointer transition ${
+                      auditSampleModeId === 'illustrative_12400'
+                        ? 'bg-amber-500/20 border-amber-500 text-amber-300'
+                        : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    Mode B: 12,400-SKU Plant Case
+                  </button>
+                </div>
               </div>
 
-              {/* Neutral Representation Box */}
+              {/* Reconciled Representation Box */}
               <div className="p-5 rounded-xl bg-slate-950 border border-slate-850 font-mono text-xs space-y-3">
                 <div className="text-[11px] font-bold text-slate-300 uppercase pb-2 border-b border-slate-850">
-                  INVENTORY REVIEW
+                  INVENTORY REVIEW ({activeAuditSampleMode.shortLabel})
                 </div>
 
                 <div className="space-y-2.5">
                   <div className="flex justify-between items-center py-1 border-b border-slate-900">
                     <span className="text-slate-400">Inventory analysed</span>
-                    <span className="text-white font-bold">₹X</span>
+                    <span className="text-white font-bold">
+                      {activeAuditSampleMode.totalBookValueFormatted}
+                    </span>
                   </div>
                   <div className="flex justify-between items-center py-1 border-b border-slate-900">
                     <span className="text-slate-400">SKUs analysed</span>
-                    <span className="text-white font-bold">X</span>
+                    <span className="text-white font-bold">
+                      {activeAuditSampleMode.skusEvaluatedText}
+                    </span>
                   </div>
                   <div className="flex justify-between items-center py-1 border-b border-slate-900">
                     <span className="text-slate-400">Potentially non-moving</span>
-                    <span className="text-rose-400 font-bold">₹X</span>
+                    <span className="text-rose-400 font-bold">
+                      {activeAuditSampleMode.deadStockValueFormatted} ({activeAuditSampleMode.deadStockSubtext})
+                    </span>
                   </div>
                   <div className="flex justify-between items-center py-1 border-b border-slate-900">
                     <span className="text-slate-400">Slow-moving</span>
-                    <span className="text-amber-400 font-bold">₹X</span>
+                    <span className="text-amber-400 font-bold">
+                      {activeAuditSampleMode.slowMovingValueFormatted} ({activeAuditSampleMode.slowMovingSubtext})
+                    </span>
                   </div>
                   <div className="flex justify-between items-center py-1 border-b border-slate-900">
                     <span className="text-slate-400">Priority review</span>
-                    <span className="text-emerald-400 font-bold">X SKUs</span>
+                    <span className="text-emerald-400 font-bold">
+                      {activeAuditSampleMode.prioritySkusHeadline} ({activeAuditSampleMode.prioritySkusSubtext})
+                    </span>
                   </div>
                   <div className="flex justify-between items-center py-1">
                     <span className="text-slate-400">Highest exposure category</span>
-                    <span className="text-cyan-400 font-bold">Example Category</span>
+                    <span className="text-cyan-400 font-bold">
+                      {activeAuditSampleMode.topCategoryName}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Connected Multi-Pillar Pills */}
+                <div className="pt-3 border-t border-slate-850 flex flex-wrap items-center justify-between gap-2 text-[11px]">
+                  <span className="text-slate-400 font-bold uppercase">
+                    Connected Plant Modules:
+                  </span>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="px-2 py-0.5 rounded bg-sky-500/15 border border-sky-500/30 text-sky-300 font-bold">
+                      {activeAuditSampleMode.p2OtifPill}
+                    </span>
+                    <span className="px-2 py-0.5 rounded bg-amber-500/15 border border-amber-500/30 text-amber-300 font-bold">
+                      {activeAuditSampleMode.p3FreightPill}
+                    </span>
+                    <span className="px-2 py-0.5 rounded bg-purple-500/15 border border-purple-500/30 text-purple-300 font-bold">
+                      {activeAuditSampleMode.p4BinPill}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -489,7 +542,7 @@ export const FactoryAuditPage: React.FC<FactoryAuditPageProps> = ({
               <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-1">
                 <strong className="text-white">4. Data access:</strong>
                 <p className="text-slate-400 font-sans text-xs">
-                  Only founder Jonez Snowin accesses submitted information during manual analysis.
+                  Only founder C. Jones Snowin accesses submitted information during manual analysis.
                 </p>
               </div>
 
@@ -555,126 +608,41 @@ export const FactoryAuditPage: React.FC<FactoryAuditPageProps> = ({
                 ))}
               </div>
 
-              {formSubmitted ? (
-                <div className="p-6 rounded-xl bg-slate-950 border border-emerald-500/50 text-center space-y-4">
-                  <div className="w-12 h-12 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center mx-auto">
-                    <CheckCircle2 className="w-6 h-6" />
-                  </div>
-                  <h4 className="text-base font-bold text-white font-mono">
-                    Pilot Audit Request Received
-                  </h4>
-                  <p className="text-xs text-slate-300 max-w-md mx-auto">
-                    Thank you, <strong>{formState.name}</strong>. Founder Jonez Snowin will review your plant profile and reach out within 1–2 business days at <strong>{formState.email}</strong> to confirm scope and share the 5-column data checklist.
-                  </p>
-                  <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
-                    <a
-                      href={mailtoHref}
-                      className="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-mono font-bold transition"
-                    >
-                      Send Direct Email Copy to Founder
-                    </a>
-                    <button
-                      onClick={() => setFormSubmitted(false)}
-                      className="text-xs font-mono text-emerald-400 underline cursor-pointer"
-                    >
-                      Submit another request
-                    </button>
-                  </div>
+              <div className="p-4 rounded-xl bg-slate-950 border border-emerald-500/30 text-xs text-slate-300 space-y-3">
+                <div className="font-mono font-bold text-emerald-300">
+                  Do not upload confidential inventory files in Step 1.
                 </div>
-              ) : (
-                <form onSubmit={handleFormSubmit} className="space-y-4 text-xs font-mono">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div className="space-y-1">
-                      <label className="text-slate-300 font-bold">Your Name *</label>
-                      <input
-                        type="text"
-                        required
-                        value={formState.name}
-                        onChange={(e) => setFormState({ ...formState, name: e.target.value })}
-                        placeholder="e.g. Rajesh Sharma"
-                        className="w-full p-2.5 rounded-lg bg-slate-950 border border-slate-850 text-white focus:border-emerald-500 focus:outline-none"
-                      />
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="text-slate-300 font-bold">Company / Factory Name *</label>
-                      <input
-                        type="text"
-                        required
-                        value={formState.company}
-                        onChange={(e) => setFormState({ ...formState, company: e.target.value })}
-                        placeholder="e.g. Apex Auto Components"
-                        className="w-full p-2.5 rounded-lg bg-slate-950 border border-slate-850 text-white focus:border-emerald-500 focus:outline-none"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div className="space-y-1">
-                      <label className="text-slate-300 font-bold">Work Email *</label>
-                      <input
-                        type="email"
-                        required
-                        value={formState.email}
-                        onChange={(e) => setFormState({ ...formState, email: e.target.value })}
-                        placeholder="rajesh@apexauto.in"
-                        className="w-full p-2.5 rounded-lg bg-slate-950 border border-slate-850 text-white focus:border-emerald-500 focus:outline-none"
-                      />
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="text-slate-300 font-bold">Estimated Inventory Size</label>
-                      <select
-                        value={formState.inventorySize}
-                        onChange={(e) => setFormState({ ...formState, inventorySize: e.target.value })}
-                        className="w-full p-2.5 rounded-lg bg-slate-950 border border-slate-850 text-white focus:border-emerald-500 focus:outline-none"
-                      >
-                        <option>Under ₹1 Crore</option>
-                        <option>₹1 Cr – ₹5 Cr</option>
-                        <option>₹5 Cr – ₹20 Cr</option>
-                        <option>Over ₹20 Crore</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="text-slate-300 font-bold">Primary Operational Challenge</label>
-                    <select
-                      value={formState.primaryProblem}
-                      onChange={(e) => setFormState({ ...formState, primaryProblem: e.target.value })}
-                      className="w-full p-2.5 rounded-lg bg-slate-950 border border-slate-850 text-white focus:border-emerald-500 focus:outline-none"
-                    >
-                      <option>Dead stock &amp; non-moving inventory</option>
-                      <option>Late dispatches &amp; customer OTIF penalties</option>
-                      <option>Transporter freight overbilling</option>
-                      <option>Store vs ERP bin mismatches</option>
-                      <option>Reporting latency before Monday meetings</option>
-                    </select>
-                  </div>
-
-                  <div className="flex items-center gap-2 pt-1 text-[11px] text-slate-400">
-                    <input
-                      type="checkbox"
-                      id="privacy-check"
-                      checked={formState.agreedToPrivacy}
-                      onChange={(e) => setFormState({ ...formState, agreedToPrivacy: e.target.checked })}
-                      className="accent-emerald-500 cursor-pointer"
-                    />
-                    <label htmlFor="privacy-check" className="cursor-pointer">
-                      I consent to being contacted regarding this Factory Inventory Audit request.
-                    </label>
-                  </div>
-
+                <p>
+                  Data scope, the 5-column export template, and part-number anonymization options are confirmed after suitability review. You can preview the exact 5-column template below:
+                </p>
+                <div className="flex flex-wrap items-center gap-2 pt-1">
                   <button
-                    type="submit"
-                    disabled={submitting}
-                    className="w-full min-h-[48px] py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-sm flex items-center justify-center gap-2 cursor-pointer transition shadow-xl touch-manipulation active:scale-95 disabled:opacity-50"
+                    type="button"
+                    onClick={() => downloadPilotDataKitXlsx()}
+                    className="px-3.5 py-2 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/40 text-emerald-300 font-mono font-bold text-xs inline-flex items-center gap-1.5 cursor-pointer"
                   >
-                    <span>{submitting ? 'Submitting Request...' : 'Request Factory Audit'}</span>
-                    <ArrowRight className="w-4 h-4" />
+                    <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Download 5-Column Data Guide (.XLSX)</span>
                   </button>
-                </form>
-              )}
+                  <button
+                    type="button"
+                    onClick={() => downloadPilotDataKitCsv()}
+                    className="px-3.5 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-200 font-mono text-xs inline-flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <Download className="w-3.5 h-3.5 text-sky-400" />
+                    <span>Download Blank CSV Template</span>
+                  </button>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => handleOpenAuditModal('audit_page_pilot_section')}
+                className="w-full min-h-[48px] py-3.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-sm flex items-center justify-center gap-2 cursor-pointer transition shadow-xl touch-manipulation active:scale-95"
+              >
+                <span>Request a Pilot Audit</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
             </div>
           </section>
         </div>
@@ -775,7 +743,7 @@ export const FactoryAuditPage: React.FC<FactoryAuditPageProps> = ({
                 step: '10',
                 stage: 'VALUE',
                 prompt: '“These findings are relevant to us.”',
-                action: '1-on-1 findings review call with founder Jonez Snowin.',
+                action: '1-on-1 findings review call with founder C. Jones Snowin.',
               },
               {
                 step: '11',
@@ -879,14 +847,73 @@ export const FactoryAuditPage: React.FC<FactoryAuditPageProps> = ({
         </section>
       )}
 
+      {/* Footer */}
+      <footer className="border-t border-slate-850 bg-slate-950 py-6 px-4 sm:px-6 text-xs text-slate-400 font-mono">
+        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
+          <div>
+            Operationalyst Factory Inventory Audit · Built by C. Jones Snowin
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={() => {
+                setLegalModalTab('privacy');
+                setIsLegalModalOpen(true);
+              }}
+              className="text-slate-400 hover:text-emerald-300 underline underline-offset-4 cursor-pointer"
+            >
+              Privacy &amp; Data Governance Policy
+            </button>
+            <span>·</span>
+            <button
+              type="button"
+              onClick={() => {
+                setLegalModalTab('terms');
+                setIsLegalModalOpen(true);
+              }}
+              className="text-slate-400 hover:text-emerald-300 underline underline-offset-4 cursor-pointer"
+            >
+              Pilot Audit Terms of Service
+            </button>
+            <span>·</span>
+            <a
+              href="?view=lead-inbox"
+              onClick={(e) => {
+                if (onOpenLeadInbox) {
+                  e.preventDefault();
+                  onOpenLeadInbox();
+                }
+              }}
+              className="text-slate-400 hover:text-emerald-300 underline underline-offset-4 cursor-pointer"
+            >
+              Founder Lead Inbox
+            </a>
+          </div>
+        </div>
+      </footer>
+
+      <FactoryAuditModal
+        isOpen={isAuditModalOpen}
+        onClose={() => setIsAuditModalOpen(false)}
+        sourceView={auditModalSource}
+        initialBuyerPersona={auditModalPersona}
+        diagnosticAttachment={auditModalDiagnostic}
+      />
+
+      <LegalGovernanceModal
+        isOpen={isLegalModalOpen}
+        onClose={() => setIsLegalModalOpen(false)}
+        initialTab={legalModalTab}
+        onRequestAudit={() => handleOpenAuditModal('audit_page_legal_modal')}
+      />
+
       {/* Sample Report & Checklist Modals */}
       <SampleAuditReportModal
         isOpen={isSampleReportOpen}
         onClose={() => setIsSampleReportOpen(false)}
         onRequestAudit={() => {
           setIsSampleReportOpen(false);
-          const el = document.getElementById('pilot-form');
-          el?.scrollIntoView({ behavior: 'smooth' });
+          handleOpenAuditModal('sample_report_modal');
         }}
       />
 
@@ -895,8 +922,7 @@ export const FactoryAuditPage: React.FC<FactoryAuditPageProps> = ({
         onClose={() => setIsChecklistOpen(false)}
         onRequestAudit={() => {
           setIsChecklistOpen(false);
-          const el = document.getElementById('pilot-form');
-          el?.scrollIntoView({ behavior: 'smooth' });
+          handleOpenAuditModal('checklist_modal');
         }}
       />
     </div>

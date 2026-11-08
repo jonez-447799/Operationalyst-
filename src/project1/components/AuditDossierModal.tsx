@@ -253,12 +253,12 @@ Certified for working capital rationalization and inventory clearance.`;
                 </div>
 
                 <div>
-                  <div className="text-[11px] text-neutral-400 font-mono">Internal Audit Verification:</div>
+                  <div className="text-[11px] text-neutral-400 font-mono">Calculation Basis:</div>
                   <div className="font-bold text-neutral-800 dark:text-neutral-200 mt-4 border-b border-neutral-300 dark:border-neutral-700 pb-1 flex items-center justify-between">
-                    <span>Audit Committee Certified</span>
-                    <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                    <span>Deterministic Browser Calculation</span>
+                    <ShieldCheck className="w-4 h-4 text-amber-500" />
                   </div>
-                  <div className="text-[10px] text-neutral-400 mt-1">Stock Engine SHA-256 Validated</div>
+                  <div className="text-[10px] text-neutral-400 mt-1">DEMONSTRATION ENVIRONMENT · Browser-Local Dataset</div>
                 </div>
               </div>
 
@@ -294,8 +294,8 @@ Certified for working capital rationalization and inventory clearance.`;
         {/* Footer */}
         <div className="p-4 border-t border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-950/70 flex items-center justify-between">
           <div className="text-xs text-neutral-500 flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-            <span>Signed with SHA-256 Audit Seal</span>
+            <span className="w-2 h-2 rounded-full bg-amber-500"></span>
+            <span>DEMONSTRATION ENVIRONMENT · Stored only in this browser</span>
           </div>
 
           <div className="flex items-center gap-2">

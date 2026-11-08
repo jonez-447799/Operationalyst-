@@ -136,7 +136,7 @@ export const CampaignAssetStudio: React.FC<CampaignAssetStudioProps> = ({
       psychologicalFrame: 'Founder Authenticity, Mayer’s Trust Triad (Benevolence & Integrity)',
       targetRole: 'All Manufacturing Leaders',
       destinationPath: '/audit?frame=founder',
-      visualConcept: 'Jonez Snowin directly addressing the camera from an industrial workspace, holding an actual inventory export printout.',
+      visualConcept: 'C. Jones Snowin directly addressing the camera from an industrial workspace, holding an actual inventory export printout.',
     },
   ];
 
@@ -284,7 +284,7 @@ We take a standard exported stock spreadsheet, run it through our velocity class
 Would you be open to reviewing an illustrative sample report to see if this could be useful for your team?
 
 Best regards,
-Jonez Snowin
+C. Jones Snowin
 Founder, Operationalyst
 joneszz2004@gmail.com`,
     },
@@ -305,7 +305,7 @@ The review requires only 5 standard inventory fields, supports full SKU anonymis
 If you are interested in seeing a sample report with neutral demonstration data, I'd be glad to share it with your office.
 
 Sincerely,
-Jonez Snowin
+C. Jones Snowin
 Founder, Operationalyst
 joneszz2004@gmail.com`,
     },
@@ -324,7 +324,7 @@ It reads your standard closing stock export and automatically isolates the top d
 I'd value your practical feedback as a stores professional. Would you be willing to take a quick look at a sample output and tell me if the format matches what you actually need on the floor?
 
 Thanks,
-Jonez Snowin
+C. Jones Snowin
 Operationalyst`,
     },
   ];
@@ -630,7 +630,7 @@ Operationalyst`,
             <div>
               <h3 className="text-lg font-bold text-white">Founder On-Camera Video Script &amp; Teleprompter</h3>
               <p className="text-xs text-slate-400">
-                Spoken word teleprompter for Jonez Snowin (Duration: ~35–40 seconds). No polished corporate jargon.
+                Spoken word teleprompter for C. Jones Snowin (Duration: ~35–40 seconds). No polished corporate jargon.
               </p>
             </div>
 

@@ -582,9 +582,9 @@ _Generated via Project 1 Engine | Verified Tally Summary_`;
       <div className="p-4 sm:p-5 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-sm">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b border-neutral-100 dark:border-neutral-800">
           <div className="flex items-center gap-2">
-            <ShieldCheck className="w-4 h-4 text-emerald-600" />
+            <ShieldCheck className="w-4 h-4 text-amber-500" />
             <h3 className="text-sm font-bold text-neutral-900 dark:text-neutral-100">
-              Automated Daily Dispatch Preview (Encrypted WhatsApp / Email)
+              Executive Summary Text Preview (WhatsApp / Email Copy)
             </h3>
           </div>
           <div className="flex items-center gap-2">
@@ -611,8 +611,8 @@ _Generated via Project 1 Engine | Verified Tally Summary_`;
           {whatsappMessage}
         </div>
         <div className="mt-2 flex items-center justify-between text-[11px] text-neutral-400">
-          <span>Daily Cadence: 08:00 AM IST (Automated before factory shift starts)</span>
-          <span className="font-mono text-emerald-400">AES-256-GCM Signature: OK</span>
+          <span>Illustrative summary generated from current browser dataset</span>
+          <span className="font-mono text-amber-400">DEMONSTRATION ENVIRONMENT</span>
         </div>
       </div>
     </div>

@@ -1,24 +1,33 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { UserRole, AuditLogEntry, SystemMetrics } from '../types';
 import { ROLE_PERMISSIONS } from '../utils/security';
+import { toSafeCsvCell } from '../utils/importValidation';
 import { 
   ShieldCheck, 
   Lock, 
   Key, 
-  Activity, 
   Terminal, 
   Download, 
   Upload, 
   Eye, 
   EyeOff, 
   CheckCircle2, 
-  AlertTriangle,
   Server,
-  FileCode,
   Copy,
   Check,
   RefreshCw
 } from 'lucide-react';
+import { CloudRunSystemBackupPanel } from './CloudRunSystemBackupPanel';
+
+interface ServerAuditEventItem {
+  eventId: string;
+  timestamp: string;
+  actor: string;
+  category: string;
+  action: string;
+  plantId: string;
+  details: string;
+}
 
 interface SecurityAndSystemProps {
   currentRole: UserRole;
@@ -43,16 +52,82 @@ export const SecurityAndSystem: React.FC<SecurityAndSystemProps> = ({
   onRestoreBackup,
   metrics,
 }) => {
-  const [activeSection, setActiveSection] = useState<'rbac' | 'audit' | 'backup' | 'mfa' | 'api' | 'metrics' | 'diagnostics'>('diagnostics');
-  const [mfaEnabled, setMfaEnabled] = useState(true);
+  const [activeSection, setActiveSection] = useState<'rbac' | 'audit' | 'backup' | 'mfa' | 'api' | 'metrics' | 'diagnostics'>('audit');
   const [mfaCode, setMfaCode] = useState('');
   const [mfaVerified, setMfaVerified] = useState(true);
+  const [mfaError, setMfaError] = useState<string | null>(null);
   const [copiedEndpoint, setCopiedEndpoint] = useState<string | null>(null);
+  const [serverAuditEvents, setServerAuditEvents] = useState<ServerAuditEventItem[]>([]);
+  const [serverCounters, setServerCounters] = useState<{
+    totalLeadsStored: number;
+    totalSnapshotsPublished: number;
+    activePlantSyncStatus: string;
+  }>({
+    totalLeadsStored: 0,
+    totalSnapshotsPublished: 0,
+    activePlantSyncStatus: 'Server Workspace Synced',
+  });
+  const [loadingServerAudit, setLoadingServerAudit] = useState(false);
+
   const [testStatus, setTestStatus] = useState<{ running: boolean; lastRan: string | null; latencyMs: number }>({
     running: false,
     lastRan: 'Just now',
     latencyMs: 1.2,
   });
+
+  const fetchServerGovernanceData = useCallback(async () => {
+    setLoadingServerAudit(true);
+    try {
+      const res = await fetch('/api/audit-events?limit=100');
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data.events)) {
+          setServerAuditEvents(data.events);
+        }
+        if (data.counters) {
+          setServerCounters({
+            totalLeadsStored: Number(data.counters.totalLeadsStored ?? 0),
+            totalSnapshotsPublished: Number(data.counters.totalSnapshotsPublished ?? 0),
+            activePlantSyncStatus: String(data.counters.activePlantSyncStatus ?? 'Server Workspace Synced'),
+          });
+        }
+      }
+    } catch {
+      // Fallback gracefully if offline
+    } finally {
+      setLoadingServerAudit(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchServerGovernanceData();
+  }, [fetchServerGovernanceData]);
+
+  const handleExportServerAuditCsv = () => {
+    const headers = ['Event ID', 'Timestamp (UTC)', 'Actor', 'Category', 'Action', 'Plant ID', 'Details'];
+    const rows = serverAuditEvents.map((ev) => [
+      toSafeCsvCell(ev.eventId),
+      toSafeCsvCell(ev.timestamp),
+      toSafeCsvCell(ev.actor),
+      toSafeCsvCell(ev.category),
+      toSafeCsvCell(ev.action),
+      toSafeCsvCell(ev.plantId),
+      toSafeCsvCell(ev.details),
+    ]);
+    const csvContent = [
+      headers.map((h) => `"${h}"`).join(','),
+      ...rows.map((r) => r.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(',')),
+    ].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `Operationalyst_Server_Audit_Log_${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
 
   const handleRunSecurityScan = async () => {
     setTestStatus((prev) => ({ ...prev, running: true }));
@@ -82,9 +157,10 @@ export const SecurityAndSystem: React.FC<SecurityAndSystemProps> = ({
     e.preventDefault();
     if (mfaCode === '123456' || mfaCode.length === 6) {
       setMfaVerified(true);
+      setMfaError(null);
       setMfaCode('');
     } else {
-      alert('Invalid test MFA code. Enter 123456 to verify.');
+      setMfaError('Invalid test MFA code. Enter 123456 to verify.');
     }
   };
 
@@ -109,21 +185,50 @@ export const SecurityAndSystem: React.FC<SecurityAndSystemProps> = ({
           <div className="flex items-center gap-2">
             <ShieldCheck className="w-5 h-5 text-emerald-600" />
             <h1 className="text-xl font-bold tracking-tight text-neutral-900 dark:text-neutral-100">
-              Security, Audit Trail &amp; System Hub
+              Security, Server Governance Audit Trail &amp; System Hub
             </h1>
           </div>
           <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
-            Enterprise data protection, immutable audit trails, GDPR privacy compliance, and ERP integration endpoints.
+            Enterprise data protection, live server-persisted governance audit logs (/api/audit-events), GDPR privacy compliance, and ERP integration endpoints.
           </p>
         </div>
 
         <div className="flex items-center gap-2 text-xs font-mono">
           <span className="px-2.5 py-1 rounded bg-emerald-50 dark:bg-emerald-950/50 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-emerald-500" />
-            <span>AES-256-GCM Encryption Active</span>
+            <span>Server Governance Synced</span>
           </span>
         </div>
       </div>
+
+      {/* Real Server Storage Counters */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="p-4 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-sm">
+          <div className="text-[11px] font-mono uppercase tracking-wider text-neutral-500">Total Leads Stored</div>
+          <div className="mt-1 text-2xl font-mono font-bold text-neutral-900 dark:text-neutral-100">
+            {serverCounters.totalLeadsStored}
+          </div>
+          <div className="text-[11px] text-neutral-400 mt-0.5">Persisted in server lead store</div>
+        </div>
+        <div className="p-4 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-sm">
+          <div className="text-[11px] font-mono uppercase tracking-wider text-neutral-500">Total Published Walkthrough Snapshots</div>
+          <div className="mt-1 text-2xl font-mono font-bold text-amber-600 dark:text-amber-400">
+            {serverCounters.totalSnapshotsPublished}
+          </div>
+          <div className="text-[11px] text-neutral-400 mt-0.5">4-Pillar server audit workspaces</div>
+        </div>
+        <div className="p-4 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-sm">
+          <div className="text-[11px] font-mono uppercase tracking-wider text-neutral-500">Active Plant Sync Status</div>
+          <div className="mt-1 text-sm font-mono font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
+            <Server className="w-4 h-4" />
+            <span>{serverCounters.activePlantSyncStatus}</span>
+          </div>
+          <div className="text-[11px] text-neutral-400 mt-0.5">3 isolated industrial plant baselines</div>
+        </div>
+      </div>
+
+      {/* Phase 8: Cloud Run Persistence & 7-Store Backup Bundle */}
+      <CloudRunSystemBackupPanel onAfterRestore={fetchServerGovernanceData} />
 
       {/* 2. Sub-Navigation Tabs */}
       <div className="flex flex-wrap items-center gap-2 p-1.5 rounded-lg bg-neutral-100 dark:bg-neutral-800 text-xs">
@@ -298,61 +403,150 @@ export const SecurityAndSystem: React.FC<SecurityAndSystemProps> = ({
 
       {/* SECTION 2: AUDIT TRAIL */}
       {activeSection === 'audit' && (
-        <div className="border border-neutral-200 dark:border-neutral-800 rounded-lg p-5 bg-white dark:bg-neutral-900 shadow-sm space-y-4">
-          <div className="flex items-center justify-between pb-3 border-b border-neutral-100 dark:border-neutral-800">
-            <div>
-              <h2 className="text-sm font-bold text-neutral-900 dark:text-neutral-100">
-                Immutable Financial Audit Trail
-              </h2>
-              <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
-                Every movement date edit, rule change, and export action is cryptographically signed with SHA-256 verification.
-              </p>
+        <div className="space-y-6">
+          {/* Server-Persisted Governance Audit Trail */}
+          <div className="border border-neutral-200 dark:border-neutral-800 rounded-lg p-5 bg-white dark:bg-neutral-900 shadow-sm space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-neutral-100 dark:border-neutral-800">
+              <div>
+                <h2 className="text-sm font-bold text-neutral-900 dark:text-neutral-100 flex items-center gap-2">
+                  <Server className="w-4 h-4 text-emerald-500" />
+                  <span>Live Server-Persisted Governance Audit Trail (/api/audit-events)</span>
+                </h2>
+                <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
+                  Durable server-backed audit records persisted to ./data/audit_events.json across leads, workspace snapshots, and plant threshold updates.
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={fetchServerGovernanceData}
+                  disabled={loadingServerAudit}
+                  className="px-2.5 py-1.5 text-xs font-semibold rounded border border-neutral-300 dark:border-neutral-700 text-neutral-700 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors flex items-center gap-1.5"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${loadingServerAudit ? 'animate-spin' : ''}`} />
+                  <span>Refresh</span>
+                </button>
+                <button
+                  onClick={handleExportServerAuditCsv}
+                  className="px-3 py-1.5 text-xs font-semibold rounded bg-amber-600 hover:bg-amber-700 text-white transition-colors flex items-center gap-1.5 shadow-sm"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Export Server Audit Log (.CSV)</span>
+                </button>
+              </div>
             </div>
-            <button
-              onClick={onClearAuditLogs}
-              className="px-2.5 py-1 text-xs text-neutral-500 hover:text-rose-500 transition-colors"
-            >
-              Clear Session Logs
-            </button>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs font-mono">
+                <thead className="bg-neutral-50 dark:bg-neutral-800/60 text-neutral-500 dark:text-neutral-400 border-b border-neutral-200 dark:border-neutral-800">
+                  <tr>
+                    <th className="py-2 px-3">Event ID</th>
+                    <th className="py-2 px-3">Timestamp (UTC)</th>
+                    <th className="py-2 px-3">Actor</th>
+                    <th className="py-2 px-3">Category</th>
+                    <th className="py-2 px-3">Plant</th>
+                    <th className="py-2 px-3">Action &amp; Details</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-neutral-200 dark:divide-neutral-800">
+                  {serverAuditEvents.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="py-4 px-3 text-center text-neutral-400 font-sans">
+                        No server audit events recorded yet.
+                      </td>
+                    </tr>
+                  ) : (
+                    serverAuditEvents.slice(0, 25).map((ev) => (
+                      <tr key={ev.eventId} className="hover:bg-neutral-50/50 dark:hover:bg-neutral-800/40">
+                        <td className="py-2.5 px-3 text-amber-600 dark:text-amber-400 font-bold whitespace-nowrap">
+                          {ev.eventId}
+                        </td>
+                        <td className="py-2.5 px-3 text-neutral-400 text-[11px] whitespace-nowrap">
+                          {new Date(ev.timestamp).toLocaleString()}
+                        </td>
+                        <td className="py-2.5 px-3 font-sans font-semibold text-neutral-900 dark:text-neutral-100">
+                          {ev.actor}
+                        </td>
+                        <td className="py-2.5 px-3">
+                          <span className="px-1.5 py-0.5 rounded bg-neutral-100 dark:bg-neutral-800 text-[10px] font-bold text-neutral-700 dark:text-neutral-300">
+                            {ev.category}
+                          </span>
+                        </td>
+                        <td className="py-2.5 px-3 uppercase text-[11px] text-emerald-600 dark:text-emerald-400 font-bold">
+                          {ev.plantId}
+                        </td>
+                        <td className="py-2.5 px-3 font-sans text-neutral-700 dark:text-neutral-300">
+                          <span className="font-mono font-bold text-[11px] mr-1.5 text-neutral-900 dark:text-neutral-100">
+                            [{ev.action}]
+                          </span>
+                          {ev.details}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs font-mono">
-              <thead className="bg-neutral-50 dark:bg-neutral-800/60 text-neutral-500 dark:text-neutral-400 border-b border-neutral-200 dark:border-neutral-800">
-                <tr>
-                  <th className="py-2 px-3">Timestamp (UTC)</th>
-                  <th className="py-2 px-3">Actor / Role</th>
-                  <th className="py-2 px-3">Action</th>
-                  <th className="py-2 px-3">Audit Details</th>
-                  <th className="py-2 px-3 text-right">Cryptographic Hash</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-neutral-200 dark:divide-neutral-800">
-                {auditLogs.map((log) => (
-                  <tr key={log.id} className="hover:bg-neutral-50/50 dark:hover:bg-neutral-800/40">
-                    <td className="py-2.5 px-3 text-neutral-400 text-[11px] whitespace-nowrap">
-                      {new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-                    </td>
-                    <td className="py-2.5 px-3 font-sans">
-                      <div className="font-semibold text-neutral-900 dark:text-neutral-100">{log.user}</div>
-                      <div className="text-[10px] text-neutral-400">{log.role}</div>
-                    </td>
-                    <td className="py-2.5 px-3">
-                      <span className="px-1.5 py-0.5 rounded bg-neutral-100 dark:bg-neutral-800 text-[10px] font-bold text-neutral-700 dark:text-neutral-300">
-                        {log.action}
-                      </span>
-                    </td>
-                    <td className="py-2.5 px-3 font-sans text-neutral-700 dark:text-neutral-300">
-                      {log.details}
-                    </td>
-                    <td className="py-2.5 px-3 text-right text-emerald-600 dark:text-emerald-400 text-[11px]">
-                      {log.hash}
-                    </td>
+          <div className="border border-neutral-200 dark:border-neutral-800 rounded-lg p-5 bg-white dark:bg-neutral-900 shadow-sm space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-neutral-100 dark:border-neutral-800">
+              <div>
+                <h2 className="text-sm font-bold text-neutral-900 dark:text-neutral-100">
+                  Immutable Financial Audit Trail
+                </h2>
+                <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
+                  Every movement date edit, rule change, and export action is cryptographically signed with SHA-256 verification.
+                </p>
+              </div>
+              <button
+                onClick={onClearAuditLogs}
+                className="px-2.5 py-1 text-xs text-neutral-500 hover:text-rose-500 transition-colors"
+              >
+                Clear Session Logs
+              </button>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs font-mono">
+                <thead className="bg-neutral-50 dark:bg-neutral-800/60 text-neutral-500 dark:text-neutral-400 border-b border-neutral-200 dark:border-neutral-800">
+                  <tr>
+                    <th className="py-2 px-3">Timestamp (UTC)</th>
+                    <th className="py-2 px-3">Actor / Role</th>
+                    <th className="py-2 px-3">Action</th>
+                    <th className="py-2 px-3">Audit Details</th>
+                    <th className="py-2 px-3 text-right">Cryptographic Hash</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-neutral-200 dark:divide-neutral-800">
+                  {auditLogs.map((log) => (
+                    <tr key={log.id} className="hover:bg-neutral-50/50 dark:hover:bg-neutral-800/40">
+                      <td className="py-2.5 px-3 text-neutral-400 text-[11px] whitespace-nowrap">
+                        {new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                      </td>
+                      <td className="py-2.5 px-3 font-sans">
+                        <div className="font-semibold text-neutral-900 dark:text-neutral-100">{log.user}</div>
+                        <div className="text-[10px] text-neutral-400">{log.role}</div>
+                      </td>
+                      <td className="py-2.5 px-3">
+                        <span className="px-1.5 py-0.5 rounded bg-neutral-100 dark:bg-neutral-800 text-[10px] font-bold text-neutral-700 dark:text-neutral-300">
+                          {log.action}
+                        </span>
+                      </td>
+                      <td className="py-2.5 px-3 font-sans text-neutral-700 dark:text-neutral-300">
+                        {log.details}
+                      </td>
+                      <td className="py-2.5 px-3 text-right text-emerald-600 dark:text-emerald-400 text-[11px]">
+                        {log.hash}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
+          {mfaError && (
+            <div className="text-xs text-rose-500 font-medium">{mfaError}</div>
+          )}
         </div>
       )}
 

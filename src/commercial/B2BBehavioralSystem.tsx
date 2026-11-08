@@ -36,12 +36,24 @@ import {
 } from './homepageConfig';
 import { trackEvent } from '../utils/analytics';
 
+import type { BuyerPersona } from '../utils/leadValidation';
+
 interface B2BBehavioralSystemProps {
-  onRequestAudit: (source: string) => void;
+  onRequestAudit: (source: string, buyerPersona?: BuyerPersona) => void;
   onViewSampleReport: (source: string) => void;
   onOpenIcebergModal: () => void;
   isFounderMode?: boolean;
 }
+
+const STAKEHOLDER_TO_PERSONA: Record<
+  'economic_buyer' | 'champion' | 'user' | 'evaluator',
+  BuyerPersona
+> = {
+  economic_buyer: 'ECONOMIC_BUYER',
+  champion: 'INTERNAL_CHAMPION',
+  user: 'PRIMARY_USER',
+  evaluator: 'TECHNICAL_EVALUATOR',
+};
 
 export const B2BBehavioralSystem: React.FC<B2BBehavioralSystemProps> = ({
   onRequestAudit,
@@ -195,7 +207,13 @@ export const B2BBehavioralSystem: React.FC<B2BBehavioralSystemProps> = ({
 
                 <div className="space-y-2 pt-2 border-t border-slate-800">
                   <button
-                    onClick={() => onRequestAudit(`stakeholder_${activeStakeholder.id}`)}
+                    data-testid={`request-audit-stakeholder-${activeStakeholder.id}`}
+                    onClick={() =>
+                      onRequestAudit(
+                        `stakeholder_${activeStakeholder.id}`,
+                        STAKEHOLDER_TO_PERSONA[activeStakeholder.id]
+                      )
+                    }
                     className="w-full py-2.5 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs font-mono flex items-center justify-center gap-1.5 cursor-pointer transition shadow-md touch-manipulation active:scale-95"
                   >
                     <span>Request Audit for {activeStakeholder.stakeholderType}</span>

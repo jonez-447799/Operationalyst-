@@ -84,7 +84,7 @@ const LADDER_STEPS: LadderStep[] = [
     commitmentLevel: 'High Value',
     commitmentBadgeColor: 'amber',
     duration: '48-hour delivery',
-    description: 'Founder Jonez Snowin personally reviews your inventory anomalies and presents an executive diagnostic report.',
+    description: 'Founder C. Jones Snowin personally reviews your inventory anomalies and presents an executive diagnostic report.',
     whatYouGive: '30 minutes of operational leadership time',
     whatYouGet: 'Dead stock ₹ amount, top 10 trapped SKUs, and debit note drafts',
     ctaText: 'Book Audit Review',
