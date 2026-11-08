@@ -69,5 +69,26 @@
     "linkedPlantId": "sriperumbudur",
     "uploadToken": "upl_ad1cfb30228d30fd10f9",
     "uploadPortalUrl": "?view=pilot-upload&leadId=PILOT-20261107-8C1C&token=upl_ad1cfb30228d30fd10f9"
+  },
+  {
+    "leadId": "PILOT-20261108-30A5",
+    "createdAt": "2026-11-08T11:22:57.946Z",
+    "updatedAt": "2026-11-08T11:22:57.946Z",
+    "status": "NEW",
+    "founderNotes": "",
+    "uploadToken": "upl_068a03da471a36df5011",
+    "uploadPortalUrl": "?view=pilot-upload&leadId=PILOT-20261108-30A5&token=upl_068a03da471a36df5011",
+    "fullName": "Vikram Deshmukh (GM Operations)",
+    "workEmail": "whatsapp-express@operationalyst.in",
+    "phoneOrWhatsapp": "+91 98201 55443",
+    "companyName": "Deshmukh Precision Forgings",
+    "plantLocation": "Manufacturing Unit (Express Intake)",
+    "roleTitle": "Plant / Operations Leadership",
+    "erpSystem": "Tally Prime / Tally ERP 9",
+    "approxSkuCount": "",
+    "primaryChallenge": "",
+    "consentConfirmed": true,
+    "sourceView": "sample_audit_sticky_cta",
+    "buyerPersona": "GENERAL"
   }
 ]

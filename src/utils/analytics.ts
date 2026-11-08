@@ -85,18 +85,30 @@ export function trackEvent(name: AnalyticsEventName, payload?: AnalyticsPayload)
 
 export type ServerFunnelEventType =
   | 'LANDING_PAGE_VIEW'
+  | 'SCROLL_DEPTH_25_PCT'
   | 'SCROLL_DEPTH_50_PCT'
+  | 'SCROLL_DEPTH_75_PCT'
   | 'SCROLL_DEPTH_90_PCT'
   | 'SAMPLE_REPORT_CLICKED'
   | 'SELF_ASSESSMENT_COMPLETED'
   | 'AUDIT_MODAL_OPENED'
   | 'DATA_KIT_DOWNLOADED'
-  | 'PILOT_AUDIT_SUBMITTED';
+  | 'PILOT_AUDIT_SUBMITTED'
+  | 'focus_name_field'
+  | 'focus_company_field'
+  | 'focus_contact_field'
+  | 'focus_erp_field'
+  | 'abandoned_at_none'
+  | 'abandoned_at_name_field'
+  | 'abandoned_at_company_field'
+  | 'abandoned_at_contact_field'
+  | 'abandoned_at_erp_field';
 
 export interface ServerFunnelEventMetadata {
   sourceSection?: string;
   buyerPersona?: string;
   sessionId?: string;
+  lastFieldTouched?: 'none' | 'name_field' | 'company_field' | 'contact_field' | 'erp_field';
 }
 
 /**

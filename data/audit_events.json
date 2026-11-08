@@ -1,5 +1,13 @@
 [
   {
+    "eventId": "EVT-20261108-F586",
+    "timestamp": "2026-11-08T11:22:57.948Z",
+    "actor": "Vikram Deshmukh (GM Operations) (Deshmukh Precision Forgings)",
+    "category": "LEAD_FUNNEL",
+    "action": "PILOT_LEAD_CREATED",
+    "details": "Captured pilot request PILOT-20261108-30A5 for Deshmukh Precision Forgings (Manufacturing Unit (Express Intake))"
+  },
+  {
     "eventId": "EVT-20261108-11EC",
     "timestamp": "2026-11-08T09:19:38.671Z",
     "actor": "CLIENT_WALKTHROUGH",

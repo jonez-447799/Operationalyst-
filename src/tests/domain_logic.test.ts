@@ -2992,3 +2992,204 @@ test('Phase 9 Modal Plain-English Privacy Guarantee Banner: Verifies FactoryAudi
   assert.ok(modalSrc.includes('Direct Founder Desk (C. Jones Snowin)'));
 });
 
+// ============================================================================
+// PHASE 10 TESTS: Automatic 5-Column CSV Template Download on Audit Submit,
+// 4-Field Express Modal Validation, Field-Level Hesitation Telemetry (focus_*
+// & abandoned_at_*), Dedicated /audit Sample Report Route, and Follow-Up Scripts
+// ============================================================================
+
+test('Phase 10 Express 4-Field Lead Validation: Accepts Express 4-Field submissions with either an email address or a WhatsApp number in the contact field', async () => {
+  const { validatePilotRequestPayload } = await import('../utils/leadValidation');
+
+  // 1. Express 4-Field submission with WhatsApp number in unified contact field
+  const whatsappExpress = validatePilotRequestPayload({
+    fullName: 'Karthik Subramanian — Plant Head',
+    companyName: 'Hosur Precision Gears Pvt Ltd',
+    contact: '+91 98402 55667',
+    erpSystem: 'Tally Prime / Tally ERP 9',
+    consentConfirmed: true,
+  });
+  assert.equal(whatsappExpress.ok, true);
+  assert.equal(whatsappExpress.data?.fullName, 'Karthik Subramanian — Plant Head');
+  assert.equal(whatsappExpress.data?.companyName, 'Hosur Precision Gears Pvt Ltd');
+  assert.equal(whatsappExpress.data?.phoneOrWhatsapp, '+91 98402 55667');
+  assert.equal(whatsappExpress.data?.erpSystem, 'Tally Prime / Tally ERP 9');
+
+  // 2. Express 4-Field submission with Email in workEmail field (no separate phoneOrWhatsapp)
+  const emailExpress = validatePilotRequestPayload({
+    fullName: 'Meera Krishnan (GM Operations)',
+    companyName: 'Sriperumbudur Automotive Stampings',
+    workEmail: 'meera@sriperumbudurstampings.in',
+    erpSystem: 'SAP (B1 / S4 / ECC)',
+    consentConfirmed: true,
+  });
+  assert.equal(emailExpress.ok, true);
+  assert.equal(emailExpress.data?.workEmail, 'meera@sriperumbudurstampings.in');
+  assert.equal(emailExpress.data?.companyName, 'Sriperumbudur Automotive Stampings');
+
+  // 3. Express 4-Field submission with WhatsApp number typed directly into workEmail input
+  const whatsappInEmailInput = validatePilotRequestPayload({
+    fullName: 'Arun Prakash — Director',
+    companyName: 'Ambattur Industrial Valves',
+    workEmail: '+91 98400 77889',
+    erpSystem: 'Excel / Google Sheets',
+    consentConfirmed: true,
+  });
+  assert.equal(whatsappInEmailInput.ok, true);
+  assert.equal(whatsappInEmailInput.data?.phoneOrWhatsapp, '+91 98400 77889');
+});
+
+test('Phase 10 Field-Level Focus & Abandonment Telemetry + 4-Stage Scroll Depth: Records focus_*, abandoned_at_*, and 25%/50%/75%/90% scroll events and computes accurate field-abandonment diagnostics', async () => {
+  const fs = await import('fs/promises');
+  const os = await import('os');
+  const path = await import('path');
+  const {
+    recordFunnelAnalyticsEvent,
+    getFunnelAnalyticsDropOffReport,
+  } = await import('../utils/funnelAnalyticsStore');
+
+  const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'operationalyst-p10-telemetry-'));
+  const analyticsFile = path.join(tmpDir, 'funnel_analytics.json');
+
+  try {
+    await recordFunnelAnalyticsEvent({ eventType: 'LANDING_PAGE_VIEW' }, analyticsFile);
+    await recordFunnelAnalyticsEvent({ eventType: 'LANDING_PAGE_VIEW' }, analyticsFile);
+    await recordFunnelAnalyticsEvent({ eventType: 'SCROLL_DEPTH_25_PCT' }, analyticsFile);
+    await recordFunnelAnalyticsEvent({ eventType: 'SCROLL_DEPTH_25_PCT' }, analyticsFile);
+    await recordFunnelAnalyticsEvent({ eventType: 'SCROLL_DEPTH_50_PCT' }, analyticsFile);
+    await recordFunnelAnalyticsEvent({ eventType: 'SCROLL_DEPTH_75_PCT' }, analyticsFile);
+    await recordFunnelAnalyticsEvent({ eventType: 'SCROLL_DEPTH_90_PCT' }, analyticsFile);
+
+    await recordFunnelAnalyticsEvent({ eventType: 'AUDIT_MODAL_OPENED' }, analyticsFile);
+    await recordFunnelAnalyticsEvent({ eventType: 'focus_name_field' }, analyticsFile);
+    await recordFunnelAnalyticsEvent({ eventType: 'focus_company_field' }, analyticsFile);
+    await recordFunnelAnalyticsEvent({ eventType: 'focus_contact_field' }, analyticsFile);
+    await recordFunnelAnalyticsEvent(
+      {
+        eventType: 'abandoned_at_contact_field',
+        metadata: { sourceSection: 'hero_primary', lastFieldTouched: 'contact_field' },
+      },
+      analyticsFile
+    );
+    await recordFunnelAnalyticsEvent(
+      {
+        eventType: 'abandoned_at_contact_field',
+        metadata: { sourceSection: 'sample_audit', lastFieldTouched: 'contact_field' },
+      },
+      analyticsFile
+    );
+    await recordFunnelAnalyticsEvent(
+      {
+        eventType: 'abandoned_at_company_field',
+        metadata: { sourceSection: 'hero_primary', lastFieldTouched: 'company_field' },
+      },
+      analyticsFile
+    );
+
+    const report = await getFunnelAnalyticsDropOffReport(analyticsFile);
+    assert.equal(report.scrollDepthBreakdown.scroll25Count, 2);
+    assert.equal(report.scrollDepthBreakdown.scroll25PctOfViews, 100);
+    assert.equal(report.scrollDepthBreakdown.scroll50Count, 1);
+    assert.equal(report.scrollDepthBreakdown.scroll75Count, 1);
+    assert.equal(report.scrollDepthBreakdown.scroll90Count, 1);
+
+    assert.equal(report.fieldHesitationBreakdown.focusCounts.name_field, 1);
+    assert.equal(report.fieldHesitationBreakdown.focusCounts.company_field, 1);
+    assert.equal(report.fieldHesitationBreakdown.focusCounts.contact_field, 1);
+    assert.equal(report.fieldHesitationBreakdown.abandonmentCounts.contact_field, 2);
+    assert.equal(report.fieldHesitationBreakdown.abandonmentCounts.company_field, 1);
+    assert.equal(report.fieldHesitationBreakdown.abandonmentCounts.totalAbandoned, 3);
+    assert.equal(report.fieldHesitationBreakdown.topAbandonmentField, 'contact_field');
+    assert.ok(
+      report.fieldHesitationBreakdown.diagnosticRecommendation.includes('WhatsApp')
+    );
+  } finally {
+    await fs.rm(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('Phase 10 Founder Quick-Follow-Up Scripts & Express 5-Column Template: Interpolates lead metadata (fullName, companyName, erpSystem) across 15m WhatsApp, 15m Email, and 48h Nudge scripts and builds canonical PRG-4402-SS / BRG-6205-ZZ CSV template', async () => {
+  const {
+    buildFounderFollowUpScripts,
+    buildExpress5ColumnAuditTemplateCsvContent,
+    downloadAuditTemplate,
+  } = await import('../utils/pilotDataKitExporter');
+
+  const scripts = buildFounderFollowUpScripts({
+    leadId: 'PILOT-20261108-ABCD',
+    fullName: 'Senthil Murugan',
+    companyName: 'Murugan Precision Forgings',
+    plantLocation: 'Ambattur SIDCO',
+    erpSystem: 'Tally Prime',
+    uploadPortalUrl: 'https://operationalyst.in/?view=pilot-upload&leadId=PILOT-20261108-ABCD',
+  });
+
+  assert.ok(scripts.whatsapp15MinScript.includes('Senthil Murugan'));
+  assert.ok(scripts.whatsapp15MinScript.includes('Murugan Precision Forgings'));
+  assert.ok(scripts.whatsapp15MinScript.includes('Tally Prime'));
+  assert.ok(scripts.whatsapp15MinScript.includes('Operationalyst_5_Column_Audit_Template.csv'));
+
+  assert.ok(scripts.email15MinBody.includes('Senthil Murugan'));
+  assert.ok(scripts.email15MinBody.includes('Murugan Precision Forgings'));
+  assert.ok(scripts.email15MinBody.includes('Tally Prime'));
+  assert.ok(scripts.email15MinBody.includes('DELCERT-...'));
+
+  assert.ok(scripts.nudge48HourScript.includes('Senthil Murugan'));
+  assert.ok(scripts.nudge48HourScript.includes('Murugan Precision Forgings'));
+  assert.ok(scripts.nudge48HourScript.includes('Top 200 Raw Material or Spares SKUs'));
+
+  const expressCsv = buildExpress5ColumnAuditTemplateCsvContent();
+  assert.ok(
+    expressCsv.includes(
+      'Part_ID,Part_Description,Closing_Stock_Qty,Unit_Cost_INR,Last_Movement_Date'
+    )
+  );
+  assert.ok(
+    expressCsv.includes('PRG-4402-SS,CNC Machined Flange Housing,420,1850,2024-05-14')
+  );
+  assert.ok(
+    expressCsv.includes('BRG-6205-ZZ,Sealed Spindle Bearing Assembly,85,640,2025-01-19')
+  );
+
+  // Verify downloadAuditTemplate works cleanly in Node test environment and returns the CSV string
+  const downloadedCsv = downloadAuditTemplate('unit_test');
+  assert.equal(downloadedCsv, expressCsv);
+});
+
+test('Phase 10 Dedicated /audit Sample Report Route (SampleAuditPage.tsx): Verifies Mode A (12,400-SKU) vs Mode B (20-SKU) toggle, Top Flagged SKUs (PRG-4402-SS, BRG-6205-ZZ, HSG-910-ALU), and auto-template download modal confirmation', async () => {
+  const fs = await import('fs/promises');
+  const path = await import('path');
+
+  const samplePageSrc = await fs.readFile(
+    path.join(process.cwd(), 'src/commercial/SampleAuditPage.tsx'),
+    'utf-8'
+  );
+  const modalSrc = await fs.readFile(
+    path.join(process.cwd(), 'src/commercial/FactoryAuditModal.tsx'),
+    'utf-8'
+  );
+  const appSrc = await fs.readFile(path.join(process.cwd(), 'src/App.tsx'), 'utf-8');
+
+  // Verify /audit and ?view=sample-audit routing in App.tsx
+  assert.ok(appSrc.includes("pathnameLower === '/audit'"));
+  assert.ok(appSrc.includes("explicitParam === 'sample-audit'"));
+
+  // Verify Mode A (12,400-SKU) vs Mode B (20-SKU) and Top Flagged SKUs in SampleAuditPage.tsx
+  assert.ok(samplePageSrc.includes('Mode A: 12,400-SKU Plant Case'));
+  assert.ok(samplePageSrc.includes('Mode B: 20-SKU Sandbox'));
+  assert.ok(samplePageSrc.includes('₹4,82,50,000'));
+  assert.ok(samplePageSrc.includes('₹18,42,000'));
+  assert.ok(samplePageSrc.includes('₹32,60,000'));
+  assert.ok(samplePageSrc.includes('₹6,45,650'));
+  assert.ok(samplePageSrc.includes('₹2,23,110'));
+  assert.ok(samplePageSrc.includes('₹63,600'));
+  assert.ok(samplePageSrc.includes('PRG-4402-SS'));
+  assert.ok(samplePageSrc.includes('BRG-6205-ZZ'));
+  assert.ok(samplePageSrc.includes('HSG-910-ALU'));
+
+  // Verify automatic template download & confirmation screen in FactoryAuditModal.tsx
+  assert.ok(modalSrc.includes("downloadAuditTemplate('audit_modal_auto_download')"));
+  assert.ok(modalSrc.includes('Audit Request Received &amp; Template Downloaded'));
+  assert.ok(modalSrc.includes('Download 5-Column Template Again (.CSV / Excel)'));
+});
+

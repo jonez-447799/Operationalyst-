@@ -49,6 +49,7 @@ import { B2BBehavioralSystem, BehavioralIcebergModal } from './B2BBehavioralSyst
 import { CampaignAssetStudio } from './CampaignAssetStudio';
 import { trackEvent, trackServerFunnelEvent } from '../utils/analytics';
 import {
+  downloadAuditTemplate,
   downloadPilotDataKitCsv,
   downloadPilotDataKitXlsx,
 } from '../utils/pilotDataKitExporter';
@@ -106,11 +107,13 @@ interface CommercialLandingPageProps {
   ) => void;
   onOpenSmartMapper: () => void;
   onOpenAuditPage?: () => void;
+  onOpenSampleAuditPage?: () => void;
   onOpenLeadInbox?: () => void;
 }
 
 export const CommercialLandingPage: React.FC<CommercialLandingPageProps> = ({
   onLaunchEngine,
+  onOpenSampleAuditPage,
   onOpenLeadInbox,
 }) => {
   // Modal states
@@ -206,9 +209,11 @@ export const CommercialLandingPage: React.FC<CommercialLandingPageProps> = ({
   // FAQ Accordion State
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(0);
 
-  // Phase 9: First-Party Server Funnel & Scroll-Depth Tracking (50% and 90% fired at most once per session)
+  // Phase 9 & 10: First-Party Server Funnel & 4-Stage Scroll-Depth Tracking (25%, 50%, 75%, 90%)
   const hasTrackedPageViewRef = useRef<boolean>(false);
+  const hasTrackedScroll25Ref = useRef<boolean>(false);
   const hasTrackedScroll50Ref = useRef<boolean>(false);
+  const hasTrackedScroll75Ref = useRef<boolean>(false);
   const hasTrackedScroll90Ref = useRef<boolean>(false);
 
   useEffect(() => {
@@ -230,9 +235,17 @@ export const CommercialLandingPage: React.FC<CommercialLandingPageProps> = ({
       if (docHeight <= 0) return;
       const scrollPct = (scrollTop / docHeight) * 100;
 
+      if (scrollPct >= 25 && !hasTrackedScroll25Ref.current) {
+        hasTrackedScroll25Ref.current = true;
+        trackServerFunnelEvent('SCROLL_DEPTH_25_PCT', { sourceSection: 'scroll_25_pct' });
+      }
       if (scrollPct >= 50 && !hasTrackedScroll50Ref.current) {
         hasTrackedScroll50Ref.current = true;
         trackServerFunnelEvent('SCROLL_DEPTH_50_PCT', { sourceSection: 'scroll_50_pct' });
+      }
+      if (scrollPct >= 75 && !hasTrackedScroll75Ref.current) {
+        hasTrackedScroll75Ref.current = true;
+        trackServerFunnelEvent('SCROLL_DEPTH_75_PCT', { sourceSection: 'scroll_75_pct' });
       }
       if (scrollPct >= 90 && !hasTrackedScroll90Ref.current) {
         hasTrackedScroll90Ref.current = true;
@@ -415,10 +428,27 @@ export const CommercialLandingPage: React.FC<CommercialLandingPageProps> = ({
             </button>
           </div>
 
-          {/* Microcopy Beneath CTAs */}
-          <p className="text-xs text-slate-400 max-w-xl mx-auto font-mono">
-            Start with an existing inventory export. Audit scope and data requirements are confirmed before analysis.
-          </p>
+          {/* Microcopy & 1-Click Dedicated /audit Sample Report Link Beneath CTAs */}
+          <div className="flex flex-wrap items-center justify-center gap-3 text-xs text-slate-400 max-w-2xl mx-auto font-mono">
+            <span>
+              Start with an existing inventory export. Audit scope and data requirements are confirmed before analysis.
+            </span>
+            <button
+              type="button"
+              data-testid="open-sample-audit-page-btn"
+              onClick={() => {
+                if (onOpenSampleAuditPage) {
+                  onOpenSampleAuditPage();
+                } else {
+                  window.location.href = '?view=sample-audit';
+                }
+              }}
+              className="text-emerald-400 hover:text-emerald-300 underline inline-flex items-center gap-1 cursor-pointer font-bold"
+            >
+              <span>Open Full-Page Sample Report (/audit)</span>
+              <ExternalLink className="w-3 h-3" />
+            </button>
+          </div>
 
           {/* Hero Visual: Simplified Product-Preview Composition */}
           {/* Inventory export → structured analysis → priority review */}
@@ -1068,12 +1098,7 @@ export const CommercialLandingPage: React.FC<CommercialLandingPageProps> = ({
             </button>
             <button
               type="button"
-              onClick={() => {
-                trackServerFunnelEvent('DATA_KIT_DOWNLOADED', {
-                  sourceSection: 'data_trust_csv',
-                });
-                downloadPilotDataKitCsv();
-              }}
+              onClick={() => downloadAuditTemplate('data_trust_csv')}
               className="px-3.5 py-2 rounded-xl bg-slate-950 hover:bg-slate-800 border border-slate-700 text-slate-200 font-semibold text-xs font-mono inline-flex items-center gap-1.5 cursor-pointer transition"
             >
               <Download className="w-3.5 h-3.5 text-sky-400" />

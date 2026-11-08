@@ -85,6 +85,17 @@ export const SampleAuditReportModal: React.FC<SampleAuditReportModalProps> = ({
             </button>
             <button
               type="button"
+              data-testid="sample-modal-open-audit-page-btn"
+              onClick={() => {
+                window.location.href = '/?view=sample-audit';
+              }}
+              className="px-3 py-1.5 rounded-lg bg-slate-950 hover:bg-slate-800 border border-emerald-500/40 text-emerald-300 font-bold text-[11px] inline-flex items-center gap-1.5 cursor-pointer transition"
+            >
+              <ExternalLink className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Open Full-Page Sample Report (/audit)</span>
+            </button>
+            <button
+              type="button"
               data-testid="sample-modal-open-walkthrough-btn"
               onClick={handleLaunchWalkthrough}
               className="px-3 py-1.5 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-300 font-bold text-[11px] inline-flex items-center gap-1.5 cursor-pointer transition"

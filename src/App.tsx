@@ -38,6 +38,7 @@ import { MultiDeviceSyncModal, SYNC_KEYS } from './components/MultiDeviceSyncMod
 import { MasterExecutiveDashboard } from './components/MasterExecutiveDashboard';
 import { CommercialLandingPage } from './commercial/CommercialLandingPage';
 import { FactoryAuditPage } from './commercial/FactoryAuditPage';
+import { SampleAuditPage } from './commercial/SampleAuditPage';
 import { AdToDemoFunnelModal } from './commercial/AdToDemoFunnelModal';
 import { FounderLeadInbox } from './commercial/FounderLeadInbox';
 import { PilotFindingsWalkthroughView } from './commercial/PilotFindingsWalkthroughView';
@@ -49,6 +50,7 @@ import { usePlant, PlantId, PeriodId } from './context/PlantContext';
 type ArchitectureVersion =
   | 'commercial_home'
   | 'factory_audit'
+  | 'sample_audit'
   | 'ad_funnel'
   | 'lead_inbox'
   | 'pilot_findings'
@@ -83,12 +85,24 @@ function parseRequestedArchitecture(): ArchitectureVersion | null {
       searchParams.get('page')
     )?.toLowerCase();
 
-    // Check for /platform in pathname or explicit platform query parameter
-    if (window.location.pathname.toLowerCase().includes('/platform')) {
+    const pathnameLower = window.location.pathname.toLowerCase();
+    // Check for /platform or /audit in pathname
+    if (pathnameLower.includes('/platform')) {
       return 'ceo_master';
+    }
+    if (pathnameLower === '/audit' || pathnameLower.endsWith('/audit')) {
+      return 'sample_audit';
     }
 
     if (explicitParam) {
+      if (
+        explicitParam === 'sample-audit' ||
+        explicitParam === 'sample_audit' ||
+        explicitParam === 'sample-report' ||
+        explicitParam === 'sample_report'
+      ) {
+        return 'sample_audit';
+      }
       if (
         explicitParam === 'pilot-upload' ||
         explicitParam === 'pilot_upload' ||
@@ -430,6 +444,30 @@ export default function App() {
     );
   }
 
+  if (versionMode === 'sample_audit') {
+    return (
+      <div className="min-h-screen bg-slate-950 text-slate-100">
+        <SampleAuditPage
+          onBackToHome={() => {
+            try {
+              window.history.pushState({}, '', '/');
+            } catch {}
+            setVersionMode('commercial_home');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
+          onOpenPlatform={() => {
+            setVersionMode('ceo_master');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
+          onOpenLeadInbox={() => {
+            setVersionMode('lead_inbox');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
+        />
+      </div>
+    );
+  }
+
   if (versionMode === 'commercial_home') {
     return (
       <div className="min-h-screen bg-slate-950 text-slate-100 selection:bg-amber-500/20 selection:text-amber-200">
@@ -441,6 +479,13 @@ export default function App() {
           onOpenSmartMapper={() => openMapperForEngine()}
           onOpenAuditPage={() => {
             setVersionMode('factory_audit');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
+          onOpenSampleAuditPage={() => {
+            try {
+              window.history.pushState({}, '', '?view=sample-audit');
+            } catch {}
+            setVersionMode('sample_audit');
             window.scrollTo({ top: 0, behavior: 'smooth' });
           }}
           onOpenLeadInbox={() => {

@@ -32,9 +32,11 @@ import {
 } from '../utils/leadValidation';
 import { toSafeCsvCell } from '../utils/importValidation';
 import {
+  downloadAuditTemplate,
   downloadPilotDataKitCsv,
   downloadPilotDataKitXlsx,
   buildStep2SuitabilityReplyTemplate,
+  buildFounderFollowUpScripts,
 } from '../utils/pilotDataKitExporter';
 import { PilotWorkspaceSnapshot } from '../utils/pilotWorkspaceStore';
 import { StockItem, RulesConfig } from '../project1/types';
@@ -183,9 +185,21 @@ export const FounderLeadInbox: React.FC<FounderLeadInboxProps> = ({
   const [sweepingExpired, setSweepingExpired] = useState<boolean>(false);
   const [purgeNotice, setPurgeNotice] = useState<string | null>(null);
 
-  // Phase 9: First-Party Server Conversion Funnel & Drop-Off Report State
+  // Phase 9 & 10: First-Party Server Conversion Funnel, Scroll Depth & Field Hesitation State
   const [funnelReport, setFunnelReport] = useState<FunnelDropOffReport | null>(null);
   const [resettingFunnel, setResettingFunnel] = useState<boolean>(false);
+  const [openScriptDrawerLeadId, setOpenScriptDrawerLeadId] = useState<string | null>(null);
+  const [copiedScriptKey, setCopiedScriptKey] = useState<string | null>(null);
+
+  const handleCopyFollowUpScript = async (scriptKey: string, text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedScriptKey(scriptKey);
+      setTimeout(() => {
+        setCopiedScriptKey((prev) => (prev === scriptKey ? null : prev));
+      }, 2500);
+    } catch {}
+  };
 
   const buildWalkthroughUrl = (workspaceId: string, shareToken: string): string => {
     const origin = typeof window !== 'undefined' ? window.location.origin : '';
@@ -945,6 +959,119 @@ export const FounderLeadInbox: React.FC<FounderLeadInboxProps> = ({
                     >
                       {funnelReport.rates.overallVisitorToLeadConversionPct}%
                     </span>
+                  </div>
+                </div>
+
+                {/* Phase 10: 4-Stage Scroll Depth & Field-Level Hesitation / Abandonment Breakdown */}
+                <div
+                  data-testid="founder-field-hesitation-breakdown"
+                  className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-3 font-mono text-[11px]"
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-2">
+                    <span className="text-amber-300 font-bold uppercase">
+                      Phase 10 · 4-Stage Scroll Depth &amp; Field-Level Modal Hesitation Telemetry (`focus_*` / `abandoned_at_*`)
+                    </span>
+                    <span className="text-slate-400">
+                      Total Modal Abandonments:{' '}
+                      <strong className="text-rose-300">
+                        {funnelReport.fieldHesitationBreakdown?.abandonmentCounts.totalAbandoned ?? 0}
+                      </strong>
+                    </span>
+                  </div>
+
+                  {/* 4-Stage Scroll Depth Bar */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    <div className="p-2 rounded bg-slate-900 border border-slate-800">
+                      <span className="text-[10px] text-slate-400 block">25% Scroll Depth</span>
+                      <span className="font-bold text-white">
+                        {funnelReport.scrollDepthBreakdown?.scroll25Count ?? 0}{' '}
+                        <span className="text-slate-400 text-[10px]">
+                          ({funnelReport.scrollDepthBreakdown?.scroll25PctOfViews ?? 0}%)
+                        </span>
+                      </span>
+                    </div>
+                    <div className="p-2 rounded bg-slate-900 border border-slate-800">
+                      <span className="text-[10px] text-slate-400 block">50% Scroll Depth</span>
+                      <span className="font-bold text-white">
+                        {funnelReport.scrollDepthBreakdown?.scroll50Count ?? 0}{' '}
+                        <span className="text-slate-400 text-[10px]">
+                          ({funnelReport.scrollDepthBreakdown?.scroll50PctOfViews ?? 0}%)
+                        </span>
+                      </span>
+                    </div>
+                    <div className="p-2 rounded bg-slate-900 border border-slate-800">
+                      <span className="text-[10px] text-slate-400 block">75% Scroll Depth</span>
+                      <span className="font-bold text-white">
+                        {funnelReport.scrollDepthBreakdown?.scroll75Count ?? 0}{' '}
+                        <span className="text-slate-400 text-[10px]">
+                          ({funnelReport.scrollDepthBreakdown?.scroll75PctOfViews ?? 0}%)
+                        </span>
+                      </span>
+                    </div>
+                    <div className="p-2 rounded bg-slate-900 border border-slate-800">
+                      <span className="text-[10px] text-slate-400 block">90% Scroll Depth</span>
+                      <span className="font-bold text-white">
+                        {funnelReport.scrollDepthBreakdown?.scroll90Count ?? 0}{' '}
+                        <span className="text-slate-400 text-[10px]">
+                          ({funnelReport.scrollDepthBreakdown?.scroll90PctOfViews ?? 0}%)
+                        </span>
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Field Focus vs Abandonment Grid */}
+                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                    <div className="p-2 rounded bg-slate-900 border border-slate-800">
+                      <span className="text-[10px] text-slate-400 block">No Field Touched</span>
+                      <span className="text-rose-300 font-bold">
+                        Abandoned: {funnelReport.fieldHesitationBreakdown?.abandonmentCounts.none ?? 0}
+                      </span>
+                    </div>
+                    <div className="p-2 rounded bg-slate-900 border border-slate-800">
+                      <span className="text-[10px] text-slate-400 block">1. Name &amp; Role</span>
+                      <span className="text-sky-300">
+                        Focus: {funnelReport.fieldHesitationBreakdown?.focusCounts.name_field ?? 0}
+                      </span>{' '}
+                      ·{' '}
+                      <span className="text-rose-300 font-bold">
+                        Drop: {funnelReport.fieldHesitationBreakdown?.abandonmentCounts.name_field ?? 0}
+                      </span>
+                    </div>
+                    <div className="p-2 rounded bg-slate-900 border border-slate-800">
+                      <span className="text-[10px] text-slate-400 block">2. Company Name</span>
+                      <span className="text-sky-300">
+                        Focus: {funnelReport.fieldHesitationBreakdown?.focusCounts.company_field ?? 0}
+                      </span>{' '}
+                      ·{' '}
+                      <span className="text-rose-300 font-bold">
+                        Drop: {funnelReport.fieldHesitationBreakdown?.abandonmentCounts.company_field ?? 0}
+                      </span>
+                    </div>
+                    <div className="p-2 rounded bg-slate-900 border border-slate-800">
+                      <span className="text-[10px] text-slate-400 block">3. Email / WhatsApp</span>
+                      <span className="text-sky-300">
+                        Focus: {funnelReport.fieldHesitationBreakdown?.focusCounts.contact_field ?? 0}
+                      </span>{' '}
+                      ·{' '}
+                      <span className="text-rose-300 font-bold">
+                        Drop: {funnelReport.fieldHesitationBreakdown?.abandonmentCounts.contact_field ?? 0}
+                      </span>
+                    </div>
+                    <div className="p-2 rounded bg-slate-900 border border-slate-800">
+                      <span className="text-[10px] text-slate-400 block">4. ERP System</span>
+                      <span className="text-sky-300">
+                        Focus: {funnelReport.fieldHesitationBreakdown?.focusCounts.erp_field ?? 0}
+                      </span>{' '}
+                      ·{' '}
+                      <span className="text-rose-300 font-bold">
+                        Drop: {funnelReport.fieldHesitationBreakdown?.abandonmentCounts.erp_field ?? 0}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="text-[11px] text-emerald-300 font-sans">
+                    <strong>Diagnostic Insight:</strong>{' '}
+                    {funnelReport.fieldHesitationBreakdown?.diagnosticRecommendation}
                   </div>
                 </div>
               </section>
@@ -1841,7 +1968,7 @@ export const FounderLeadInbox: React.FC<FounderLeadInboxProps> = ({
                                   )}
                                 </div>
                               </div>
-                              <div className="pt-1">
+                              <div className="pt-1 flex flex-wrap items-center gap-1.5">
                                 <button
                                   type="button"
                                   onClick={() => handleCopyStep2Reply(lead)}
@@ -1854,7 +1981,106 @@ export const FounderLeadInbox: React.FC<FounderLeadInboxProps> = ({
                                       : 'Copy Step 2 Data Guide Reply'}
                                   </span>
                                 </button>
+                                <button
+                                  type="button"
+                                  data-testid={`toggle-followup-scripts-${lead.leadId}`}
+                                  onClick={() =>
+                                    setOpenScriptDrawerLeadId((prev) =>
+                                      prev === lead.leadId ? null : lead.leadId
+                                    )
+                                  }
+                                  className="px-2.5 py-1 rounded bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/40 text-emerald-300 font-mono font-bold text-[10px] inline-flex items-center gap-1 cursor-pointer"
+                                >
+                                  <Sparkles className="w-3 h-3" />
+                                  <span>
+                                    {openScriptDrawerLeadId === lead.leadId
+                                      ? 'Hide Quick-Follow-Up Scripts'
+                                      : 'Founder Quick-Follow-Up Scripts (WhatsApp / Email / 48h Nudge)'}
+                                  </span>
+                                </button>
                               </div>
+
+                              {openScriptDrawerLeadId === lead.leadId &&
+                                (() => {
+                                  const scripts = buildFounderFollowUpScripts({
+                                    leadId: lead.leadId,
+                                    fullName: lead.fullName,
+                                    companyName: lead.companyName,
+                                    plantLocation: lead.plantLocation,
+                                    erpSystem: lead.erpSystem || 'Tally / SAP / Excel',
+                                    uploadPortalUrl: buildUploadPortalFullUrl(lead),
+                                  });
+                                  return (
+                                    <div
+                                      data-testid={`founder-followup-scripts-drawer-${lead.leadId}`}
+                                      className="mt-2 p-3 rounded-xl bg-slate-950 border border-emerald-500/40 space-y-2.5 text-[11px]"
+                                    >
+                                      <div className="font-mono font-bold text-emerald-300 uppercase text-[10px]">
+                                        1-Click Pre-Filled Follow-Up Scripts ({lead.fullName} ·{' '}
+                                        {lead.companyName} · {lead.erpSystem || 'Tally / SAP / Excel'})
+                                      </div>
+                                      <div className="flex flex-wrap gap-1.5 font-mono">
+                                        <button
+                                          type="button"
+                                          data-testid={`copy-whatsapp-15m-${lead.leadId}`}
+                                          onClick={() =>
+                                            handleCopyFollowUpScript(
+                                              `wa-${lead.leadId}`,
+                                              scripts.whatsapp15MinScript
+                                            )
+                                          }
+                                          className="px-2.5 py-1 rounded bg-emerald-500 text-slate-950 font-bold text-[10px] inline-flex items-center gap-1 cursor-pointer"
+                                        >
+                                          <Copy className="w-2.5 h-2.5" />
+                                          <span>
+                                            {copiedScriptKey === `wa-${lead.leadId}`
+                                              ? 'Copied 15m WhatsApp!'
+                                              : 'Copy 15-Min WhatsApp Reply'}
+                                          </span>
+                                        </button>
+                                        <button
+                                          type="button"
+                                          data-testid={`copy-email-15m-${lead.leadId}`}
+                                          onClick={() =>
+                                            handleCopyFollowUpScript(
+                                              `em-${lead.leadId}`,
+                                              scripts.email15MinBody
+                                            )
+                                          }
+                                          className="px-2.5 py-1 rounded bg-sky-500/20 border border-sky-500/40 text-sky-300 font-bold text-[10px] inline-flex items-center gap-1 cursor-pointer"
+                                        >
+                                          <Copy className="w-2.5 h-2.5" />
+                                          <span>
+                                            {copiedScriptKey === `em-${lead.leadId}`
+                                              ? 'Copied 15m Email!'
+                                              : 'Copy 15-Min Email Script'}
+                                          </span>
+                                        </button>
+                                        <button
+                                          type="button"
+                                          data-testid={`copy-nudge-48h-${lead.leadId}`}
+                                          onClick={() =>
+                                            handleCopyFollowUpScript(
+                                              `nd-${lead.leadId}`,
+                                              scripts.nudge48HourScript
+                                            )
+                                          }
+                                          className="px-2.5 py-1 rounded bg-amber-500/20 border border-amber-500/40 text-amber-300 font-bold text-[10px] inline-flex items-center gap-1 cursor-pointer"
+                                        >
+                                          <Copy className="w-2.5 h-2.5" />
+                                          <span>
+                                            {copiedScriptKey === `nd-${lead.leadId}`
+                                              ? 'Copied 48h Nudge!'
+                                              : 'Copy 48-Hour Nudge Script'}
+                                          </span>
+                                        </button>
+                                      </div>
+                                      <pre className="p-2 rounded bg-slate-900 border border-slate-800 text-[10px] text-slate-300 whitespace-pre-wrap font-mono max-h-36 overflow-y-auto">
+                                        {scripts.whatsapp15MinScript}
+                                      </pre>
+                                    </div>
+                                  );
+                                })()}
                             </td>
 
                             {/* ERP, SKUs, Qualification & Challenge */}

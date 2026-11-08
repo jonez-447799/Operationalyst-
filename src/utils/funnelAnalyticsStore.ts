@@ -13,21 +13,40 @@ import crypto from 'crypto';
 
 export const ALLOWED_FUNNEL_EVENT_TYPES = [
   'LANDING_PAGE_VIEW',
+  'SCROLL_DEPTH_25_PCT',
   'SCROLL_DEPTH_50_PCT',
+  'SCROLL_DEPTH_75_PCT',
   'SCROLL_DEPTH_90_PCT',
   'SAMPLE_REPORT_CLICKED',
   'SELF_ASSESSMENT_COMPLETED',
   'AUDIT_MODAL_OPENED',
   'DATA_KIT_DOWNLOADED',
   'PILOT_AUDIT_SUBMITTED',
+  'focus_name_field',
+  'focus_company_field',
+  'focus_contact_field',
+  'focus_erp_field',
+  'abandoned_at_none',
+  'abandoned_at_name_field',
+  'abandoned_at_company_field',
+  'abandoned_at_contact_field',
+  'abandoned_at_erp_field',
 ] as const;
 
 export type FunnelEventType = (typeof ALLOWED_FUNNEL_EVENT_TYPES)[number];
+
+export type ModalFieldTouchedId =
+  | 'none'
+  | 'name_field'
+  | 'company_field'
+  | 'contact_field'
+  | 'erp_field';
 
 export interface FunnelEventMetadata {
   sourceSection?: string;
   buyerPersona?: string;
   sessionId?: string;
+  lastFieldTouched?: ModalFieldTouchedId;
 }
 
 export interface FunnelAnalyticsEventRecord {
@@ -52,6 +71,36 @@ export interface FunnelStageBreakdown {
   conversionFromTopPct: number;
 }
 
+export interface ScrollDepthMilestoneBreakdown {
+  scroll25Count: number;
+  scroll50Count: number;
+  scroll75Count: number;
+  scroll90Count: number;
+  scroll25PctOfViews: number;
+  scroll50PctOfViews: number;
+  scroll75PctOfViews: number;
+  scroll90PctOfViews: number;
+}
+
+export interface FieldHesitationBreakdown {
+  focusCounts: {
+    name_field: number;
+    company_field: number;
+    contact_field: number;
+    erp_field: number;
+  };
+  abandonmentCounts: {
+    none: number;
+    name_field: number;
+    company_field: number;
+    contact_field: number;
+    erp_field: number;
+    totalAbandoned: number;
+  };
+  topAbandonmentField: ModalFieldTouchedId;
+  diagnosticRecommendation: string;
+}
+
 export interface FunnelDropOffReport {
   totalEventsRecorded: number;
   lastEventAt: string | null;
@@ -68,6 +117,8 @@ export interface FunnelDropOffReport {
   };
   stages: FunnelStageBreakdown[];
   primaryBottleneckStage: string;
+  scrollDepthBreakdown: ScrollDepthMilestoneBreakdown;
+  fieldHesitationBreakdown: FieldHesitationBreakdown;
 }
 
 export const DEFAULT_FUNNEL_ANALYTICS_FILE_PATH = path.resolve(
@@ -129,11 +180,24 @@ export function validateFunnelEventPayload(raw: unknown): {
     const sourceSection = sanitizeShortString(rawMeta.sourceSection, 80);
     const buyerPersona = sanitizeShortString(rawMeta.buyerPersona, 60);
     const sessionId = sanitizeShortString(rawMeta.sessionId, 64);
-    if (sourceSection || buyerPersona || sessionId) {
+    const rawLastField = sanitizeShortString(rawMeta.lastFieldTouched, 40);
+    const validFields: ModalFieldTouchedId[] = [
+      'none',
+      'name_field',
+      'company_field',
+      'contact_field',
+      'erp_field',
+    ];
+    const lastFieldTouched = validFields.includes(rawLastField as ModalFieldTouchedId)
+      ? (rawLastField as ModalFieldTouchedId)
+      : undefined;
+
+    if (sourceSection || buyerPersona || sessionId || lastFieldTouched) {
       metadata = {
         ...(sourceSection ? { sourceSection } : {}),
         ...(buyerPersona ? { buyerPersona } : {}),
         ...(sessionId ? { sessionId } : {}),
+        ...(lastFieldTouched ? { lastFieldTouched } : {}),
       };
     }
   }
@@ -154,20 +218,32 @@ function roundPct(value: number): number {
 }
 
 /**
- * Pure deterministic calculation of B2B funnel conversion & drop-off metrics.
+ * Pure deterministic calculation of B2B funnel conversion, 4-stage scroll depth,
+ * and modal field-level hesitation & abandonment metrics.
  */
 export function computeFunnelDropOffReport(
   events: FunnelAnalyticsEventRecord[]
 ): FunnelDropOffReport {
   const counts: Record<FunnelEventType, number> = {
     LANDING_PAGE_VIEW: 0,
+    SCROLL_DEPTH_25_PCT: 0,
     SCROLL_DEPTH_50_PCT: 0,
+    SCROLL_DEPTH_75_PCT: 0,
     SCROLL_DEPTH_90_PCT: 0,
     SAMPLE_REPORT_CLICKED: 0,
     SELF_ASSESSMENT_COMPLETED: 0,
     AUDIT_MODAL_OPENED: 0,
     DATA_KIT_DOWNLOADED: 0,
     PILOT_AUDIT_SUBMITTED: 0,
+    focus_name_field: 0,
+    focus_company_field: 0,
+    focus_contact_field: 0,
+    focus_erp_field: 0,
+    abandoned_at_none: 0,
+    abandoned_at_name_field: 0,
+    abandoned_at_company_field: 0,
+    abandoned_at_contact_field: 0,
+    abandoned_at_erp_field: 0,
   };
 
   let lastEventAt: string | null = null;
@@ -182,7 +258,10 @@ export function computeFunnelDropOffReport(
   }
 
   const views = counts.LANDING_PAGE_VIEW;
+  const scroll25 = counts.SCROLL_DEPTH_25_PCT;
   const scroll50 = counts.SCROLL_DEPTH_50_PCT;
+  const scroll75 = counts.SCROLL_DEPTH_75_PCT;
+  const scroll90 = counts.SCROLL_DEPTH_90_PCT;
   const sampleClicks = counts.SAMPLE_REPORT_CLICKED;
   const modalOpens = counts.AUDIT_MODAL_OPENED;
   const submissions = counts.PILOT_AUDIT_SUBMITTED;
@@ -270,6 +349,81 @@ export function computeFunnelDropOffReport(
     primaryBottleneckStage = `${maxDropStage.label} (${maxDropStage.dropOffFromPreviousPct}% drop-off)`;
   }
 
+  const scrollDepthBreakdown: ScrollDepthMilestoneBreakdown = {
+    scroll25Count: scroll25,
+    scroll50Count: scroll50,
+    scroll75Count: scroll75,
+    scroll90Count: scroll90,
+    scroll25PctOfViews: views > 0 ? roundPct((scroll25 / views) * 100) : 0,
+    scroll50PctOfViews: views > 0 ? roundPct((scroll50 / views) * 100) : 0,
+    scroll75PctOfViews: views > 0 ? roundPct((scroll75 / views) * 100) : 0,
+    scroll90PctOfViews: views > 0 ? roundPct((scroll90 / views) * 100) : 0,
+  };
+
+  const abandonmentCounts = {
+    none: counts.abandoned_at_none,
+    name_field: counts.abandoned_at_name_field,
+    company_field: counts.abandoned_at_company_field,
+    contact_field: counts.abandoned_at_contact_field,
+    erp_field: counts.abandoned_at_erp_field,
+    totalAbandoned:
+      counts.abandoned_at_none +
+      counts.abandoned_at_name_field +
+      counts.abandoned_at_company_field +
+      counts.abandoned_at_contact_field +
+      counts.abandoned_at_erp_field,
+  };
+
+  const fieldCandidates: Array<{ field: ModalFieldTouchedId; count: number }> = [
+    { field: 'none', count: abandonmentCounts.none },
+    { field: 'name_field', count: abandonmentCounts.name_field },
+    { field: 'company_field', count: abandonmentCounts.company_field },
+    { field: 'contact_field', count: abandonmentCounts.contact_field },
+    { field: 'erp_field', count: abandonmentCounts.erp_field },
+  ];
+
+  let topAbandonmentField: ModalFieldTouchedId = 'none';
+  let maxAbandoned = 0;
+  for (const cand of fieldCandidates) {
+    if (cand.count > maxAbandoned) {
+      maxAbandoned = cand.count;
+      topAbandonmentField = cand.field;
+    }
+  }
+
+  let diagnosticRecommendation =
+    'No modal abandonment recorded yet — 4-Field Express Modal is operating cleanly.';
+  if (abandonmentCounts.totalAbandoned > 0) {
+    if (topAbandonmentField === 'contact_field') {
+      diagnosticRecommendation =
+        'Highest hesitation at Work Email / WhatsApp field — emphasize WhatsApp-friendly option and zero sales spam guarantee.';
+    } else if (topAbandonmentField === 'company_field') {
+      diagnosticRecommendation =
+        'Highest hesitation at Company / Plant Name field — highlight Plain-English Privacy Guarantee and part-number anonymization.';
+    } else if (topAbandonmentField === 'erp_field') {
+      diagnosticRecommendation =
+        'Highest hesitation at ERP System selector — clarify that plain Excel / CSV stock sheets are 100% supported.';
+    } else if (topAbandonmentField === 'name_field') {
+      diagnosticRecommendation =
+        'Hesitation on initial Name & Role field — visitors are inspecting the modal before committing.';
+    } else {
+      diagnosticRecommendation =
+        'Visitors opened the modal to inspect the privacy guarantee without touching a field — automatic 5-column CSV download reduces friction.';
+    }
+  }
+
+  const fieldHesitationBreakdown: FieldHesitationBreakdown = {
+    focusCounts: {
+      name_field: counts.focus_name_field,
+      company_field: counts.focus_company_field,
+      contact_field: counts.focus_contact_field,
+      erp_field: counts.focus_erp_field,
+    },
+    abandonmentCounts,
+    topAbandonmentField,
+    diagnosticRecommendation,
+  };
+
   return {
     totalEventsRecorded: events.length,
     lastEventAt,
@@ -286,6 +440,8 @@ export function computeFunnelDropOffReport(
     },
     stages,
     primaryBottleneckStage,
+    scrollDepthBreakdown,
+    fieldHesitationBreakdown,
   };
 }
 

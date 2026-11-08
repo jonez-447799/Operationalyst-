@@ -9,6 +9,7 @@ import {
   toSafeCsvCell,
   QuarantinedRowRecord,
 } from './importValidation.ts';
+import { trackServerFunnelEvent } from './analytics.ts';
 
 export const PILOT_DATA_KIT_COLUMNS = [
   'Part_ID',
@@ -452,6 +453,122 @@ export function buildStep2SuitabilityReplyTemplate(params: {
   ].join('\n');
 }
 
+export interface FounderFollowUpScripts {
+  whatsapp15MinScript: string;
+  email15MinSubject: string;
+  email15MinBody: string;
+  nudge48HourScript: string;
+}
+
+/**
+ * Phase 10: Generates pre-filled 15-minute WhatsApp, 15-minute Email, and 48-hour Nudge scripts
+ * interpolating the lead's Name, Company Name, and ERP system (Tally / SAP / Excel).
+ */
+export function buildFounderFollowUpScripts(params: {
+  leadId?: string;
+  fullName?: string;
+  companyName?: string;
+  plantLocation?: string;
+  erpSystem?: string;
+  uploadPortalUrl?: string;
+}): FounderFollowUpScripts {
+  const name = params.fullName?.trim() || 'Team';
+  const company = params.companyName?.trim() || 'your plant';
+  const erp = params.erpSystem?.trim() || 'Tally / SAP / Excel';
+  const leadRef = params.leadId?.trim() || 'PILOT-AUDIT';
+  const portalLine = params.uploadPortalUrl?.trim()
+    ? `\nSecure Step-2 Upload Link: ${params.uploadPortalUrl.trim()}`
+    : '';
+
+  const whatsapp15MinScript = [
+    `Hi ${name}, this is C. Jones Snowin (Founder, Operationalyst).`,
+    `Saw your 48-Hour Pilot Audit request for ${company} (${leadRef}).`,
+    `The 5-column template (Operationalyst_5_Column_Audit_Template.csv) has been downloaded to your system. Whenever your stores team pulls the ${erp} stock summary (Part_ID, Part_Description, Closing_Stock_Qty, Unit_Cost_INR, Last_Movement_Date), you can strip vendor/customer names and reply here or upload directly.${portalLine}`,
+    `I will personally turn around your ranked non-moving SKU & carrying-cost report within 48 hours.`,
+  ].join('\n\n');
+
+  const email15MinSubject = `48-Hour Inventory Audit Intake (${leadRef}) — ${company} [${erp}]`;
+
+  const email15MinBody = [
+    `Subject: ${email15MinSubject}`,
+    ``,
+    `Hi ${name},`,
+    ``,
+    `Thank you for requesting the 48-Hour Factory Inventory Audit for ${company} (Ref: ${leadRef}).`,
+    ``,
+    `Your 5-column template (Operationalyst_5_Column_Audit_Template.csv) is ready. To run your diagnostic from ${erp}, we only need 5 columns:`,
+    `• Part_ID (SKU or item code)`,
+    `• Part_Description (Vendor and customer names stripped)`,
+    `• Closing_Stock_Qty`,
+    `• Unit_Cost_INR`,
+    `• Last_Movement_Date`,
+    portalLine,
+    `Reply to this email with your ${erp} export (.CSV or .XLSX) or upload via the link above. Your data is reviewed strictly by me and purged within 14 days with a cryptographic Deletion Certificate (DELCERT-...).`,
+    ``,
+    `Best regards,`,
+    `C. Jones Snowin`,
+    `Founder, Operationalyst`,
+    `Direct Founder Desk: joneszz2004@gmail.com`,
+  ].join('\n');
+
+  const nudge48HourScript = [
+    `Hi ${name}, quick follow-up from C. Jones Snowin regarding the ${company} inventory audit.`,
+    `If exporting the full plant ledger from ${erp} takes time, you can start by sending just a single category (e.g., Top 200 Raw Material or Spares SKUs).`,
+    `Even a partial 5-column ${erp} export is enough to isolate your top non-moving SKUs and annual carrying-cost burn in 48 hours.${portalLine}`,
+  ].join('\n\n');
+
+  return {
+    whatsapp15MinScript,
+    email15MinSubject,
+    email15MinBody,
+    nudge48HourScript,
+  };
+}
+
+/**
+ * Phase 10: Builds the Express 5-Column CSV Template containing the 5 canonical headers
+ * and the two canonical floor sample rows (PRG-4402-SS and BRG-6205-ZZ).
+ */
+export function buildExpress5ColumnAuditTemplateCsvContent(): string {
+  const lines = [
+    'Part_ID,Part_Description,Closing_Stock_Qty,Unit_Cost_INR,Last_Movement_Date',
+    'PRG-4402-SS,CNC Machined Flange Housing,420,1850,2024-05-14',
+    'BRG-6205-ZZ,Sealed Spindle Bearing Assembly,85,640,2025-01-19',
+  ];
+  return lines.join('\n') + '\n';
+}
+
+/**
+ * Phase 10: Reusable helper that generates and downloads Operationalyst_5_Column_Audit_Template.csv
+ * containing the 5 canonical headers and 2 sample rows (PRG-4402-SS and BRG-6205-ZZ),
+ * and logs 'DATA_KIT_DOWNLOADED' to /api/analytics/event.
+ */
+export function downloadAuditTemplate(
+  sourceSection: string = 'audit_template_download',
+  filename: string = 'Operationalyst_5_Column_Audit_Template.csv'
+): string {
+  const csvContent = buildExpress5ColumnAuditTemplateCsvContent();
+  try {
+    trackServerFunnelEvent('DATA_KIT_DOWNLOADED', { sourceSection });
+  } catch {
+    // Ignore telemetry error in offline/test contexts
+  }
+
+  if (typeof document !== 'undefined' && typeof Blob !== 'undefined') {
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', filename);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }
+
+  return csvContent;
+}
+
 /**
  * Triggers a browser download of the 5-Column Blank/Sample CSV Template.
  */
@@ -459,15 +576,17 @@ export function downloadPilotDataKitCsv(
   filename: string = 'Operationalyst_5_Column_Audit_Template.csv'
 ): void {
   const csv = buildPilotDataKitCsvContent();
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.setAttribute('download', filename);
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
+  if (typeof document !== 'undefined' && typeof Blob !== 'undefined') {
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', filename);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }
 }
 
 /**

@@ -168,12 +168,55 @@ export function validatePilotRequestPayload(raw: unknown): PilotRequestValidatio
     fieldErrors.fullName = 'Full name is required (2–120 characters).';
   }
 
-  const workEmail = sanitizeText(body.workEmail).toLowerCase();
+  // Phase 10 Express 4-Field Contact Resolution:
+  // Accepts unified `contact` / `workEmailOrWhatsapp` field OR single `workEmail` / `phoneOrWhatsapp` field
+  const rawContact = sanitizeText(body.contact ?? body.workEmailOrWhatsapp);
+  let rawWorkEmail = sanitizeText(body.workEmail).toLowerCase();
+  let rawPhone = sanitizeText(body.phoneOrWhatsapp);
+
+  // If unified contact is provided, or if workEmail was given a phone number in Express Mode
+  if (rawContact.length > 0) {
+    if (EMAIL_REGEX.test(rawContact.toLowerCase())) {
+      rawWorkEmail = rawWorkEmail || rawContact.toLowerCase();
+      rawPhone = rawPhone || 'Express Email Intake';
+    } else if (rawContact.length >= 7 && rawContact.length <= 25 && !rawContact.includes('@')) {
+      rawPhone = rawPhone || rawContact;
+      rawWorkEmail = rawWorkEmail || 'whatsapp-express@operationalyst.in';
+    } else {
+      fieldErrors.workEmail = 'Please provide a valid work email or WhatsApp number.';
+    }
+  } else if (
+    rawWorkEmail.length >= 7 &&
+    rawWorkEmail.length <= 25 &&
+    !rawWorkEmail.includes('@') &&
+    /[0-9]{7,}/.test(rawWorkEmail.replace(/[\s+\-()]/g, '')) &&
+    body.phoneOrWhatsapp === undefined
+  ) {
+    // Express contact field passed via workEmail containing a phone/WhatsApp number
+    rawPhone = rawWorkEmail;
+    rawWorkEmail = 'whatsapp-express@operationalyst.in';
+  } else if (
+    rawWorkEmail &&
+    EMAIL_REGEX.test(rawWorkEmail) &&
+    body.phoneOrWhatsapp === undefined
+  ) {
+    // Express contact field passed via workEmail containing a valid email address
+    rawPhone = 'Express Email Intake';
+  } else if (
+    rawPhone.length >= 7 &&
+    rawPhone.length <= 25 &&
+    body.workEmail === undefined
+  ) {
+    // Express contact field passed via phoneOrWhatsapp only
+    rawWorkEmail = 'whatsapp-express@operationalyst.in';
+  }
+
+  const workEmail = rawWorkEmail;
   if (!workEmail || workEmail.length > 160 || !EMAIL_REGEX.test(workEmail)) {
     fieldErrors.workEmail = 'A valid work email address is required (max 160 characters).';
   }
 
-  const phoneOrWhatsapp = sanitizeText(body.phoneOrWhatsapp);
+  const phoneOrWhatsapp = rawPhone;
   if (!phoneOrWhatsapp || phoneOrWhatsapp.length < 7 || phoneOrWhatsapp.length > 25) {
     fieldErrors.phoneOrWhatsapp = 'Phone or WhatsApp number is required (7–25 characters).';
   }
@@ -183,12 +226,21 @@ export function validatePilotRequestPayload(raw: unknown): PilotRequestValidatio
     fieldErrors.companyName = 'Company or factory name is required (2–160 characters).';
   }
 
-  const plantLocation = sanitizeText(body.plantLocation);
+  // In Express 4-Field mode, plantLocation and roleTitle may be omitted (undefined)
+  const rawPlantLocation =
+    body.plantLocation === undefined && companyName.length >= 2
+      ? 'Manufacturing Unit (Express Intake)'
+      : sanitizeText(body.plantLocation);
+  const plantLocation = rawPlantLocation;
   if (!plantLocation || plantLocation.length < 2 || plantLocation.length > 160) {
     fieldErrors.plantLocation = 'Plant location (City / Industrial Estate) is required (2–160 characters).';
   }
 
-  const roleTitle = sanitizeText(body.roleTitle);
+  const rawRoleTitle =
+    body.roleTitle === undefined && fullName.length >= 2
+      ? 'Plant / Operations Leadership'
+      : sanitizeText(body.roleTitle);
+  const roleTitle = rawRoleTitle;
   if (!roleTitle || roleTitle.length < 2 || roleTitle.length > 120) {
     fieldErrors.roleTitle = 'Role or job title is required (2–120 characters).';
   }
