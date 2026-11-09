@@ -334,7 +334,7 @@ export function buildSixSheetDataset(plantIdOrFlag?: PlantId | boolean): SixShee
     `[${plantDataset.plantName}] OTIF at ${Math.round(otifRatio * 100)}% (${otifRag}) — ${revenueAtRiskNotice}`,
     `[${plantDataset.plantName}] Freight variance audited at ₹${Math.round(freightLeakage / 1000)}K (${freightRag}) across active carrier bills`,
     `[${plantDataset.plantName}] Warehouse bin accuracy at ${Math.round(accuracyRatio * 100)}% (${accuracyRag}) with blind recount scheduled`,
-    `Historical trends will appear after multiple analysis periods are available`,
+    `Target ceiling: Keep >180-day dormant stock below ₹1.00 L (15% of total valuation).`,
   ];
 
   return {

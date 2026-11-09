@@ -124,7 +124,17 @@ export const AppShell: React.FC<AppShellProps> = ({
   onAddNewClientSlot,
   syncRefreshKey,
 }) => {
-  const [activeTab, setActiveTab] = useState<PlatformNavId>(initialTab);
+  const [activeTab, setActiveTab] = useState<PlatformNavId>(() => {
+    try {
+      if (typeof window !== 'undefined') {
+        const urlTab = new URLSearchParams(window.location.search).get('tab') as PlatformNavId | null;
+        if (urlTab && PLATFORM_NAVIGATION.some((n) => n.id === urlTab)) {
+          return urlTab;
+        }
+      }
+    } catch {}
+    return initialTab;
+  });
   const [roleView, setRoleView] = useState<RoleViewMode>('executive');
   const [showOperatorTools, setShowOperatorTools] = useState<boolean>(false);
   const [showPilotAuditModal, setShowPilotAuditModal] = useState<boolean>(false);
@@ -146,8 +156,15 @@ export const AppShell: React.FC<AppShellProps> = ({
     resetting: false,
   });
 
-  // Sync when parent route changes initialTab
+  // Sync when parent route changes initialTab (unless URL explicitly specifies ?tab=)
   useEffect(() => {
+    try {
+      const urlTab = new URLSearchParams(window.location.search).get('tab') as PlatformNavId | null;
+      if (urlTab && PLATFORM_NAVIGATION.some((n) => n.id === urlTab)) {
+        setActiveTab(urlTab);
+        return;
+      }
+    } catch {}
     setActiveTab(initialTab);
   }, [initialTab]);
 
@@ -499,25 +516,29 @@ export const AppShell: React.FC<AppShellProps> = ({
                     <span>
                       {activePlant.name} • {activePeriod.label}
                     </span>
-                    <span
-                      data-testid="server-workspace-sync-badge"
-                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-950/70 border border-emerald-500/40 text-emerald-300 font-mono text-[10px]"
-                    >
-                      <CheckCircle2 className="w-3 h-3 text-emerald-400" />
-                      <span>Server Workspace Synced · {activePlant.name}</span>
-                    </span>
-                    <button
-                      type="button"
-                      onClick={handleResetPlantWorkspace}
-                      disabled={serverSyncState.resetting}
-                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-slate-950 hover:bg-slate-800 border border-slate-700 text-slate-300 hover:text-white font-mono text-[10px] cursor-pointer"
-                      title={`Reset ${activePlant.name} on the server back to its deterministic factory baseline`}
-                    >
-                      <RotateCcw className="w-2.5 h-2.5 text-sky-400" />
-                      <span>
-                        {serverSyncState.resetting ? 'Resetting...' : 'Reset Plant to Baseline'}
-                      </span>
-                    </button>
+                    {showOperatorTools && (
+                      <>
+                        <span
+                          data-testid="server-workspace-sync-badge"
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-950/70 border border-emerald-500/40 text-emerald-300 font-mono text-[10px]"
+                        >
+                          <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                          <span>Workspace Baseline · {activePlant.name}</span>
+                        </span>
+                        <button
+                          type="button"
+                          onClick={handleResetPlantWorkspace}
+                          disabled={serverSyncState.resetting}
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-slate-950 hover:bg-slate-800 border border-slate-700 text-slate-300 hover:text-white font-mono text-[10px] cursor-pointer"
+                          title={`Reset ${activePlant.name} back to its deterministic factory baseline`}
+                        >
+                          <RotateCcw className="w-2.5 h-2.5 text-sky-400" />
+                          <span>
+                            {serverSyncState.resetting ? 'Resetting...' : 'Reset Plant to Baseline'}
+                          </span>
+                        </button>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>
@@ -761,6 +782,7 @@ export const AppShell: React.FC<AppShellProps> = ({
                   snapshot={snapshot}
                   onNavigateDomain={handleNavigate}
                   onOpenMethodology={(mId) => setActiveMethodologyId(mId)}
+                  onOpenPilotAuditModal={() => setShowPilotAuditModal(true)}
                 />
               )}
               {activeTab === 'delivery' && (

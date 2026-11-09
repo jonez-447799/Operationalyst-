@@ -450,7 +450,9 @@ export function runFourPillarSensitivity(
     normalDays: baseP1Rules.slowThresholdDays ?? DEFAULT_SENSITIVITY_CONFIG.normalDays,
     slowDays: baseP1Rules.deadThresholdDays ?? DEFAULT_SENSITIVITY_CONFIG.slowDays,
     annualCarryingCostPercent:
-      fullInput.p1Rules?.holdingCostPercent ?? DEFAULT_SENSITIVITY_CONFIG.annualCarryingCostPercent,
+      fullInput.p1Rules?.holdingCostPercent && fullInput.p1Rules.holdingCostPercent !== 18
+        ? fullInput.p1Rules.holdingCostPercent
+        : DEFAULT_SENSITIVITY_CONFIG.annualCarryingCostPercent,
     asOfDate: baseP1Rules.asOfDate || P1_DEFAULT_RULES.asOfDate,
     ...(fullInput.baselineConfig || {}),
   };

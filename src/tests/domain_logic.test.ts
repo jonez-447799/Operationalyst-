@@ -3723,6 +3723,130 @@ test('Phase 12 Platform Executive Hierarchy & Cleanup Guard: Verifies P1-First s
   assert.ok(dropzoneSrc.includes('data-testid="instant-dropzone-request-audit-btn"'));
 });
 
+// ============================================================================
+// PHASE 13 TESTS: 100% P1 Inventory Sub-Page Alignment, Unified Carrying-Cost Rate,
+// Dynamic November 2026 Period Labels, Category Breakdown Card, and P1 Table CTA
+// ============================================================================
+
+test('Phase 13 Zero Stale September Dates & Zero Empty Historical Trends Guard: Verifies no hardcoded 15–28 Sep 2026 or Historical trends will appear placeholders remain in dashboard views or configs', async () => {
+  const fs = await import('fs/promises');
+  const path = await import('path');
+  const { PERIODS } = await import('../context/PlantContext');
+
+  assert.ok(!PERIODS.fortnight_sep.label.includes('15–28 Sep'));
+  assert.ok(!PERIODS.fortnight_sep.dateRange.includes('15 Sep'));
+  assert.ok(!PERIODS.month_sep.label.includes('Sep 2026'));
+
+  const filesToVerify = [
+    'src/dashboard/dashboardConfig.ts',
+    'src/dashboard/AppShell.tsx',
+    'src/dashboard/views/ExecutiveOverviewView.tsx',
+    'src/dashboard/views/DomainViews.tsx',
+    'src/dashboard/components/SharedDashboardPrimitives.tsx',
+    'src/context/PlantContext.tsx',
+    'src/utils/excelCommandCenterExporter.ts',
+  ];
+
+  for (const relPath of filesToVerify) {
+    const content = await fs.readFile(path.join(process.cwd(), relPath), 'utf-8');
+    assert.ok(
+      !content.includes('15–28 Sep 2026'),
+      `Found stale '15–28 Sep 2026' in ${relPath}`
+    );
+    assert.ok(
+      !content.includes('15 Sep – 28 Sep 2026'),
+      `Found stale '15 Sep – 28 Sep 2026' in ${relPath}`
+    );
+    assert.ok(
+      !content.includes('Historical trends will appear after multiple analysis periods are available'),
+      `Found duplicate placeholder 'Historical trends will appear after multiple analysis periods are available' in ${relPath}`
+    );
+  }
+});
+
+test('Phase 13 P1 Stagnant Stock Breakdown by Category: computeP1StagnantCategoryBreakdown deterministically computes 3 manufacturing categories summing to ₹2,23,110', async () => {
+  const { computeP1StagnantCategoryBreakdown } = await import(
+    '../dashboard/views/DomainViews'
+  );
+
+  const breakdown = computeP1StagnantCategoryBreakdown(223110);
+  assert.equal(breakdown.length, 3);
+
+  assert.equal(
+    breakdown[0].label,
+    '1. Precision Machined Castings & Sub-Assemblies'
+  );
+  assert.equal(breakdown[0].valueInr, 135250);
+  assert.equal(breakdown[0].sharePct, 60.6);
+
+  assert.equal(breakdown[1].label, '2. Raw Material & Bar Stock');
+  assert.equal(breakdown[1].valueInr, 51760);
+  assert.equal(breakdown[1].sharePct, 23.2);
+
+  assert.equal(
+    breakdown[2].label,
+    '3. Bearings, Seals & Maintenance Spares'
+  );
+  assert.equal(breakdown[2].valueInr, 36100);
+  assert.equal(breakdown[2].sharePct, 16.2);
+
+  const sumInr = breakdown.reduce((acc, item) => acc + item.valueInr, 0);
+  assert.equal(sumInr, 223110);
+});
+
+test('Phase 13 P1 Drill-Down Conversion CTA & Unified 22% Carrying Cost Formula: Verifies p1-ledger-request-pilot-btn, category breakdown card, and exact formula tooltip', async () => {
+  const fs = await import('fs/promises');
+  const path = await import('path');
+  const { runFourPillarSensitivity } = await import('../utils/sensitivitySimulator');
+  const { getPlantBaseline } = await import('../data/multiPlantBaselines');
+
+  const domainViewsSrc = await fs.readFile(
+    path.join(process.cwd(), 'src/dashboard/views/DomainViews.tsx'),
+    'utf-8'
+  );
+
+  assert.ok(domainViewsSrc.includes('data-testid="p1-ledger-request-pilot-btn"'));
+  assert.ok(domainViewsSrc.includes('data-testid="p1-ledger-download-template-btn"'));
+  assert.ok(domainViewsSrc.includes('data-testid="p1-stagnant-category-breakdown-card"'));
+  assert.ok(domainViewsSrc.includes('Request 48-Hour Pilot Audit on Your Stock →'));
+  assert.ok(
+    domainViewsSrc.includes(
+      'Target ceiling: Keep &gt;180-day dormant stock below ₹1.00 L (15% of total valuation).'
+    )
+  );
+  assert.ok(domainViewsSrc.includes('Est. Annual Carrying Cost (22%)'));
+
+  // Verify 4-pillar simulator also unifies carrying cost to 22% even when passed ambattur.p1Rules
+  const ambattur = getPlantBaseline('ambattur');
+  const simWithPlantRules = runFourPillarSensitivity({
+    skus: ambattur.p1Items,
+    p1Rules: ambattur.p1Rules,
+  });
+  assert.equal(simWithPlantRules.baselineConfig.annualCarryingCostPercent, 22);
+  assert.equal(simWithPlantRules.baselineAnnualCarryingDrainInr, 49084);
+});
+
+test('Phase 13 Executive Workspace Banner & Operator Tools Gating: Verifies clean DEMO_ENVIRONMENT_CONFIG noticeText and operator-gated Reset button', async () => {
+  const fs = await import('fs/promises');
+  const path = await import('path');
+  const { DEMO_ENVIRONMENT_CONFIG } = await import('../dashboard/dashboardConfig');
+
+  assert.ok(
+    DEMO_ENVIRONMENT_CONFIG.noticeText.includes(
+      'loaded with row-traceable ERP stock records for instant audit testing.'
+    )
+  );
+  assert.ok(!DEMO_ENVIRONMENT_CONFIG.noticeText.includes('/api/plant-workspaces'));
+
+  const appShellSrc = await fs.readFile(
+    path.join(process.cwd(), 'src/dashboard/AppShell.tsx'),
+    'utf-8'
+  );
+  assert.ok(!appShellSrc.includes('Server Workspace Synced'));
+  assert.ok(appShellSrc.includes('onOpenPilotAuditModal={() => setShowPilotAuditModal(true)}'));
+});
+
+
 
 
 

@@ -58,7 +58,7 @@ export const DEMO_ENVIRONMENT_CONFIG = {
   badgeLabel: 'DEMONSTRATION ENVIRONMENT',
   organizationName: 'Illustrative Manufacturing Company',
   noticeText:
-    'Interactive multi-plant executive sandbox with row-traceable Tally Prime, SAP, and Excel operational records across Ambattur, Sriperumbudur, and Hosur.',
+    'Each plant (Ambattur, Sriperumbudur, Hosur) is loaded with row-traceable ERP stock records for instant audit testing.',
   policyPendingNotice: 'Policy details governed under Operationalyst B2B Data Policy',
   lastRefreshDisplay: 'Multi-Plant Executive Workspace • Row-Traceable P1–P4 Data',
 };
@@ -465,8 +465,8 @@ export function buildLivePlatformSnapshot(
           definition: 'Items with low turnover velocity (90 to 180 days idle) requiring reorder pause review.',
         },
         {
-          term: 'Estimated Carrying Cost',
-          definition: 'Modeled at 18%–22% annual cost of capital, storage, insurance, and obsolescence risk.',
+          term: 'Estimated Carrying Cost (22% p.a.)',
+          definition: 'Modeled at a unified 22% annual cost of capital, storage, insurance, and obsolescence risk (Non-Moving Stock × 22%).',
         },
       ],
       includedRecords: `${p1Eval.length} active stock ledger items imported from Tally Stock Summary.`,

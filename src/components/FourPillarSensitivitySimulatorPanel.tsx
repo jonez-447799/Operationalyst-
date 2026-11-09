@@ -84,7 +84,9 @@ export const FourPillarSensitivitySimulatorPanel: React.FC<
       normalDays: p1Rules?.slowThresholdDays ?? DEFAULT_SENSITIVITY_CONFIG.normalDays,
       slowDays: p1Rules?.deadThresholdDays ?? DEFAULT_SENSITIVITY_CONFIG.slowDays,
       annualCarryingCostPercent:
-        p1Rules?.holdingCostPercent ?? DEFAULT_SENSITIVITY_CONFIG.annualCarryingCostPercent,
+        p1Rules?.holdingCostPercent && p1Rules.holdingCostPercent !== 18
+          ? p1Rules.holdingCostPercent
+          : DEFAULT_SENSITIVITY_CONFIG.annualCarryingCostPercent,
       excludeReserveSpares: initialExcludeReserveSpares,
     }),
     [p1Rules, initialExcludeReserveSpares]

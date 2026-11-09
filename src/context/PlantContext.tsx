@@ -312,21 +312,21 @@ export const PERIODS: Record<PeriodId, PeriodConfig> = {
     label: getDynamicFortnightLabel(),
     shortLabel: 'Current Fortnight',
     dateRange: getDynamicFortnightLabel().replace(/^Current Fortnight \(|\)$/g, ''),
-    asOfDate: '2026-09-28',
+    asOfDate: '2026-11-09',
   },
   month_sep: {
     id: 'month_sep',
-    label: 'Full Month: Sep 2026',
-    shortLabel: 'Sep 2026',
-    dateRange: '01 Sep – 30 Sep 2026',
-    asOfDate: '2026-09-30',
+    label: 'Full Month: Nov 2026',
+    shortLabel: 'Nov 2026',
+    dateRange: '01 Nov – 30 Nov 2026',
+    asOfDate: '2026-11-30',
   },
   q3_fy26: {
     id: 'q3_fy26',
     label: 'Quarter: Q3 FY26 (Oct–Dec 2026)',
     shortLabel: 'Q3 FY26',
     dateRange: '01 Oct – 31 Dec 2026',
-    asOfDate: '2026-10-01',
+    asOfDate: '2026-11-09',
   },
 };
 
