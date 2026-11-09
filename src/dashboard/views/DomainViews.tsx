@@ -250,14 +250,14 @@ export const InventoryDomainView: React.FC<SharedDomainProps> = ({
 
         <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-4">
           <div className="flex items-center justify-between mb-1">
-            <span className="text-xs text-slate-400">Est. Annual Carrying Cost (20%)</span>
+            <span className="text-xs text-slate-400">Est. Annual Carrying Cost (22%)</span>
             <ValueClassificationBadge type="Estimate" />
           </div>
           <div className="text-2xl font-mono font-bold text-sky-300">
-            {formatINRCompact(snapshot.p1DeadValue * 0.2)}
+            {formatINRCompact(Math.round(snapshot.p1DeadValue * 0.22))}
           </div>
           <div className="text-xs text-slate-400 mt-1">
-            Modeled holding, storage, and capital cost on &gt;180d stock
+            Modeled holding, storage, and capital cost on &gt;180d stock (22% p.a.)
           </div>
         </div>
       </div>
@@ -351,7 +351,7 @@ export const InventoryDomainView: React.FC<SharedDomainProps> = ({
               volumeContext: `${snapshot.p1DeadSkuCount} SKUs`,
             },
           ]}
-          interpretation="Historical trends will appear after multiple analysis periods are available."
+          interpretation={`Non-moving stock (>180 days) accounts for ${snapshot.p1DeadPercent}% of total valued inventory (${formatINRCompact(snapshot.p1DeadValue)} across ${snapshot.p1DeadSkuCount} SKUs), with ${formatINRCompact(Math.round(snapshot.p1DeadValue * 0.22))}/yr in estimated carrying burn at 22%.`}
           dataSource="Tally Prime Stock Summary"
         />
       </div>
@@ -579,7 +579,7 @@ export const DeliveryDomainView: React.FC<SharedDomainProps> = ({
             </p>
           </div>
           <span className="text-xs font-mono text-amber-300 bg-amber-950/60 border border-amber-500/30 px-2.5 py-1 rounded">
-            Order Value in Failed Dispatches: {dg.revenueAtRiskFormatted}
+            Dual-Gate SLA Target: ≥ {dg.targetPercent}% On-Time &amp; In-Full
           </span>
         </div>
 

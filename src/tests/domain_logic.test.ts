@@ -3193,3 +3193,536 @@ test('Phase 10 Dedicated /audit Sample Report Route (SampleAuditPage.tsx): Verif
   assert.ok(modalSrc.includes('Download 5-Column Template Again (.CSV / Excel)'));
 });
 
+// ============================================================================
+// PHASE 11 TESTS: Mode A/B 100% Consistency, 6-Stage Analytical Methodology
+// Visibility & Auto-Expand, Optional Environment Variables, & Accessibility
+// ============================================================================
+
+test('Phase 11 Mode A (12,400-SKU Plant Case) & Mode B (Live 20-SKU Sandbox Dataset) Deterministic KPI Alignment across Landing Page, Modal, and /audit Route', async () => {
+  const fs = await import('fs/promises');
+  const path = await import('path');
+  const { getReconciledSampleAuditModes } = await import('../commercial/homepageConfig');
+  const {
+    getLiveSandboxReconciledModeMetrics,
+    ILLUSTRATIVE_12400_CASE_METRICS,
+  } = await import('../utils/liveSandboxMetrics');
+
+  const modes = getReconciledSampleAuditModes();
+  const modeA = modes.illustrative_12400;
+  const modeB = modes.sandbox_20;
+  const liveSandbox = getLiveSandboxReconciledModeMetrics();
+
+  // 1. Mode A (12,400-SKU Plant Case) exact KPI invariants
+  assert.ok(modeA.shortLabel.includes('Mode A: 12,400-SKU Plant Case'));
+  assert.ok(ILLUSTRATIVE_12400_CASE_METRICS.modeLabel.includes('Mode A: 12,400-SKU Plant Case'));
+  assert.equal(modeA.totalBookValueFormatted, '₹4,82,50,000');
+  assert.equal(modeA.deadStockValueFormatted, '₹18,42,000');
+  assert.ok(modeA.deadStockSubtext.includes('24 SKUs'));
+  assert.equal(modeA.slowMovingValueFormatted, '₹32,60,000');
+  assert.ok(modeA.slowMovingSubtext.includes('41 SKUs'));
+  assert.equal(modeA.prioritySkusHeadline, '18 Priority SKUs');
+
+  // 2. Mode B (Live 20-SKU Sandbox Dataset) exact KPI invariants + P2/P3/P4 connected signals
+  assert.ok(modeB.shortLabel.includes('Mode B: 20-SKU Sandbox'));
+  assert.ok(liveSandbox.modeLabel.includes('Mode B: 20-SKU Sandbox'));
+  assert.equal(modeB.totalBookValueFormatted, '₹6,45,650');
+  assert.equal(modeB.deadStockValueFormatted, '₹2,23,110');
+  assert.ok(modeB.deadStockSubtext.includes('8 SKUs · 34.6%'));
+  assert.equal(modeB.slowMovingValueFormatted, '₹63,600');
+  assert.ok(modeB.slowMovingSubtext.includes('2 SKUs · 9.9%'));
+  assert.equal(modeB.prioritySkusHeadline, '10 Priority SKUs');
+  assert.ok(modeB.p2OtifPill.includes('50.0%'));
+  assert.ok(modeB.p3FreightPill.includes('₹13,944'));
+  assert.ok(modeB.p4BinPill.includes('60.0%'));
+  assert.ok(modeB.p4BinPill.includes('₹24,240'));
+
+  // 3. Cross-file verification across CommercialLandingPage.tsx, SampleAuditPage.tsx, and SampleAuditReportModal.tsx
+  const landingSrc = await fs.readFile(
+    path.join(process.cwd(), 'src/commercial/CommercialLandingPage.tsx'),
+    'utf-8'
+  );
+  const samplePageSrc = await fs.readFile(
+    path.join(process.cwd(), 'src/commercial/SampleAuditPage.tsx'),
+    'utf-8'
+  );
+  const sampleModalSrc = await fs.readFile(
+    path.join(process.cwd(), 'src/commercial/SampleAuditReportModal.tsx'),
+    'utf-8'
+  );
+
+  assert.ok(landingSrc.includes('Mode A: 12,400-SKU Plant Case'));
+  assert.ok(landingSrc.includes('Mode B: 20-SKU Sandbox'));
+  assert.ok(sampleModalSrc.includes('Mode A: 12,400-SKU Plant Case (₹4,82,50,000)'));
+  assert.ok(sampleModalSrc.includes('Mode B: 20-SKU Sandbox (₹6,45,650)'));
+  assert.ok(samplePageSrc.includes('Mode A: 12,400-SKU Plant Case'));
+  assert.ok(samplePageSrc.includes('Mode B: 20-SKU Sandbox'));
+  assert.ok(samplePageSrc.includes('liveSandboxMetrics.connectedP2Pill'));
+  assert.ok(samplePageSrc.includes('liveSandboxMetrics.connectedP3Pill'));
+  assert.ok(samplePageSrc.includes('liveSandboxMetrics.connectedP4Pill'));
+  assert.ok(liveSandbox.connectedP2Pill.includes('50.0%'));
+  assert.ok(liveSandbox.connectedP3Pill.includes('₹13,944'));
+  assert.ok(liveSandbox.connectedP4Pill.includes('60.0%'));
+  assert.ok(liveSandbox.connectedP4Pill.includes('₹24,240'));
+});
+
+test('Phase 11 6-Stage Analytical Methodology Schema & Deterministic Formulas: Verifies all 6 stages have complete titles, pill labels, formulas, inputs, and outputs', async () => {
+  const { METHODOLOGY_STAGES } = await import('../commercial/homepageConfig');
+
+  assert.equal(METHODOLOGY_STAGES.length, 6);
+
+  const expectedStages = [
+    {
+      stage: 'Stage 01',
+      nameSnippet: '5-Column Schema & Type Ingestion',
+      pillSnippet: 'Part_ID, Part_Description, Closing_Stock_Qty, Unit_Cost_INR, Last_Movement_Date',
+      formulaSnippet: 'Closing_Stock_Qty_i × Unit_Cost_INR_i',
+    },
+    {
+      stage: 'Stage 02',
+      nameSnippet: 'Data Sanitization & Anomaly Isolation',
+      pillSnippet: 'Null dates, negative stock, duplicate SKU checks',
+      formulaSnippet: 'MatchHealth%',
+    },
+    {
+      stage: 'Stage 03',
+      nameSnippet: 'Deterministic Dormancy & Velocity Segmentation',
+      pillSnippet: 'ΔDays = AsOfDate − LastMovementDate across 0–90d, 91–180d, 181–365d, >365d',
+      formulaSnippet: 'ΔDays = AsOfDate − LastMovementDate',
+    },
+    {
+      stage: 'Stage 04',
+      nameSnippet: 'Carrying-Cost Burn & Capital Trap Quantification',
+      pillSnippet: 'AnnualBurn = BookValue × HoldingRate%, default 22% p.a.',
+      formulaSnippet: 'AnnualBurn = BookValue × HoldingRate%',
+    },
+    {
+      stage: 'Stage 05',
+      nameSnippet: 'Pareto 80/20 Concentration & Priority SKU Ranking',
+      pillSnippet: 'Cumulative value share isolation',
+      formulaSnippet: 'CumulativeValueShare_k',
+    },
+    {
+      stage: 'Stage 06',
+      nameSnippet: 'Cross-Pillar Floor Verification & Action Plan',
+      pillSnippet: 'Linking P1 Dead Stock with P2 OTIF, P3 Freight Audit, and P4 Ghost/Bin Reconciliation',
+      formulaSnippet: 'TargetCashRelease',
+    },
+  ];
+
+  expectedStages.forEach((expected, idx) => {
+    const item = METHODOLOGY_STAGES[idx];
+    assert.equal(item.stage, expected.stage);
+    assert.ok(item.name.includes(expected.nameSnippet), `Stage ${expected.stage} name mismatch: ${item.name}`);
+    assert.ok(
+      item.pillLabel.includes(expected.pillSnippet),
+      `Stage ${expected.stage} pillLabel mismatch: ${item.pillLabel}`
+    );
+    assert.ok(
+      item.formula.includes(expected.formulaSnippet),
+      `Stage ${expected.stage} formula mismatch: ${item.formula}`
+    );
+    assert.ok(item.inputs && item.inputs.trim().length > 10);
+    assert.ok(item.outputs && item.outputs.trim().length > 10);
+    assert.ok(item.summary && item.summary.trim().length > 20);
+  });
+});
+
+test('Phase 11 6-Stage Methodology UI Strip & Auto-Expand Wiring: Verifies 6-pill summary strip above drawer button and auto-expansion on [Read the Methodology] and #methodology', async () => {
+  const fs = await import('fs/promises');
+  const path = await import('path');
+
+  const landingSrc = await fs.readFile(
+    path.join(process.cwd(), 'src/commercial/CommercialLandingPage.tsx'),
+    'utf-8'
+  );
+  const methodologyModalSrc = await fs.readFile(
+    path.join(process.cwd(), 'src/commercial/MethodologyModal.tsx'),
+    'utf-8'
+  );
+
+  // 1. Verify 6-pill summary strip appears BEFORE the toggle-methodology-stages-drawer button
+  const stripIndex = landingSrc.indexOf('data-testid="methodology-6-pill-summary-strip"');
+  const toggleBtnIndex = landingSrc.indexOf('data-testid="toggle-methodology-stages-drawer"');
+  assert.ok(stripIndex > 0, 'methodology-6-pill-summary-strip must be present');
+  assert.ok(toggleBtnIndex > stripIndex, '6-pill summary strip must appear above the toggle drawer button');
+
+  // 2. Verify auto-expand function sets isMethodologyDrawerOpen(true) and is wired to read-methodology-btn and footer-methodology-link
+  assert.ok(landingSrc.includes('setIsMethodologyDrawerOpen(true)'));
+  assert.ok(landingSrc.includes('data-testid="read-methodology-btn"'));
+  assert.ok(landingSrc.includes('data-testid="footer-methodology-link"'));
+
+  // 3. Verify MethodologyModal and CommercialLandingPage render formula, inputs, and outputs
+  assert.ok(landingSrc.includes('stg.formula'));
+  assert.ok(landingSrc.includes('stg.inputs'));
+  assert.ok(landingSrc.includes('stg.outputs'));
+  assert.ok(methodologyModalSrc.includes('stg.formula'));
+  assert.ok(methodologyModalSrc.includes('stg.inputs'));
+  assert.ok(methodologyModalSrc.includes('stg.outputs'));
+});
+
+test('Phase 11 Optional Environment Variable Graceful Fallback: Verifies missing, blank, placeholder, or unreachable LEAD_NOTIFICATION_WEBHOOK_URL and Web3Forms keys never throw errors', async () => {
+  const {
+    dispatchOptionalWebhookNotification,
+    dispatchOptionalWeb3FormsNotification,
+  } = await import('../utils/leadValidation');
+
+  const samplePayload = {
+    event: 'pilot_lead_captured',
+    leadId: 'PILOT-20261108-TEST',
+    companyName: 'Apex Auto Components',
+  };
+
+  // 1. Missing / undefined / empty webhook URL fails gracefully
+  const missingWebhook = await dispatchOptionalWebhookNotification(samplePayload, undefined);
+  assert.equal(missingWebhook.dispatched, false);
+  assert.equal(missingWebhook.skippedReason, 'missing_env');
+
+  const emptyWebhook = await dispatchOptionalWebhookNotification(samplePayload, '   ');
+  assert.equal(emptyWebhook.dispatched, false);
+  assert.equal(emptyWebhook.skippedReason, 'missing_env');
+
+  // 2. Placeholder webhook URL fails gracefully without making network call
+  const placeholderWebhook = await dispatchOptionalWebhookNotification(
+    samplePayload,
+    'https://example.com/your_webhook_url'
+  );
+  assert.equal(placeholderWebhook.dispatched, false);
+  assert.equal(placeholderWebhook.skippedReason, 'placeholder_env');
+
+  // 3. Network rejection inside fetchImpl is caught silently without throwing
+  const networkFailWebhook = await dispatchOptionalWebhookNotification(
+    samplePayload,
+    'https://hooks.operationalyst.in/notify',
+    async () => {
+      throw new Error('Simulated ECONNREFUSED');
+    }
+  );
+  assert.equal(networkFailWebhook.dispatched, false);
+  assert.equal(networkFailWebhook.skippedReason, 'network_error');
+
+  // 4. Missing, placeholder, or failing Web3Forms key fails gracefully
+  const missingWeb3 = await dispatchOptionalWeb3FormsNotification(samplePayload, '');
+  assert.equal(missingWeb3.dispatched, false);
+  assert.equal(missingWeb3.skippedReason, 'missing_env');
+
+  const placeholderWeb3 = await dispatchOptionalWeb3FormsNotification(
+    samplePayload,
+    'YOUR_WEB3FORMS_KEY'
+  );
+  assert.equal(placeholderWeb3.dispatched, false);
+  assert.equal(placeholderWeb3.skippedReason, 'placeholder_env');
+
+  const networkFailWeb3 = await dispatchOptionalWeb3FormsNotification(
+    samplePayload,
+    'a1b2c3d4-real-looking-uuid',
+    async () => {
+      throw new Error('Offline');
+    }
+  );
+  assert.equal(networkFailWeb3.dispatched, false);
+  assert.equal(networkFailWeb3.skippedReason, 'network_error');
+});
+
+test('Phase 11 Accessibility & Zero Console-Noise Verification: Verifies explicit type="button", aria-expanded, and clean analytics dispatcher across commercial components', async () => {
+  const fs = await import('fs/promises');
+  const path = await import('path');
+
+  const filesToInspect = [
+    'src/commercial/CommercialLandingPage.tsx',
+    'src/commercial/FactoryAuditModal.tsx',
+    'src/commercial/SelfAssessmentWidget.tsx',
+    'src/commercial/SampleAuditPage.tsx',
+    'src/commercial/B2BBehavioralSystem.tsx',
+    'src/commercial/SampleAuditReportModal.tsx',
+    'src/commercial/MethodologyModal.tsx',
+  ];
+
+  for (const relPath of filesToInspect) {
+    const src = await fs.readFile(path.join(process.cwd(), relPath), 'utf-8');
+    const buttonTags = src.match(/<button\b[^>]*>/g) || [];
+    assert.ok(buttonTags.length > 0, `Expected <button> tags in ${relPath}`);
+    for (const tag of buttonTags) {
+      assert.ok(
+        tag.includes('type="button"') || tag.includes('type="submit"'),
+        `Every <button> in ${relPath} must have an explicit type="button" or type="submit". Found: ${tag}`
+      );
+    }
+  }
+
+  // Verify aria-expanded is present on collapsible drawers
+  const landingSrc = await fs.readFile(
+    path.join(process.cwd(), 'src/commercial/CommercialLandingPage.tsx'),
+    'utf-8'
+  );
+  assert.ok(landingSrc.includes('aria-expanded={isMethodologyDrawerOpen}'));
+  assert.ok(landingSrc.includes('aria-expanded={showGovernanceFaqDrawer}'));
+
+  // Verify analytics.ts does not emit noisy console.info notices in browser sessions
+  const analyticsSrc = await fs.readFile(
+    path.join(process.cwd(), 'src/utils/analytics.ts'),
+    'utf-8'
+  );
+  assert.ok(!analyticsSrc.includes('console.info('));
+});
+
+test('Phase 11 Core P1–P4 Mathematical Invariants Regression Guard: Verifies P1 Stock, P2 OTIF, P3 Freight Audit, and P4 Bin Reconciliation formulas remain 100% unaltered', async () => {
+  const { evaluateStockEngine, generateOwnerReport } = await import('../project1/utils/calculations');
+  const { AMBATTUR_FABRICATION_SAMPLE, DEFAULT_RULES } = await import('../project1/data/initialData');
+  const { calculateOTIFMetrics } = await import('../project2/utils/otifCalculator');
+  const { INITIAL_DISPATCHES, INITIAL_RULES: P2_DEFAULT_RULES } = await import('../project2/data/initialData');
+  const { calculateAuditMetrics } = await import('../project3/utils/auditCalculations');
+  const { INITIAL_TRIPS, DEFAULT_RULES: P3_DEFAULT_RULES } = await import('../project3/data/defaultData');
+  const { computeSummary } = await import('../project4/utils/auditCalculations');
+  const { INITIAL_SAMPLE_SKUS, DEFAULT_RULES: P4_DEFAULT_RULES } = await import('../project4/data/sampleData');
+
+  const p1Evaluated = evaluateStockEngine(AMBATTUR_FABRICATION_SAMPLE, DEFAULT_RULES);
+  const p1Report = generateOwnerReport(AMBATTUR_FABRICATION_SAMPLE, DEFAULT_RULES);
+  const p2 = calculateOTIFMetrics(INITIAL_DISPATCHES, P2_DEFAULT_RULES);
+  const p3 = calculateAuditMetrics(INITIAL_TRIPS, P3_DEFAULT_RULES);
+  const p4 = computeSummary(INITIAL_SAMPLE_SKUS, P4_DEFAULT_RULES);
+
+  assert.equal(p1Evaluated.length, 20);
+  assert.equal(p1Report.totalStockValue, 645650);
+  assert.equal(p1Report.deadCash, 223110);
+  assert.equal(p1Report.deadItemCount, 8);
+  assert.equal(p1Report.slowCash, 63600);
+  assert.equal(p1Report.slowItemCount, 2);
+
+  assert.equal(p2.totalDispatches, 18);
+  assert.equal(p2.otifPercent, 50.0);
+
+  assert.equal(p3.totals.totalLeak, 13944);
+  assert.equal(Math.round((p4.linesMatched / p4.skusCounted) * 100), 60);
+  assert.equal(p4.shelfShortRupees, 24240);
+});
+
+// ============================================================================
+// PHASE 12 TESTS: Executive Platform View Cleanup, P1-First Hierarchy,
+// Dynamic Fortnight Dates, 22% Carrying-Cost & 12-LR Alignment, Instant CSV Dropzone
+// ============================================================================
+
+test('Phase 12 Dynamic Fortnight Label: getDynamicFortnightLabel produces a valid 14-day range string formatted in en-IN', async () => {
+  const { getDynamicFortnightLabel } = await import('../commercial/PlatformTopBar');
+
+  const fixedRef = new Date('2026-11-15T10:00:00.000Z');
+  const label = getDynamicFortnightLabel(fixedRef);
+
+  assert.ok(label.startsWith('Current Fortnight ('));
+  assert.ok(label.endsWith(')'));
+  assert.ok(label.includes('–'));
+  assert.ok(label.includes('2026'));
+
+  // Verify default invocation uses current date and does not hardcode September
+  const liveLabel = getDynamicFortnightLabel();
+  assert.match(liveLabel, /^Current Fortnight \(.+ – .+\)$/);
+});
+
+test('Phase 12 Canonical Demo Plant Presets: PLATFORM_DEMO_PLANTS matches canonical values including 22% carrying cost and 12 Flagged LRs for Ambattur', async () => {
+  const { PLATFORM_DEMO_PLANTS } = await import('../commercial/PlatformTopBar');
+  const { runFourPillarSensitivity } = await import('../utils/sensitivitySimulator');
+
+  // 1. Ambattur Baseline Unit
+  const amb = PLATFORM_DEMO_PLANTS.ambattur;
+  assert.equal(amb.name, 'Ambattur Baseline Unit');
+  assert.equal(amb.skuCount, 20);
+  assert.equal(amb.totalStockValue, 645650);
+  assert.equal(amb.nonMovingValue, 223110);
+  assert.equal(amb.nonMovingSkus, 8);
+  assert.equal(amb.slowMovingValue, 63600);
+  assert.equal(amb.slowMovingSkus, 2);
+  assert.equal(amb.carryingCostPct, 22);
+  assert.equal(amb.annualCarryingBurn, 49084);
+  assert.equal(amb.otifPercent, 50);
+  assert.equal(amb.otifPassed, 9);
+  assert.equal(amb.otifTotal, 18);
+  assert.equal(amb.freightLeakValue, 13944);
+  assert.equal(amb.flaggedLRs, 12);
+  assert.equal(amb.binMatchPercent, 60);
+  assert.equal(amb.binVarianceValue, 24240);
+  assert.equal(amb.auditedBins, 6);
+
+  // Verify 4-pillar simulator also reports 12 Flagged LRs and 22% baseline carrying cost for Ambattur
+  const sim = runFourPillarSensitivity({});
+  assert.equal(sim.baselineConfig.annualCarryingCostPercent, 22);
+  assert.equal(sim.baselineFlaggedTripsCount, 12);
+  assert.equal(sim.scenarioFlaggedTripsCount, 12);
+
+  // 2. Sriperumbudur Press & Machining
+  const sri = PLATFORM_DEMO_PLANTS.sriperumbudur;
+  assert.equal(sri.name, 'Sriperumbudur Press & Machining');
+  assert.equal(sri.skuCount, 45);
+  assert.equal(sri.totalStockValue, 1840000);
+  assert.equal(sri.nonMovingValue, 512000);
+  assert.equal(sri.nonMovingSkus, 14);
+  assert.equal(sri.slowMovingValue, 195000);
+  assert.equal(sri.slowMovingSkus, 6);
+  assert.equal(sri.otifPercent, 68);
+  assert.equal(sri.freightLeakValue, 28400);
+  assert.equal(sri.flaggedLRs, 9);
+  assert.equal(sri.binMatchPercent, 75);
+  assert.equal(sri.binVarianceValue, 41200);
+  assert.equal(sri.auditedBins, 5);
+
+  // 3. Hosur Auto Components Unit
+  const hos = PLATFORM_DEMO_PLANTS.hosur;
+  assert.equal(hos.name, 'Hosur Auto Components Unit');
+  assert.equal(hos.skuCount, 12400);
+  assert.equal(hos.totalStockValue, 48250000);
+  assert.equal(hos.nonMovingValue, 1842000);
+  assert.equal(hos.nonMovingSkus, 24);
+  assert.equal(hos.slowMovingValue, 3260000);
+  assert.equal(hos.slowMovingSkus, 41);
+  assert.equal(hos.otifPercent, 74);
+  assert.equal(hos.freightLeakValue, 46500);
+  assert.equal(hos.flaggedLRs, 15);
+  assert.equal(hos.binMatchPercent, 82);
+  assert.equal(hos.binVarianceValue, 68000);
+  assert.equal(hos.auditedBins, 8);
+});
+
+test('Phase 12 CFO Policy Simulator: computeSimulatedPolicyMetrics accurately computes simulatedDeadStock and annualCarryingBurn across 120d/180d/270d cutoffs, carrying-cost rates, and 15% spare reserve buffer', async () => {
+  const { computeSimulatedPolicyMetrics, CFO_POLICY_PRESETS } = await import(
+    '../commercial/PlatformTopBar'
+  );
+
+  assert.equal(CFO_POLICY_PRESETS.length, 3);
+  assert.equal(CFO_POLICY_PRESETS[0].label, 'Strict CFO: 120d / 24%');
+  assert.equal(CFO_POLICY_PRESETS[1].label, 'Standard Baseline: 180d / 22%');
+  assert.equal(CFO_POLICY_PRESETS[2].label, 'Lenient Buffer: 270d / 18%');
+
+  // 1. Standard Baseline (180d / 22%, no spare buffer)
+  const baseline = computeSimulatedPolicyMetrics({
+    plantId: 'ambattur',
+    cutoffDays: 180,
+    carryingCostPct: 22,
+    excludeReserveSpares: false,
+  });
+  assert.equal(baseline.simulatedDeadStock, 223110);
+  assert.equal(baseline.annualCarryingBurn, Math.round(223110 * 0.22)); // 49084
+  assert.equal(baseline.flaggedLRs, 12);
+
+  // 2. Standard Baseline with 15% Critical Machine Spares Reserve Buffer enabled
+  const withBuffer = computeSimulatedPolicyMetrics({
+    plantId: 'ambattur',
+    cutoffDays: 180,
+    carryingCostPct: 22,
+    excludeReserveSpares: true,
+  });
+  assert.equal(withBuffer.reserveSparesProtectedValue, Math.round(223110 * 0.15));
+  assert.equal(withBuffer.simulatedDeadStock, 223110 - Math.round(223110 * 0.15));
+  assert.equal(
+    withBuffer.annualCarryingBurn,
+    Math.round(withBuffer.simulatedDeadStock * 0.22)
+  );
+
+  // 3. Strict CFO (120d / 24%) vs Lenient Buffer (270d / 18%)
+  const strict = computeSimulatedPolicyMetrics({
+    plantId: 'ambattur',
+    cutoffDays: 120,
+    carryingCostPct: 24,
+    excludeReserveSpares: false,
+  });
+  const lenient = computeSimulatedPolicyMetrics({
+    plantId: 'ambattur',
+    cutoffDays: 270,
+    carryingCostPct: 18,
+    excludeReserveSpares: false,
+  });
+
+  assert.ok(strict.simulatedDeadStock > baseline.simulatedDeadStock);
+  assert.ok(strict.annualCarryingBurn > baseline.annualCarryingBurn);
+  assert.ok(lenient.simulatedDeadStock < baseline.simulatedDeadStock);
+  assert.ok(lenient.annualCarryingBurn < baseline.annualCarryingBurn);
+});
+
+test('Phase 12 Instant In-Browser 5-Column CSV Dropzone: parseAndEvaluateFiveColumnCsv accurately evaluates 5-column CSV input and matches canonical Ambattur 20-SKU totals', async () => {
+  const {
+    AMBATTUR_20_SKU_SAMPLE_CSV,
+    parseAndEvaluateFiveColumnCsv,
+  } = await import('../commercial/InstantAuditDropzone');
+
+  const result = parseAndEvaluateFiveColumnCsv(AMBATTUR_20_SKU_SAMPLE_CSV);
+
+  assert.equal(result.totalSkus, 20);
+  assert.equal(result.totalValuationInr, 645650);
+  assert.equal(result.totalValuationFormatted, '₹6,45,650');
+  assert.equal(result.nonMovingValueInr, 223110);
+  assert.equal(result.nonMovingFormatted, '₹2,23,110');
+  assert.equal(result.nonMovingSkuCount, 8);
+  assert.equal(result.slowMovingValueInr, 63600);
+  assert.equal(result.slowMovingFormatted, '₹63,600');
+  assert.equal(result.slowMovingSkuCount, 2);
+  assert.equal(result.prioritySkuCount, 10);
+  assert.equal(result.carryingCostPct, 22);
+  assert.equal(result.annualCarryingBurnInr, 49084);
+  assert.equal(result.annualCarryingBurnFormatted, '₹49,084');
+  assert.equal(result.topNonMovingRows.length, 5);
+  assert.equal(result.topNonMovingRows[0].partId, 'FG-PBX-G1');
+});
+
+test('Phase 12 Zero Env Popup Polish: .env.example comments out all optional secret keys with a leading #', async () => {
+  const fs = await import('fs/promises');
+  const path = await import('path');
+
+  const envExample = await fs.readFile(path.join(process.cwd(), '.env.example'), 'utf-8');
+  const activeLines = envExample
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter((l) => l.length > 0 && !l.startsWith('#'));
+
+  // Only APP_URL="MY_APP_URL" should remain uncommented; optional secrets must be commented out
+  for (const line of activeLines) {
+    assert.ok(
+      !line.startsWith('ADMIN_ACCESS_KEY='),
+      'ADMIN_ACCESS_KEY must be commented out in .env.example'
+    );
+    assert.ok(
+      !line.startsWith('LEAD_NOTIFICATION_WEBHOOK_URL='),
+      'LEAD_NOTIFICATION_WEBHOOK_URL must be commented out in .env.example'
+    );
+    assert.ok(
+      !line.startsWith('VITE_WEB3FORMS_KEY='),
+      'VITE_WEB3FORMS_KEY must be commented out in .env.example'
+    );
+  }
+});
+
+test('Phase 12 Platform Executive Hierarchy & Cleanup Guard: Verifies P1-First section, Phase 2 Add-Ons section, TopBar testids, and removal of developer implementation strings', async () => {
+  const fs = await import('fs/promises');
+  const path = await import('path');
+  const { DEMO_ENVIRONMENT_CONFIG } = await import('../dashboard/dashboardConfig');
+
+  assert.ok(!DEMO_ENVIRONMENT_CONFIG.noticeText.includes('/api/plant-workspaces'));
+  assert.ok(!DEMO_ENVIRONMENT_CONFIG.noticeText.includes('Express server'));
+
+  const topBarSrc = await fs.readFile(
+    path.join(process.cwd(), 'src/commercial/PlatformTopBar.tsx'),
+    'utf-8'
+  );
+  assert.ok(topBarSrc.includes('data-testid="platform-back-to-website-btn"'));
+  assert.ok(topBarSrc.includes('data-testid="platform-request-pilot-btn"'));
+  assert.ok(topBarSrc.includes('data-testid="platform-plant-switcher"'));
+  assert.ok(topBarSrc.includes('data-testid="toggle-operator-tools"'));
+  assert.ok(topBarSrc.includes('click_back_to_website'));
+
+  const overviewSrc = await fs.readFile(
+    path.join(process.cwd(), 'src/dashboard/views/ExecutiveOverviewView.tsx'),
+    'utf-8'
+  );
+  assert.ok(overviewSrc.includes('data-testid="platform-p1-primary-section"'));
+  assert.ok(overviewSrc.includes('data-testid="platform-phase2-addons-section"'));
+  assert.ok(!overviewSrc.includes('Historical trends will appear after multiple analysis periods are available'));
+  assert.ok(!overviewSrc.includes('Revenue exposure unavailable because order-value information was not provided'));
+
+  const dropzoneSrc = await fs.readFile(
+    path.join(process.cwd(), 'src/commercial/InstantAuditDropzone.tsx'),
+    'utf-8'
+  );
+  assert.ok(dropzoneSrc.includes('data-testid="instant-dropzone-load-sample-btn"'));
+  assert.ok(dropzoneSrc.includes('data-testid="instant-dropzone-download-template-btn"'));
+  assert.ok(dropzoneSrc.includes('data-testid="instant-dropzone-request-audit-btn"'));
+});
+
+
+
+

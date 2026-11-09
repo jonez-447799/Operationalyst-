@@ -72,7 +72,7 @@ export const DEFAULT_SENSITIVITY_CONFIG: SensitivityScenarioConfig = {
   fastDays: 30,
   normalDays: 90,
   slowDays: 180,
-  annualCarryingCostPercent: 24,
+  annualCarryingCostPercent: 22,
   targetRecoveryPercent: 35,
   excludeReserveSpares: true,
   gracePeriodDays: 0,
@@ -97,12 +97,12 @@ export const SENSITIVITY_PRESETS: Record<
   STRICT_CFO_AUDIT: {
     id: 'STRICT_CFO_AUDIT',
     label: 'Strict CFO Working-Capital Audit',
-    subtitle: 'Dead >120d · Slow >60d · 28% Carrying Cost · 0d OTIF Grace · >5% Freight Overcharge Flag · ≥₹1,500 Bin Risk',
+    subtitle: 'Dead >120d · Slow >60d · 24% Carrying Cost · 0d OTIF Grace · >5% Freight Overcharge Flag · ≥₹1,500 Bin Risk',
     config: {
       fastDays: 20,
       normalDays: 60,
       slowDays: 120,
-      annualCarryingCostPercent: 28,
+      annualCarryingCostPercent: 24,
       targetRecoveryPercent: 45,
       excludeReserveSpares: true,
       gracePeriodDays: 0,
@@ -118,7 +118,7 @@ export const SENSITIVITY_PRESETS: Record<
   STANDARD_BASELINE: {
     id: 'STANDARD_BASELINE',
     label: 'Standard Industrial Baseline',
-    subtitle: 'Dead >180d · Slow >90d · 24% Carrying Cost · 0d OTIF Grace · >15% Freight Overcharge Flag · ≥₹5,000 Bin Risk',
+    subtitle: 'Dead >180d · Slow >90d · 22% Carrying Cost · 0d OTIF Grace · >15% Freight Overcharge Flag · ≥₹5,000 Bin Risk',
     config: {
       ...DEFAULT_SENSITIVITY_CONFIG,
     },
@@ -450,7 +450,7 @@ export function runFourPillarSensitivity(
     normalDays: baseP1Rules.slowThresholdDays ?? DEFAULT_SENSITIVITY_CONFIG.normalDays,
     slowDays: baseP1Rules.deadThresholdDays ?? DEFAULT_SENSITIVITY_CONFIG.slowDays,
     annualCarryingCostPercent:
-      baseP1Rules.holdingCostPercent ?? DEFAULT_SENSITIVITY_CONFIG.annualCarryingCostPercent,
+      fullInput.p1Rules?.holdingCostPercent ?? DEFAULT_SENSITIVITY_CONFIG.annualCarryingCostPercent,
     asOfDate: baseP1Rules.asOfDate || P1_DEFAULT_RULES.asOfDate,
     ...(fullInput.baselineConfig || {}),
   };
@@ -688,18 +688,23 @@ export function runFourPillarSensitivity(
     }
   }
 
-  // Reconcile baselineLeakInr with canonical P3 totalLeak when baselineConfig is at default
+  // Reconcile baselineLeakInr and flagged trips count with canonical P3 totalLeak when baselineConfig is at default
+  const canonicalFlaggedCount = baseP3Audit.calculatedTrips.filter(
+    (t) => (t.totalLeak || 0) > 0
+  ).length;
   if (
     baselineConfig.maxOverchargePercent === DEFAULT_SENSITIVITY_CONFIG.maxOverchargePercent &&
     baselineConfig.detentionThreshold === DEFAULT_SENSITIVITY_CONFIG.detentionThreshold
   ) {
     baselineLeakInr = baseP3Audit.totals.totalLeak;
+    baselineFlaggedTripsCount = canonicalFlaggedCount;
     if (
       scenarioConfig.maxOverchargePercent === DEFAULT_SENSITIVITY_CONFIG.maxOverchargePercent &&
       scenarioConfig.detentionThreshold === DEFAULT_SENSITIVITY_CONFIG.detentionThreshold &&
       scenarioConfig.maxAdvanceRatio === DEFAULT_SENSITIVITY_CONFIG.maxAdvanceRatio
     ) {
       scenarioLeakInr = baseP3Audit.totals.totalLeak;
+      scenarioFlaggedTripsCount = canonicalFlaggedCount;
     }
   }
   const leakDeltaInr = scenarioLeakInr - baselineLeakInr;

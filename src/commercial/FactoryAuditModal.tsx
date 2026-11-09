@@ -608,6 +608,7 @@ export const FactoryAuditModal: React.FC<FactoryAuditModalProps> = ({
                 Direct Founder Desk (C. Jones Snowin)
               </a>
               <button
+                type="button"
                 onClick={handleResetAndClose}
                 className="px-5 py-2.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs cursor-pointer transition shadow"
               >
@@ -770,6 +771,7 @@ export const FactoryAuditModal: React.FC<FactoryAuditModalProps> = ({
               <button
                 type="button"
                 data-testid="toggle-modal-full-details"
+                aria-expanded={showFullDetails}
                 onClick={() => setShowFullDetails((prev) => !prev)}
                 className="text-xs font-mono text-emerald-400 hover:text-emerald-300 inline-flex items-center gap-1.5 cursor-pointer"
               >

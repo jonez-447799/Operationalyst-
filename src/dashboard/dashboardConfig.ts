@@ -58,9 +58,9 @@ export const DEMO_ENVIRONMENT_CONFIG = {
   badgeLabel: 'DEMONSTRATION ENVIRONMENT',
   organizationName: 'Illustrative Manufacturing Company',
   noticeText:
-    'Each plant (Ambattur, Sriperumbudur, Hosur) maintains an isolated, row-traceable dataset persisted both locally and on the Express server (/api/plant-workspaces).',
+    'Interactive multi-plant executive sandbox with row-traceable Tally Prime, SAP, and Excel operational records across Ambattur, Sriperumbudur, and Hosur.',
   policyPendingNotice: 'Policy details governed under Operationalyst B2B Data Policy',
-  lastRefreshDisplay: 'Server-Backed Multi-Plant Workspace • Row-Traceable P1–P4 Data',
+  lastRefreshDisplay: 'Multi-Plant Executive Workspace • Row-Traceable P1–P4 Data',
 };
 
 export const PLATFORM_NAVIGATION: NavItemConfig[] = [
@@ -600,7 +600,7 @@ export function buildLivePlatformSnapshot(
       currentValue: `${otifPercent}% (${passedBoth}/${totalDispatches} passed)`,
       targetValue: '60% min threshold (95% SLA target)',
       changeLabel: 'Single-period snapshot',
-      whyItMatters: `${failedTotal} customer dispatch lines failed the Dual-Gate Rule (${lateOnly} late only, ${shortOnly} short only, ${lateAndShort} both late & short). ${p2DualGate.revenueAtRiskFormatted}`,
+      whyItMatters: `${failedTotal} customer dispatch lines failed the Dual-Gate Rule (${lateOnly} late only, ${shortOnly} short only, ${lateAndShort} both late & short), creating OEM line-stoppage and expedite risk.`,
       primaryActionLabel: `Inspect ${failedTotal} failed dispatches`,
       supportingRecordsCount: failedTotal,
       metricId: 'delivery_otif',
@@ -727,7 +727,7 @@ export function buildLivePlatformSnapshot(
       domain: 'delivery',
       domainLabel: 'Delivery (P2)',
       signal: `${failedTotal} of ${totalDispatches} customer dispatches failed Dual-Gate OTIF (${otifPercent}% pass rate)`,
-      whyItMatters: `Failed dispatches risk OEM/Tier-1 delivery SLA penalties and expedite costs. (${p2DualGate.revenueAtRiskFormatted})`,
+      whyItMatters: `Failed dispatches risk OEM/Tier-1 delivery SLA penalties, customer scorecards, and emergency spot-freight costs.`,
       evidenceCount: failedTotal,
       evidenceLabel: `${failedTotal} dispatch records`,
       owner: 'Dispatch Head (R. Karthik)',
@@ -831,7 +831,7 @@ export function buildLivePlatformSnapshot(
   // Rule-Based Executive Brief (Generated from actual data, cautious language, no fabricated trend drift)
   const executiveBrief = {
     currentState: `Across ${plant.name} (${period.label}), 3 operational areas require management review: Gate OTIF is at ${otifPercent}% (${passedBoth} of ${totalDispatches} dispatches passed), ${formatINRCompact(p1DeadValue)} (${p1DeadItems.length} SKUs) has recorded zero movement for >180 days, and ${formatINRCompact(p3LeakageValue)} in carrier billing variance is flagged across ${p3FlaggedTripCount} trips.`,
-    importantChange: `Historical trends will appear after multiple analysis periods are available. Current snapshot shows ${failedTotal} failed dispatches and ${p1DeadItems.length} SKUs exceeding the 180-day inactivity rule.`,
+    importantChange: `Current fortnight audit flags ${p1DeadItems.length} SKUs exceeding the 180-day inactivity rule (${formatINRCompact(Math.round(p1DeadValue * 0.22))}/yr carrying burn at 22%) and ${failedTotal} failed customer dispatch lines.`,
     likelyDriver: `Recorded dispatch logs show ${lateOnly} failures were late-only (associated with vehicle placement delays and gate congestion), while ${shortOnly + lateAndShort} involved quantity shortages that correlate with the ${p4MismatchCount} unverified bin discrepancies in Stores.`,
     priorityInvestigation: `First, review the ${failedTotal} failed dispatch lines in Delivery (P2) alongside the ${p4MismatchCount} mismatched bins in Warehouse (P4) to stop repeat short-shipments; second, audit the top ${Math.min(5, p1DeadItems.length)} non-moving SKUs in Inventory (P1) before approving next month's purchase indents.`,
     dataLimitation: `Figures and records shown here are illustrative unless a user imports data locally. Operational information is currently stored only in this browser (${period.dateRange}); items flagged as non-moving require engineering review to exclude mandatory machine spares.`,

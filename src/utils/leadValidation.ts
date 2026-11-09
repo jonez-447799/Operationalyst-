@@ -459,3 +459,99 @@ export function validateAdminLeadPatch(raw: unknown): AdminLeadPatchValidationRe
     data: result,
   };
 }
+
+export interface OptionalNotificationDispatchResult {
+  dispatched: boolean;
+  skippedReason?: 'missing_env' | 'placeholder_env' | 'invalid_url' | 'fetch_unavailable' | 'network_error';
+}
+
+const PLACEHOLDER_WEBHOOK_PATTERNS = [
+  'your_webhook_url',
+  'your-webhook-url',
+  'my_webhook_url',
+  'example.com',
+  'placeholder',
+  'changeme',
+];
+
+const PLACEHOLDER_WEB3FORMS_PATTERNS = [
+  'your_web3forms_key',
+  'your_access_key',
+  'placeholder',
+  'changeme',
+  'my_web3forms_key',
+];
+
+/**
+ * Pure, safe, non-throwing helper for optional server-side LEAD_NOTIFICATION_WEBHOOK_URL notifications.
+ * Never throws or logs noisy errors when the environment variable is unset, blank, a placeholder, or unreachable.
+ */
+export async function dispatchOptionalWebhookNotification(
+  payload: Record<string, unknown>,
+  rawWebhookUrl: string | undefined = process.env.LEAD_NOTIFICATION_WEBHOOK_URL,
+  fetchImpl: typeof fetch | undefined = typeof fetch === 'function' ? fetch : undefined
+): Promise<OptionalNotificationDispatchResult> {
+  try {
+    const trimmed = typeof rawWebhookUrl === 'string' ? rawWebhookUrl.trim() : '';
+    if (!trimmed) {
+      return { dispatched: false, skippedReason: 'missing_env' };
+    }
+    const lower = trimmed.toLowerCase();
+    if (PLACEHOLDER_WEBHOOK_PATTERNS.some((p) => lower.includes(p))) {
+      return { dispatched: false, skippedReason: 'placeholder_env' };
+    }
+    if (!lower.startsWith('https://') && !lower.startsWith('http://')) {
+      return { dispatched: false, skippedReason: 'invalid_url' };
+    }
+    if (typeof fetchImpl !== 'function') {
+      return { dispatched: false, skippedReason: 'fetch_unavailable' };
+    }
+    const res = await fetchImpl(trimmed, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    return { dispatched: Boolean(res && res.ok) };
+  } catch {
+    return { dispatched: false, skippedReason: 'network_error' };
+  }
+}
+
+/**
+ * Pure, safe, non-throwing helper for optional Web3Forms notifications (VITE_WEB3FORMS_KEY / VITE_WEB3FORMS_ACCESS_KEY).
+ * Never throws or logs noisy errors when the environment variable is unset, blank, a placeholder, or unreachable.
+ */
+export async function dispatchOptionalWeb3FormsNotification(
+  payload: Record<string, unknown>,
+  rawAccessKey?: string,
+  fetchImpl: typeof fetch | undefined = typeof fetch === 'function' ? fetch : undefined
+): Promise<OptionalNotificationDispatchResult> {
+  try {
+    const trimmed = typeof rawAccessKey === 'string' ? rawAccessKey.trim() : '';
+    if (!trimmed) {
+      return { dispatched: false, skippedReason: 'missing_env' };
+    }
+    const lower = trimmed.toLowerCase();
+    if (PLACEHOLDER_WEB3FORMS_PATTERNS.some((p) => lower.includes(p))) {
+      return { dispatched: false, skippedReason: 'placeholder_env' };
+    }
+    if (typeof fetchImpl !== 'function') {
+      return { dispatched: false, skippedReason: 'fetch_unavailable' };
+    }
+    const res = await fetchImpl('https://api.web3forms.com/submit', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
+      body: JSON.stringify({
+        access_key: trimmed,
+        ...payload,
+      }),
+    });
+    return { dispatched: Boolean(res && res.ok) };
+  } catch {
+    return { dispatched: false, skippedReason: 'network_error' };
+  }
+}
+

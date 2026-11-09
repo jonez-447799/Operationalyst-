@@ -292,7 +292,7 @@ export const SampleAuditPage: React.FC<SampleAuditPageProps> = ({
                   ₹4,82,50,000
                 </div>
                 <div className="text-xs text-slate-400 font-mono">
-                  12,400 Evaluated Line Items
+                  12,400 Line Items (Evaluated)
                 </div>
               </div>
 
@@ -304,7 +304,7 @@ export const SampleAuditPage: React.FC<SampleAuditPageProps> = ({
                   ₹18,42,000
                 </div>
                 <div className="text-xs text-rose-200/80 font-mono">
-                  24 SKUs · ₹4,05,240/yr Carrying Burn (22%)
+                  &gt;180 Days Inactive (24 SKUs) · ₹4,05,240/yr Burn (22%)
                 </div>
               </div>
 
@@ -316,7 +316,7 @@ export const SampleAuditPage: React.FC<SampleAuditPageProps> = ({
                   ₹32,60,000
                 </div>
                 <div className="text-xs text-amber-200/80 font-mono">
-                  41 SKUs · Velocity Deceleration Alert
+                  90–180d Velocity Deceleration (41 SKUs)
                 </div>
               </div>
 
@@ -325,10 +325,10 @@ export const SampleAuditPage: React.FC<SampleAuditPageProps> = ({
                   Monday Priority Floor Targets
                 </div>
                 <div className="text-2xl sm:text-3xl font-black text-emerald-400 font-mono">
-                  18 SKUs
+                  18 Priority SKUs
                 </div>
                 <div className="text-xs text-emerald-200/80 font-mono">
-                  Account for 76% of Stagnant Capital
+                  76% of Stagnant Capital Concentrated Here
                 </div>
               </div>
             </div>
@@ -357,7 +357,7 @@ export const SampleAuditPage: React.FC<SampleAuditPageProps> = ({
                   ₹2,23,110
                 </div>
                 <div className="text-xs text-rose-200/80 font-mono">
-                  8 SKUs (34.6% of Book Value)
+                  &gt;180d Inactive (8 SKUs · 34.6%)
                 </div>
               </div>
 
@@ -369,7 +369,7 @@ export const SampleAuditPage: React.FC<SampleAuditPageProps> = ({
                   ₹63,600
                 </div>
                 <div className="text-xs text-amber-200/80 font-mono">
-                  2 SKUs (9.9% of Book Value)
+                  90–179d (2 SKUs · 9.9%)
                 </div>
               </div>
 
@@ -381,11 +381,32 @@ export const SampleAuditPage: React.FC<SampleAuditPageProps> = ({
                   10 Priority SKUs
                 </div>
                 <div className="text-xs text-emerald-200/80 font-mono">
-                  Highest Category: {liveSandboxMetrics.highestValueCategory}
+                  8 Dead + 2 Slow Items · Highest: {liveSandboxMetrics.highestValueCategory}
                 </div>
               </div>
             </div>
           )}
+
+          {/* Connected Multi-Pillar Summary Pills (P2 OTIF, P3 Freight, P4 Bin Accuracy) */}
+          <div
+            data-testid="sample-audit-connected-pillars"
+            className="p-3.5 rounded-xl bg-slate-950/90 border border-slate-800 flex flex-wrap items-center justify-between gap-2 font-mono text-[11px]"
+          >
+            <span className="text-slate-400 font-bold uppercase">
+              Connected 4-Pillar Audit Signals:
+            </span>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="px-2.5 py-1 rounded-md bg-sky-500/15 border border-sky-500/30 text-sky-300 font-bold">
+                {liveSandboxMetrics.connectedP2Pill}
+              </span>
+              <span className="px-2.5 py-1 rounded-md bg-amber-500/15 border border-amber-500/30 text-amber-300 font-bold">
+                {liveSandboxMetrics.connectedP3Pill}
+              </span>
+              <span className="px-2.5 py-1 rounded-md bg-purple-500/15 border border-purple-500/30 text-purple-300 font-bold">
+                {liveSandboxMetrics.connectedP4Pill}
+              </span>
+            </div>
+          </div>
         </section>
 
         {/* Top Flagged SKUs Requiring Floor Investigation Table */}

@@ -117,6 +117,7 @@ export const SelfAssessmentWidget: React.FC<SelfAssessmentWidgetProps> = ({
         <div className="flex flex-wrap items-center gap-2">
           {isCompleted && (
             <button
+              type="button"
               onClick={reset}
               className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-750 text-slate-300 text-xs font-mono flex items-center gap-1.5 cursor-pointer transition"
             >
@@ -172,6 +173,7 @@ export const SelfAssessmentWidget: React.FC<SelfAssessmentWidgetProps> = ({
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-1">
             {OPTIONS.map((opt) => (
               <button
+                type="button"
                 key={opt.value}
                 onClick={() => handleSelectOption(currentQ.id, opt.value)}
                 data-testid={`self-assessment-option-${opt.value}`}
@@ -215,8 +217,8 @@ export const SelfAssessmentWidget: React.FC<SelfAssessmentWidgetProps> = ({
                   <span>Identified Operational Visibility Gaps ({evaluation.identifiedGaps.length}):</span>
                 </div>
                 <ul className="space-y-1 text-xs text-slate-300 list-disc list-inside">
-                  {evaluation.identifiedGaps.map((gap, idx) => (
-                    <li key={idx}>{gap}</li>
+                  {evaluation.identifiedGaps.map((gap) => (
+                    <li key={gap}>{gap}</li>
                   ))}
                 </ul>
               </div>

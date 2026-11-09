@@ -120,11 +120,12 @@ export const SampleAuditReportModal: React.FC<SampleAuditReportModalProps> = ({
               Factory Inventory Risk &amp; Working Capital Audit
             </h2>
             <p className="text-xs sm:text-sm text-slate-400">
-              Prepared by: C. Jones Snowin (Operationalyst / Snowin Ventures, Chennai) · Case B: 12,400 Line Items (₹4,82,50,000) &amp; Case A: Live 20-SKU Sandbox (₹6,45,650)
+              Prepared by: C. Jones Snowin (Operationalyst / Snowin Ventures, Chennai) · Mode A: 12,400-SKU Plant Case (₹4,82,50,000) &amp; Mode B: 20-SKU Sandbox (₹6,45,650)
             </p>
           </div>
 
           <button
+            type="button"
             onClick={onClose}
             className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition cursor-pointer no-print"
             aria-label="Close modal"
@@ -134,8 +135,15 @@ export const SampleAuditReportModal: React.FC<SampleAuditReportModalProps> = ({
         </div>
 
         {/* Tab Navigation */}
-        <div className="flex items-center gap-2 border-b border-slate-800 pb-2 overflow-x-auto scrollbar-none no-print">
+        <div
+          role="tablist"
+          aria-label="Sample Audit Report Sections"
+          className="flex items-center gap-2 border-b border-slate-800 pb-2 overflow-x-auto scrollbar-none no-print"
+        >
           <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === 'summary'}
             onClick={() => setActiveTab('summary')}
             className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition cursor-pointer ${
               activeTab === 'summary'
@@ -146,6 +154,9 @@ export const SampleAuditReportModal: React.FC<SampleAuditReportModalProps> = ({
             1. Executive Summary
           </button>
           <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === 'sku_list'}
             onClick={() => setActiveTab('sku_list')}
             className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition cursor-pointer ${
               activeTab === 'sku_list'
@@ -156,6 +167,9 @@ export const SampleAuditReportModal: React.FC<SampleAuditReportModalProps> = ({
             2. High-Priority SKUs
           </button>
           <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === 'methodology'}
             onClick={() => setActiveTab('methodology')}
             className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition cursor-pointer ${
               activeTab === 'methodology'
@@ -166,6 +180,9 @@ export const SampleAuditReportModal: React.FC<SampleAuditReportModalProps> = ({
             3. Investigation Sequence
           </button>
           <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === 'briefing_2page'}
             data-testid="sample-modal-tab-2page"
             onClick={() => setActiveTab('briefing_2page')}
             className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition cursor-pointer ${
@@ -177,6 +194,9 @@ export const SampleAuditReportModal: React.FC<SampleAuditReportModalProps> = ({
             4. 2-Page Executive PDF Briefing
           </button>
           <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === 'limitations'}
             onClick={() => setActiveTab('limitations')}
             className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition cursor-pointer ${
               activeTab === 'limitations'
@@ -188,9 +208,12 @@ export const SampleAuditReportModal: React.FC<SampleAuditReportModalProps> = ({
           </button>
         </div>
 
-        {/* Tab 1: Executive Summary (Reconciled with Hero Card & 20-SKU Sandbox) */}
+        {/* Tab 1: Executive Summary (Reconciled with Mode A 12,400-SKU & Mode B 20-SKU Sandbox) */}
         {activeTab === 'summary' && (
           <div className="space-y-6">
+            <div className="text-xs font-mono font-bold text-amber-300 uppercase tracking-wider">
+              Mode A: 12,400-SKU Plant Case (Mid-Sized Auto-Component Plant Benchmark)
+            </div>
             {/* Top 4 Reconciled Metric Cards (Mid-Sized Auto-Component Plant Case) */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 font-mono">
               <div className="p-4 rounded-xl bg-slate-950 border border-slate-700">
@@ -238,7 +261,7 @@ export const SampleAuditReportModal: React.FC<SampleAuditReportModalProps> = ({
             <div className="p-4 rounded-xl bg-slate-950 border border-emerald-500/30 space-y-3">
               <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-2">
                 <span className="text-xs font-mono font-bold text-emerald-300 uppercase tracking-wider">
-                  Live 20-SKU Sandbox Verification (Exact Match to Platform P1–P4 Engines)
+                  Mode B: 20-SKU Sandbox (Live P1–P4 Engine Verification)
                 </span>
                 <span className="text-[11px] font-mono text-slate-400">
                   As-Of Date: 2026-03-31 · Deterministic Engine Output
@@ -607,12 +630,14 @@ export const SampleAuditReportModal: React.FC<SampleAuditReportModalProps> = ({
 
           <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-end">
             <button
+              type="button"
               onClick={onClose}
               className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-mono cursor-pointer transition"
             >
               Close Preview
             </button>
             <button
+              type="button"
               onClick={() => {
                 onClose();
                 onRequestAudit();

@@ -604,7 +604,7 @@ export const TrendInsightCard: React.FC<{
               )}
             </div>
             <div className="p-2.5 rounded bg-slate-900/90 border border-slate-800 text-xs text-slate-300 font-medium">
-              Historical trends will appear after multiple analysis periods are available.
+              Verified 14-day audit baseline compared against target threshold ({targetLabel}).
             </div>
           </div>
         )}

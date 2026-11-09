@@ -52,8 +52,8 @@ export interface ReconciledSampleAuditModeMetrics {
 
 export const ILLUSTRATIVE_12400_CASE_METRICS: ReconciledSampleAuditModeMetrics = {
   modeId: 'B_ILLUSTRATIVE_12400',
-  modeLabel: 'Mode B: Mid-Sized Auto-Component Plant Illustrative Case (12,400 Line Items)',
-  modeBadge: 'ILLUSTRATIVE CASE STUDY • MATCHES HERO BENCHMARK CARD',
+  modeLabel: 'Mode A: 12,400-SKU Plant Case (Mid-Sized Auto-Component Plant)',
+  modeBadge: 'MODE A • 12,400-SKU PLANT CASE • MATCHES HERO BENCHMARK CARD',
   companyName: 'Mid-Sized Tier-1 Auto-Component Plant (Illustrative Case)',
   plantLocation: 'Chakan / Ambattur Industrial Corridor',
   inventoryAnalysedFormatted: '₹4,82,50,000',
@@ -225,8 +225,8 @@ export function getLiveSandboxReconciledModeMetrics(): ReconciledSampleAuditMode
 
   return {
     modeId: 'A_LIVE_SANDBOX',
-    modeLabel: 'Mode A: Live 20-SKU Sandbox Dataset (Exact Match to Platform & Walkthrough)',
-    modeBadge: '100% ENGINE-COMPUTED • MATCHES P1–P4 PLATFORM & WALKTHROUGH',
+    modeLabel: 'Mode B: 20-SKU Sandbox (Live P1–P4 Engine Dataset)',
+    modeBadge: 'MODE B • 100% ENGINE-COMPUTED • MATCHES P1–P4 PLATFORM & WALKTHROUGH',
     companyName: snap.companyName,
     plantLocation: snap.plantLocation,
     inventoryAnalysedFormatted: `₹${p1.totalStockValue.toLocaleString('en-IN')}`,

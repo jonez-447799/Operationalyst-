@@ -304,12 +304,14 @@ export const PLANTS: Record<PlantId, PlantConfig> = {
   },
 };
 
+import { getDynamicFortnightLabel } from '../commercial/PlatformTopBar';
+
 export const PERIODS: Record<PeriodId, PeriodConfig> = {
   fortnight_sep: {
     id: 'fortnight_sep',
-    label: 'Current Fortnight (15–28 Sep 2026)',
-    shortLabel: '15–28 Sep \'26',
-    dateRange: '15 Sep – 28 Sep 2026',
+    label: getDynamicFortnightLabel(),
+    shortLabel: 'Current Fortnight',
+    dateRange: getDynamicFortnightLabel().replace(/^Current Fortnight \(|\)$/g, ''),
     asOfDate: '2026-09-28',
   },
   month_sep: {

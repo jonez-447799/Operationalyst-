@@ -128,36 +128,82 @@ export const AUDIT_DELIVERABLES = [
   },
 ];
 
-export const METHODOLOGY_STAGES = [
+export interface MethodologyStageItem {
+  stage: string;
+  name: string;
+  pillLabel: string;
+  formula: string;
+  inputs: string;
+  outputs: string;
+  summary: string;
+}
+
+export const METHODOLOGY_STAGES: MethodologyStageItem[] = [
   {
     stage: 'Stage 01',
-    name: 'Input Validation',
-    summary: 'Checking column headers, numerical consistency, date timestamps, and missing fields.',
+    name: '5-Column Schema & Type Ingestion',
+    pillLabel:
+      'Stage 01: 5-Column Schema & Type Ingestion (Part_ID, Part_Description, Closing_Stock_Qty, Unit_Cost_INR, Last_Movement_Date)',
+    formula: 'BookValue_i = Closing_Stock_Qty_i × Unit_Cost_INR_i',
+    inputs: 'Part_ID, Part_Description, Closing_Stock_Qty, Unit_Cost_INR, Last_Movement_Date',
+    outputs: 'Canonical 5-column typed inventory records with ERP alias resolution',
+    summary:
+      'Maps Tally Prime, SAP, Busy, or Excel exports to the canonical 5-column schema (Part_ID, Part_Description, Closing_Stock_Qty, Unit_Cost_INR, Last_Movement_Date) and computes baseline line-item book value.',
   },
   {
     stage: 'Stage 02',
-    name: 'Definition Agreement',
-    summary: 'Aligning on specific plant thresholds for "dead stock" (>180 days default) and reserve buffer stock.',
+    name: 'Data Sanitization & Anomaly Isolation',
+    pillLabel:
+      'Stage 02: Data Sanitization & Anomaly Isolation (Null dates, negative stock, duplicate SKU checks)',
+    formula: 'MatchHealth% = (ValidRows ÷ TotalSubmittedRows) × 100 · Item 07 Reserve Spare Flag',
+    inputs: 'Raw ingested rows + plant dead-stock threshold (>180d default) & Item 07 reserve spare flags',
+    outputs: 'Sanitized analytical dataset + quarantined exception ledger + protected machine reserve spares',
+    summary:
+      'Isolates null movement dates, negative closing balances, and duplicate SKU keys before evaluation while protecting critical machine reserve spares under Item 07.',
   },
   {
     stage: 'Stage 03',
-    name: 'Movement Classification',
-    summary: 'Calculating days elapsed since last factory issue or transaction (ΔDays = Today − DateOfLastMovement).',
+    name: 'Deterministic Dormancy & Velocity Segmentation',
+    pillLabel:
+      'Stage 03: Deterministic Dormancy & Velocity Segmentation (ΔDays = AsOfDate − LastMovementDate across 0–90d, 91–180d, 181–365d, >365d)',
+    formula: 'ΔDays = AsOfDate − LastMovementDate (segmented into 0–90d, 91–180d, 181–365d, >365d)',
+    inputs: 'Sanitized SKU ledger + audit AsOfDate + velocity bracket rules (30d / 90d / 180d / 365d)',
+    outputs: 'SKU-level inactivity day count and velocity classification across 0–90d, 91–180d, 181–365d, and >365d',
+    summary:
+      'Computes exact inactivity duration (ΔDays = AsOfDate − LastMovementDate) and segments every SKU into Active (0–90d), Slow-Moving (91–180d), or Non-Moving Dead Stock (181–365d and >365d).',
   },
   {
     stage: 'Stage 04',
-    name: 'Ageing & Value Analysis',
-    summary: 'Multiplying inactive quantities by unit valuation to determine total rupee exposure by category.',
+    name: 'Carrying-Cost Burn & Capital Trap Quantification',
+    pillLabel:
+      'Stage 04: Carrying-Cost Burn & Capital Trap Quantification (AnnualBurn = BookValue × HoldingRate%, default 22% p.a.)',
+    formula: 'AnnualBurn = BookValue × HoldingRate% (default 22% p.a.) · MonthlyBurn = AnnualBurn ÷ 12',
+    inputs: 'Dormant & slow-moving SKU valuations + plant annual carrying-cost rate (default 22% p.a.)',
+    outputs: 'Category-wise trapped working capital, annual carrying-cost burn, and monthly holding drain',
+    summary:
+      'Quantifies trapped rupee exposure and recurring carrying-cost burn (AnnualBurn = BookValue × HoldingRate%, default 22% p.a.) across Raw Material, WIP, Finished Goods, and Spares.',
   },
   {
     stage: 'Stage 05',
-    name: 'Priority Classification',
-    summary: 'Ranking inactive SKUs by financial impact to deliver an actionable top-15 floor investigation list.',
+    name: 'Pareto 80/20 Concentration & Priority SKU Ranking',
+    pillLabel:
+      'Stage 05: Pareto 80/20 Concentration & Priority SKU Ranking (Cumulative value share isolation)',
+    formula: 'CumulativeValueShare_k = (Σ_{i=1..k} DeadBookValue_i) ÷ TotalDeadBookValue',
+    inputs: 'All non-moving and slow-moving SKUs sorted descending by locked rupee exposure',
+    outputs: 'Ranked Pareto 80/20 floor investigation list isolating the top SKUs driving 75–80% of stagnant cash',
+    summary:
+      'Ranks stagnant SKUs by locked rupee value and cumulative Pareto share so stores and procurement teams focus on the 15–20 priority SKUs that account for the majority of dormant capital.',
   },
   {
     stage: 'Stage 06',
-    name: 'Executive Review',
-    summary: 'Synthesizing observations into a structured executive report highlighting clear discussion points.',
+    name: 'Cross-Pillar Floor Verification & Action Plan',
+    pillLabel:
+      'Stage 06: Cross-Pillar Floor Verification & Action Plan (Linking P1 Dead Stock with P2 OTIF, P3 Freight Audit, and P4 Ghost/Bin Reconciliation)',
+    formula: 'TargetCashRelease = (DeadStock × 70%) + (SlowStock × 30%) + P3_FreightLeak + P4_GhostStock',
+    inputs: 'P1 Pareto SKU list + connected P2 Gate OTIF, P3 Carrier Rate/Detention, and P4 Physical Bin counts',
+    outputs: '2-page Executive Briefing, Monday floor verification checklist, and CAPA financial disposition ledger',
+    summary:
+      'Links P1 Dead Stock findings with P2 Gate OTIF dispatch misses, P3 Freight rate/detention leakage, and P4 Ghost/Bin reconciliation into a concrete Monday shop-floor action plan.',
   },
 ];
 
@@ -521,10 +567,10 @@ export function getReconciledSampleAuditModes(): Record<SampleAuditModeId, Sampl
   return {
     sandbox_20: {
       id: 'sandbox_20',
-      badge: 'LIVE 20-SKU SANDBOX DATASET • EXACT ENGINE MATCH',
-      badgeLabel: 'LIVE 20-SKU SANDBOX DATASET • EXACT ENGINE MATCH',
-      shortLabel: '20-SKU Platform Sandbox',
-      buttonLabel: 'Mode A: Live 20-SKU Sandbox Dataset (Exact Match to Platform & Walkthrough)',
+      badge: 'MODE B • LIVE 20-SKU SANDBOX DATASET • EXACT ENGINE MATCH',
+      badgeLabel: 'MODE B • LIVE 20-SKU SANDBOX DATASET • EXACT ENGINE MATCH',
+      shortLabel: 'Mode B: 20-SKU Sandbox',
+      buttonLabel: 'Mode B: 20-SKU Sandbox (Live P1–P4 Engine Dataset)',
       subtitle:
         'Dynamically computed by the real P1–P4 calculation engines on the 20-SKU Ambattur Fabrication sample dataset.',
       totalBookValueFormatted: formatCurrency(p1Owner.totalStockValue),
@@ -575,10 +621,10 @@ export function getReconciledSampleAuditModes(): Record<SampleAuditModeId, Sampl
     },
     illustrative_12400: {
       id: 'illustrative_12400',
-      badge: 'ILLUSTRATIVE CASE • MID-SIZED AUTO-COMPONENT PLANT (12,400 LINE ITEMS)',
-      badgeLabel: 'ILLUSTRATIVE CASE • MID-SIZED AUTO-COMPONENT PLANT (12,400 LINE ITEMS)',
-      shortLabel: '12,400-Line Auto-Component Plant',
-      buttonLabel: 'Mode B: Mid-Sized Auto-Component Plant Illustrative Case (12,400 Line Items)',
+      badge: 'MODE A • 12,400-SKU PLANT CASE • MID-SIZED AUTO-COMPONENT BENCHMARK',
+      badgeLabel: 'MODE A • 12,400-SKU PLANT CASE • MID-SIZED AUTO-COMPONENT BENCHMARK',
+      shortLabel: 'Mode A: 12,400-SKU Plant Case',
+      buttonLabel: 'Mode A: 12,400-SKU Plant Case (Mid-Sized Auto-Component Plant)',
       subtitle:
         'Reconciled 100% with the Hero benchmark card showing a typical mid-sized Tier-2 automotive component plant.',
       totalBookValueFormatted: '₹4,82,50,000',

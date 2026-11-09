@@ -145,5 +145,45 @@
     "metadata": {
       "sourceSection": "audit_modal_auto_download"
     }
+  },
+  {
+    "eventId": "FNLEVT-20261109-3363",
+    "timestamp": "2026-11-09T04:33:55.661Z",
+    "eventType": "LANDING_PAGE_VIEW",
+    "metadata": {
+      "sourceSection": "landing_page_load"
+    }
+  },
+  {
+    "eventId": "FNLEVT-20261109-CFBF",
+    "timestamp": "2026-11-09T04:33:56.737Z",
+    "eventType": "SCROLL_DEPTH_25_PCT",
+    "metadata": {
+      "sourceSection": "scroll_25_pct"
+    }
+  },
+  {
+    "eventId": "FNLEVT-20261109-5871",
+    "timestamp": "2026-11-09T04:33:56.858Z",
+    "eventType": "SCROLL_DEPTH_50_PCT",
+    "metadata": {
+      "sourceSection": "scroll_50_pct"
+    }
+  },
+  {
+    "eventId": "FNLEVT-20261109-8E6F",
+    "timestamp": "2026-11-09T04:33:57.712Z",
+    "eventType": "SAMPLE_REPORT_CLICKED",
+    "metadata": {
+      "sourceSection": "dedicated_sample_audit_route"
+    }
+  },
+  {
+    "eventId": "FNLEVT-20261109-770F",
+    "timestamp": "2026-11-09T05:05:59.426Z",
+    "eventType": "LANDING_PAGE_VIEW",
+    "metadata": {
+      "sourceSection": "landing_page_load"
+    }
   }
 ]

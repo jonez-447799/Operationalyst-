@@ -43,6 +43,7 @@ export const MethodologyModal: React.FC<MethodologyModalProps> = ({
           </div>
 
           <button
+            type="button"
             onClick={onClose}
             className="min-h-[40px] min-w-[40px] p-2 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition flex items-center justify-center cursor-pointer"
             aria-label="Close Methodology Modal"
@@ -56,7 +57,7 @@ export const MethodologyModal: React.FC<MethodologyModalProps> = ({
           {METHODOLOGY_STAGES.map((stg, idx) => (
             <div
               key={stg.stage}
-              className="p-4 rounded-xl bg-slate-950 border border-slate-850 space-y-1.5"
+              className="p-4 rounded-xl bg-slate-950 border border-slate-850 space-y-2"
             >
               <div className="flex items-center justify-between">
                 <span className="text-xs font-mono font-bold text-emerald-400 uppercase">
@@ -66,6 +67,20 @@ export const MethodologyModal: React.FC<MethodologyModalProps> = ({
               </div>
               <h3 className="text-sm font-bold text-white">{stg.name}</h3>
               <p className="text-xs text-slate-300 leading-relaxed font-sans">{stg.summary}</p>
+              <div className="pt-1.5 border-t border-slate-800/80 space-y-1 text-[11px] font-mono">
+                <div className="text-emerald-300">
+                  <span className="text-slate-400">Formula: </span>
+                  <code>{stg.formula}</code>
+                </div>
+                <div className="text-slate-300">
+                  <span className="text-slate-400">Inputs: </span>
+                  <span>{stg.inputs}</span>
+                </div>
+                <div className="text-cyan-300">
+                  <span className="text-slate-400">Output: </span>
+                  <span>{stg.outputs}</span>
+                </div>
+              </div>
             </div>
           ))}
         </div>
@@ -87,12 +102,14 @@ export const MethodologyModal: React.FC<MethodologyModalProps> = ({
           </span>
           <div className="flex items-center gap-2 w-full sm:w-auto">
             <button
+              type="button"
               onClick={onClose}
               className="w-full sm:w-auto px-4 py-2 rounded-lg hover:bg-slate-800 text-slate-300 text-xs cursor-pointer transition"
             >
               Close
             </button>
             <button
+              type="button"
               onClick={() => {
                 onClose();
                 onRequestAudit();

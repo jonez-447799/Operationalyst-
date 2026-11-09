@@ -64,6 +64,8 @@ import {
   writePlantDatasetToBrowser,
   clearPlantDatasetInBrowser,
 } from '../data/multiPlantBaselines';
+import { PlatformTopBar } from '../commercial/PlatformTopBar';
+import { FactoryAuditModal } from '../commercial/FactoryAuditModal';
 
 interface AppShellProps {
   initialTab: PlatformNavId;
@@ -124,6 +126,8 @@ export const AppShell: React.FC<AppShellProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<PlatformNavId>(initialTab);
   const [roleView, setRoleView] = useState<RoleViewMode>('executive');
+  const [showOperatorTools, setShowOperatorTools] = useState<boolean>(false);
+  const [showPilotAuditModal, setShowPilotAuditModal] = useState<boolean>(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(false);
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState<boolean>(false);
   const [activeMethodologyId, setActiveMethodologyId] = useState<string | null>(null);
@@ -247,8 +251,34 @@ export const AppShell: React.FC<AppShellProps> = ({
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  const handleToggleOperatorTools = () => {
+    setShowOperatorTools((prev) => {
+      const next = !prev;
+      if (!next) {
+        if (roleView !== 'executive') {
+          setRoleView('executive');
+        }
+        if (activeTab === 'administration') {
+          setActiveTab('overview');
+        }
+      }
+      return next;
+    });
+  };
+
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex">
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
+      {!isClientLocked && (
+        <PlatformTopBar
+          selectedPlantId={activePlant.id}
+          onSelectPlant={onSelectPlant}
+          showOperatorTools={showOperatorTools}
+          onToggleOperatorTools={handleToggleOperatorTools}
+          onBackToWebsite={onOpenPublicHome}
+          onRequestPilotAudit={() => setShowPilotAuditModal(true)}
+        />
+      )}
+      <div className="flex-1 flex min-w-0">
       {/* =====================================================================
           DESKTOP LEFT NAVIGATION SIDEBAR
       ===================================================================== */}
@@ -364,21 +394,23 @@ export const AppShell: React.FC<AppShellProps> = ({
 
           {/* Bottom Navigation Items (Administration, Methodology, Help, Public Links, Profile) */}
           <div className="p-3.5 border-t border-slate-800 space-y-1.5 text-xs">
-            <button
-              onClick={() => {
-                setRoleView('executive');
-                handleNavigate('administration');
-              }}
-              className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg transition cursor-pointer ${
-                activeTab === 'administration'
-                  ? 'bg-sky-500 text-slate-950 font-bold'
-                  : 'text-slate-300 hover:bg-slate-800 hover:text-white'
-              }`}
-              title="Administration & Governance"
-            >
-              <Shield className="w-4 h-4 shrink-0" />
-              {!sidebarCollapsed && <span>Administration</span>}
-            </button>
+            {showOperatorTools && (
+              <button
+                onClick={() => {
+                  setRoleView('executive');
+                  handleNavigate('administration');
+                }}
+                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg transition cursor-pointer ${
+                  activeTab === 'administration'
+                    ? 'bg-sky-500 text-slate-950 font-bold'
+                    : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                }`}
+                title="Administration & Governance"
+              >
+                <Shield className="w-4 h-4 shrink-0" />
+                {!sidebarCollapsed && <span>Administration</span>}
+              </button>
+            )}
 
             <button
               onClick={() => {
@@ -492,36 +524,38 @@ export const AppShell: React.FC<AppShellProps> = ({
 
               {/* Right: Role View Switcher + Quick Domain Jump + Issue Count + Primary Action */}
               <div className="flex flex-wrap items-center gap-2 text-xs">
-                {/* Role-Based UI Preview Switcher */}
-                <div
-                  className="flex items-center gap-1.5 bg-slate-950 border border-slate-800 rounded-lg px-2 py-0.5"
-                  role="group"
-                  aria-label="Preview interface as"
-                  title="Role previews change the interface only. They do not provide security or authorization in this demonstration environment."
-                >
-                  <span className="text-[10px] font-mono uppercase tracking-wider text-slate-400 hidden lg:inline">
-                    Preview interface as:
-                  </span>
-                  {(
-                    [
-                      { id: 'executive', label: 'Executive' },
-                      { id: 'dispatch_desk', label: 'Dispatch Desk' },
-                      { id: 'gate_kiosk', label: 'Gate Kiosk' },
-                    ] as const
-                  ).map((mode) => (
-                    <button
-                      key={mode.id}
-                      onClick={() => setRoleView(mode.id)}
-                      className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition cursor-pointer ${
-                        roleView === mode.id
-                          ? 'bg-sky-500 text-slate-950 font-bold'
-                          : 'text-slate-400 hover:text-white'
-                      }`}
-                    >
-                      {mode.label}
-                    </button>
-                  ))}
-                </div>
+                {/* Role-Based UI Preview Switcher (Reveals Shop-Floor Operator Views when showOperatorTools is toggled ON) */}
+                {showOperatorTools && (
+                  <div
+                    className="flex items-center gap-1.5 bg-slate-950 border border-slate-800 rounded-lg px-2 py-0.5"
+                    role="group"
+                    aria-label="Preview interface as"
+                    title="Role previews change the interface only. They do not provide security or authorization in this demonstration environment."
+                  >
+                    <span className="text-[10px] font-mono uppercase tracking-wider text-slate-400 hidden lg:inline">
+                      Preview interface as:
+                    </span>
+                    {(
+                      [
+                        { id: 'executive', label: 'Executive' },
+                        { id: 'dispatch_desk', label: 'Dispatch Desk' },
+                        { id: 'gate_kiosk', label: 'Gate Kiosk' },
+                      ] as const
+                    ).map((mode) => (
+                      <button
+                        key={mode.id}
+                        onClick={() => setRoleView(mode.id)}
+                        className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition cursor-pointer ${
+                          roleView === mode.id
+                            ? 'bg-sky-500 text-slate-950 font-bold'
+                            : 'text-slate-400 hover:text-white'
+                        }`}
+                      >
+                        {mode.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
 
                 {/* Quick Global Search / Jump */}
                 <div className="hidden xl:flex items-center relative">
@@ -784,6 +818,7 @@ export const AppShell: React.FC<AppShellProps> = ({
           )}
         </main>
       </div>
+      </div>
 
       {/* Contextual Right-Side Calculation & Methodology Drawer */}
       <MetricExplanationDrawer
@@ -802,6 +837,17 @@ export const AppShell: React.FC<AppShellProps> = ({
           } catch {}
         }}
         onOpenDataImports={() => handleNavigate('data_imports')}
+      />
+
+      {/* Direct In-Platform Pilot Audit Modal */}
+      <FactoryAuditModal
+        isOpen={showPilotAuditModal}
+        onClose={() => setShowPilotAuditModal(false)}
+        sourceView="platform_topbar"
+        onOpenSmartMapper={() => {
+          setShowPilotAuditModal(false);
+          onOpenSmartMapper();
+        }}
       />
     </div>
   );

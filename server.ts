@@ -4,6 +4,7 @@ import path from "path";
 import {
   validatePilotRequestPayload,
   validateAdminLeadPatch,
+  dispatchOptionalWebhookNotification,
 } from "./src/utils/leadValidation.ts";
 import {
   createLeadRecord,
@@ -208,30 +209,21 @@ async function startServer() {
         `[PILOT_LEAD_CAPTURED] leadId=${record.leadId} company="${record.companyName}" location="${record.plantLocation}"`
       );
 
-      // Non-blocking optional webhook notification
-      const webhookUrl = process.env.LEAD_NOTIFICATION_WEBHOOK_URL?.trim();
-      if (webhookUrl) {
-        fetch(webhookUrl, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            event: "pilot_lead_captured",
-            leadId: record.leadId,
-            companyName: record.companyName,
-            plantLocation: record.plantLocation,
-            fullName: record.fullName,
-            workEmail: record.workEmail,
-            phoneOrWhatsapp: record.phoneOrWhatsapp,
-            roleTitle: record.roleTitle,
-            erpSystem: record.erpSystem,
-            approxSkuCount: record.approxSkuCount,
-            primaryChallenge: record.primaryChallenge,
-            createdAt: record.createdAt,
-          }),
-        }).catch((err) => {
-          console.error("[PILOT_WEBHOOK_ERROR]", err instanceof Error ? err.message : String(err));
-        });
-      }
+      // Non-blocking optional webhook notification (100% optional with silent graceful fallback)
+      void dispatchOptionalWebhookNotification({
+        event: "pilot_lead_captured",
+        leadId: record.leadId,
+        companyName: record.companyName,
+        plantLocation: record.plantLocation,
+        fullName: record.fullName,
+        workEmail: record.workEmail,
+        phoneOrWhatsapp: record.phoneOrWhatsapp,
+        roleTitle: record.roleTitle,
+        erpSystem: record.erpSystem,
+        approxSkuCount: record.approxSkuCount,
+        primaryChallenge: record.primaryChallenge,
+        createdAt: record.createdAt,
+      });
 
       return res.status(201).json({
         ok: true,

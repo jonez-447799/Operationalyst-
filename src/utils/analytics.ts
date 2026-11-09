@@ -23,7 +23,8 @@ export type AnalyticsEventName =
   | 'import_started'
   | 'import_validation_completed'
   | 'report_exported'
-  | 'demo_environment_viewed';
+  | 'demo_environment_viewed'
+  | 'click_back_to_website';
 
 export interface AnalyticsPayload {
   source?: string;
@@ -71,12 +72,9 @@ export function trackEvent(name: AnalyticsEventName, payload?: AnalyticsPayload)
       ...safePayload,
     };
 
-    // Safe in-browser event dispatch for testability and monitoring
+    // Safe in-browser event dispatch for testability and monitoring without noisy console output
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('operationalyst_analytics', { detail: eventRecord }));
-      if (process.env.NODE_ENV !== 'production') {
-        console.info(`[Operationalyst Analytics] ${name}`, eventRecord);
-      }
     }
   } catch (err) {
     // Fail silently without disrupting user interaction

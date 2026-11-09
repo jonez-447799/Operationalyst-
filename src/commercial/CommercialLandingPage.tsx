@@ -59,6 +59,7 @@ import type { SelfAssessmentEvaluation } from '../utils/selfAssessmentScorer';
 import type { VerifiedProofRecord } from '../utils/verifiedProofRegistryStore';
 import type { DeletionCertificateRecord } from '../utils/dataPurgeEngine';
 import { formatCurrency } from '../project1/utils/calculations';
+import { InstantAuditDropzone } from './InstantAuditDropzone';
 
 const DEFAULT_SANDBOX_DEMO_PROOF: VerifiedProofRecord = {
   proofId: 'PROOF-SANDBOX-DEMO',
@@ -130,7 +131,7 @@ export const CommercialLandingPage: React.FC<CommercialLandingPageProps> = ({
   const [isCampaignStudioOpen, setIsCampaignStudioOpen] = useState(false);
   const [isLegalModalOpen, setIsLegalModalOpen] = useState(false);
   const [legalModalTab, setLegalModalTab] = useState<LegalGovernanceTab>('privacy');
-  const [sampleModeId, setSampleModeId] = useState<SampleAuditModeId>('sandbox_20');
+  const [sampleModeId, setSampleModeId] = useState<SampleAuditModeId>('illustrative_12400');
 
   // Phase 7: Verified Proof Registry State
   const [verifiedProofs, setVerifiedProofs] = useState<VerifiedProofRecord[]>([]);
@@ -199,8 +200,10 @@ export const CommercialLandingPage: React.FC<CommercialLandingPageProps> = ({
   // A/B Test Readiness Configuration (defaults to Variant A, switchable via Iceberg Lab)
   const [headlineVariant, setHeadlineVariant] = useState<'A' | 'B' | 'C'>(ACTIVE_DEFAULT_VARIANT);
 
-  // Phase 9 Collapsible Deep-Dive Drawer States
-  const [showMethodologyStagesDrawer, setShowMethodologyStagesDrawer] = useState<boolean>(false);
+  // Phase 9 & 11 Collapsible Deep-Dive Drawer States
+  const [isMethodologyDrawerOpen, setIsMethodologyDrawerOpen] = useState<boolean>(false);
+  const showMethodologyStagesDrawer = isMethodologyDrawerOpen;
+  const setShowMethodologyStagesDrawer = setIsMethodologyDrawerOpen;
   const [showGovernanceFaqDrawer, setShowGovernanceFaqDrawer] = useState<boolean>(false);
 
   // Data & Trust Accordion State
@@ -221,6 +224,13 @@ export const CommercialLandingPage: React.FC<CommercialLandingPageProps> = ({
       hasTrackedPageViewRef.current = true;
       trackServerFunnelEvent('LANDING_PAGE_VIEW', { sourceSection: 'landing_page_load' });
     }
+
+    const handleHashChange = () => {
+      if (typeof window !== 'undefined' && window.location.hash === '#methodology') {
+        setIsMethodologyDrawerOpen(true);
+      }
+    };
+    handleHashChange();
 
     const handleScroll = () => {
       if (typeof window === 'undefined' || typeof document === 'undefined') return;
@@ -254,8 +264,10 @@ export const CommercialLandingPage: React.FC<CommercialLandingPageProps> = ({
     };
 
     window.addEventListener('scroll', handleScroll, { passive: true });
+    window.addEventListener('hashchange', handleHashChange);
     return () => {
       window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('hashchange', handleHashChange);
     };
   }, []);
 
@@ -329,6 +341,7 @@ export const CommercialLandingPage: React.FC<CommercialLandingPageProps> = ({
               By Role
             </a>
             <button
+              type="button"
               onClick={() => handleOpenSampleReport('nav')}
               className="hover:text-emerald-400 transition cursor-pointer text-left"
             >
@@ -338,6 +351,7 @@ export const CommercialLandingPage: React.FC<CommercialLandingPageProps> = ({
               Data &amp; Trust
             </a>
             <button
+              type="button"
               onClick={() => setIsIcebergModalOpen(true)}
               className="px-2.5 py-1 rounded-md bg-slate-900 border border-amber-500/30 text-amber-300 hover:text-amber-200 text-[11px] font-mono transition flex items-center gap-1 cursor-pointer"
               title="View the 27 Behavioral Economics & Decision Science Dimensions"
@@ -346,6 +360,7 @@ export const CommercialLandingPage: React.FC<CommercialLandingPageProps> = ({
               <span>Iceberg Lab</span>
             </button>
             <button
+              type="button"
               onClick={() => setIsCampaignStudioOpen(true)}
               className="px-2.5 py-1 rounded-md bg-slate-900 border border-emerald-500/30 text-emerald-300 hover:text-emerald-200 text-[11px] font-mono transition flex items-center gap-1 cursor-pointer"
               title="View 6 Ad Variations, Founder Teleprompter & Outreach Playbook"
@@ -354,6 +369,7 @@ export const CommercialLandingPage: React.FC<CommercialLandingPageProps> = ({
               <span>Campaigns</span>
             </button>
             <button
+              type="button"
               onClick={handleViewPlatform}
               className="text-slate-400 hover:text-white transition flex items-center gap-1 cursor-pointer font-mono text-[11px]"
               title="Launch the underlying multi-engine software platform"
@@ -366,6 +382,7 @@ export const CommercialLandingPage: React.FC<CommercialLandingPageProps> = ({
           {/* Right Action Button */}
           <div className="flex items-center gap-2.5">
             <button
+              type="button"
               onClick={handleViewPlatform}
               className="lg:hidden min-h-[38px] px-2.5 py-1.5 rounded-lg bg-slate-900 text-slate-300 hover:text-white border border-slate-800 text-xs font-mono font-semibold flex items-center gap-1 cursor-pointer"
             >
@@ -373,6 +390,7 @@ export const CommercialLandingPage: React.FC<CommercialLandingPageProps> = ({
               <span>Platform</span>
             </button>
             <button
+              type="button"
               onClick={() => handleOpenAuditModal('nav_button')}
               className="min-h-[38px] px-4 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs flex items-center gap-1.5 cursor-pointer transition shadow-md touch-manipulation active:scale-95"
             >
@@ -412,6 +430,7 @@ export const CommercialLandingPage: React.FC<CommercialLandingPageProps> = ({
           {/* Primary Choice Architecture: Exactly Two Primary Hero CTAs */}
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
             <button
+              type="button"
               onClick={() => handleOpenAuditModal('hero_primary')}
               className="w-full sm:w-auto min-h-[48px] px-8 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-sm sm:text-base flex items-center justify-center gap-2 cursor-pointer transition shadow-xl touch-manipulation active:scale-95"
             >
@@ -420,6 +439,7 @@ export const CommercialLandingPage: React.FC<CommercialLandingPageProps> = ({
             </button>
 
             <button
+              type="button"
               onClick={() => handleOpenSampleReport('hero_secondary')}
               className="w-full sm:w-auto min-h-[48px] px-6 py-3 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-750 text-slate-200 font-bold text-sm sm:text-base flex items-center justify-center gap-2 cursor-pointer transition touch-manipulation active:scale-95"
             >
@@ -509,6 +529,13 @@ export const CommercialLandingPage: React.FC<CommercialLandingPageProps> = ({
           </div>
         </div>
       </section>
+
+      {/* ===================================================================== */}
+      {/* INSTANT IN-BROWSER 5-COLUMN CSV AUDIT DROPZONE (PHASE 12)             */}
+      {/* ===================================================================== */}
+      <InstantAuditDropzone
+        onOpenRequestAuditModal={() => handleOpenAuditModal('instant_dropzone')}
+      />
 
       {/* ===================================================================== */}
       {/* SECTION 3: PROBLEM RECOGNITION                                        */}
@@ -672,7 +699,7 @@ export const CommercialLandingPage: React.FC<CommercialLandingPageProps> = ({
                 </span>
               </div>
 
-              {/* 2-Mode Sample Data Switcher */}
+              {/* 2-Mode Sample Data Switcher (Aligned with /audit & SampleAuditReportModal) */}
               <div
                 role="tablist"
                 aria-label="Sample Audit Dataset Mode"
@@ -681,30 +708,30 @@ export const CommercialLandingPage: React.FC<CommercialLandingPageProps> = ({
                 <button
                   type="button"
                   role="tab"
-                  aria-selected={sampleModeId === 'sandbox_20'}
-                  data-testid="sample-mode-sandbox"
-                  onClick={() => setSampleModeId('sandbox_20')}
-                  className={`px-3 py-1.5 rounded-lg border font-bold cursor-pointer transition ${
-                    sampleModeId === 'sandbox_20'
-                      ? 'bg-emerald-500/20 border-emerald-500 text-emerald-300'
-                      : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200'
-                  }`}
-                >
-                  Mode A: Live 20-SKU Sandbox Dataset
-                </button>
-                <button
-                  type="button"
-                  role="tab"
                   aria-selected={sampleModeId === 'illustrative_12400'}
                   data-testid="sample-mode-illustrative"
                   onClick={() => setSampleModeId('illustrative_12400')}
                   className={`px-3 py-1.5 rounded-lg border font-bold cursor-pointer transition ${
                     sampleModeId === 'illustrative_12400'
+                      ? 'bg-emerald-500/20 border-emerald-500 text-emerald-300'
+                      : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  Mode A: 12,400-SKU Plant Case
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={sampleModeId === 'sandbox_20'}
+                  data-testid="sample-mode-sandbox"
+                  onClick={() => setSampleModeId('sandbox_20')}
+                  className={`px-3 py-1.5 rounded-lg border font-bold cursor-pointer transition ${
+                    sampleModeId === 'sandbox_20'
                       ? 'bg-amber-500/20 border-amber-500 text-amber-300'
                       : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200'
                   }`}
                 >
-                  Mode B: 12,400-SKU Auto-Component Case
+                  Mode B: 20-SKU Sandbox
                 </button>
               </div>
             </div>
@@ -819,6 +846,7 @@ export const CommercialLandingPage: React.FC<CommercialLandingPageProps> = ({
                 Click below to review the multi-page illustrative report with SKU breakdowns and 2-page PDF briefing.
               </span>
               <button
+                type="button"
                 onClick={() => handleOpenSampleReport('sample_section')}
                 className="w-full sm:w-auto px-5 py-2.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer transition shadow"
               >
@@ -894,7 +922,7 @@ export const CommercialLandingPage: React.FC<CommercialLandingPageProps> = ({
       {/* SECTION 9: EXPLAINABLE METHODOLOGY                                    */}
       {/* ===================================================================== */}
       <section id="explainable" className="py-16 sm:py-20 px-4 sm:px-6 bg-slate-900/40 border-y border-slate-850">
-        <div className="max-w-5xl mx-auto space-y-10">
+        <div id="methodology" className="max-w-5xl mx-auto space-y-10">
           <div className="text-center space-y-3">
             <span className="text-xs font-mono font-bold text-emerald-400 uppercase tracking-widest">
               TRANSPARENT METHODOLOGY
@@ -907,8 +935,25 @@ export const CommercialLandingPage: React.FC<CommercialLandingPageProps> = ({
             </p>
           </div>
 
-          {/* Collapsible 6 Methodology Stages Drawer */}
+          {/* Collapsible 6 Methodology Stages Drawer with Always-Visible 6-Pill Summary Strip */}
           <div className="p-5 rounded-2xl bg-slate-950 border border-slate-800 space-y-4">
+            {/* Phase 11: Crisp 6-Pill Summary Strip (Always Visible Even When Collapsed) */}
+            <div
+              data-testid="methodology-6-pill-summary-strip"
+              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5 pb-3 border-b border-slate-800/80"
+            >
+              {METHODOLOGY_STAGES.map((stg) => (
+                <div
+                  key={stg.stage}
+                  data-testid={`methodology-pill-${stg.stage.toLowerCase().replace(/\s+/g, '-')}`}
+                  className="px-3 py-2 rounded-xl bg-slate-900/90 border border-slate-800 text-[11px] font-mono text-slate-200 leading-snug flex items-start gap-2"
+                >
+                  <span className="text-emerald-400 font-bold shrink-0">{stg.stage}:</span>
+                  <span className="text-slate-300">{stg.pillLabel.replace(`${stg.stage}: `, '')}</span>
+                </div>
+              ))}
+            </div>
+
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div className="space-y-1">
                 <div className="text-xs font-mono font-bold text-emerald-400 uppercase">
@@ -922,11 +967,11 @@ export const CommercialLandingPage: React.FC<CommercialLandingPageProps> = ({
                 <button
                   type="button"
                   data-testid="toggle-methodology-stages-drawer"
-                  aria-expanded={showMethodologyStagesDrawer}
-                  onClick={() => setShowMethodologyStagesDrawer((prev) => !prev)}
+                  aria-expanded={isMethodologyDrawerOpen}
+                  onClick={() => setIsMethodologyDrawerOpen((prev) => !prev)}
                   className="px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-200 font-mono font-bold text-xs inline-flex items-center gap-1.5 cursor-pointer transition"
                 >
-                  {showMethodologyStagesDrawer ? (
+                  {isMethodologyDrawerOpen ? (
                     <>
                       <ChevronUp className="w-3.5 h-3.5 text-emerald-400" />
                       <span>Collapse 6-Stage Breakdown</span>
@@ -940,8 +985,10 @@ export const CommercialLandingPage: React.FC<CommercialLandingPageProps> = ({
                 </button>
                 <button
                   type="button"
+                  data-testid="read-methodology-btn"
                   onClick={() => {
                     trackEvent('methodology_opened');
+                    setIsMethodologyDrawerOpen(true);
                     setIsMethodologyOpen(true);
                   }}
                   className="px-3.5 py-2 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/40 text-xs font-mono font-bold text-emerald-300 cursor-pointer transition"
@@ -959,13 +1006,27 @@ export const CommercialLandingPage: React.FC<CommercialLandingPageProps> = ({
                 {METHODOLOGY_STAGES.map((stg) => (
                   <div
                     key={stg.stage}
-                    className="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-1.5"
+                    className="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-2"
                   >
                     <span className="text-[10px] font-mono font-bold text-emerald-400 uppercase">
                       {stg.stage}
                     </span>
                     <h3 className="text-sm font-bold text-white">{stg.name}</h3>
-                    <p className="text-xs text-slate-400 leading-relaxed font-sans">{stg.summary}</p>
+                    <p className="text-xs text-slate-300 leading-relaxed font-sans">{stg.summary}</p>
+                    <div className="pt-2 border-t border-slate-800/80 space-y-1 text-[11px] font-mono">
+                      <div className="text-emerald-300">
+                        <span className="text-slate-400">Formula: </span>
+                        <code>{stg.formula}</code>
+                      </div>
+                      <div className="text-slate-300">
+                        <span className="text-slate-400">Inputs: </span>
+                        <span>{stg.inputs}</span>
+                      </div>
+                      <div className="text-cyan-300">
+                        <span className="text-slate-400">Output: </span>
+                        <span>{stg.outputs}</span>
+                      </div>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -1047,6 +1108,7 @@ export const CommercialLandingPage: React.FC<CommercialLandingPageProps> = ({
                     className="rounded-xl bg-slate-950 border border-slate-800 overflow-hidden"
                   >
                     <button
+                      type="button"
                       onClick={() => toggleTrust(idx)}
                       className="w-full p-3.5 text-left flex items-center justify-between gap-3 cursor-pointer hover:bg-slate-900 transition"
                       aria-expanded={isOpen}
@@ -1290,6 +1352,7 @@ export const CommercialLandingPage: React.FC<CommercialLandingPageProps> = ({
 
           <div>
             <button
+              type="button"
               onClick={() => handleOpenAuditModal('founder_pilot_section')}
               className="min-h-[48px] px-8 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-sm sm:text-base inline-flex items-center justify-center gap-2 cursor-pointer transition shadow-xl touch-manipulation active:scale-95"
             >
@@ -1483,6 +1546,7 @@ export const CommercialLandingPage: React.FC<CommercialLandingPageProps> = ({
               <button
                 type="button"
                 data-testid="toggle-sandbox-proof-preview"
+                aria-expanded={showSandboxProofPreview}
                 onClick={() => setShowSandboxProofPreview((prev) => !prev)}
                 className="shrink-0 px-3.5 py-2 rounded-lg bg-slate-950 hover:bg-slate-800 border border-emerald-500/40 text-emerald-300 font-mono font-bold text-[11px] cursor-pointer transition"
               >
@@ -1713,6 +1777,7 @@ export const CommercialLandingPage: React.FC<CommercialLandingPageProps> = ({
                 className="rounded-xl bg-slate-900 border border-slate-800 overflow-hidden"
               >
                 <button
+                  type="button"
                   onClick={() => toggleFaq(idx)}
                   className="w-full p-4 text-left flex items-center justify-between gap-3 cursor-pointer hover:bg-slate-850 transition"
                   aria-expanded={isOpen}
@@ -1756,6 +1821,7 @@ export const CommercialLandingPage: React.FC<CommercialLandingPageProps> = ({
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-3">
             <button
+              type="button"
               onClick={() => handleOpenAuditModal('final_cta')}
               className="w-full sm:w-auto min-h-[48px] px-8 py-3.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-sm sm:text-base flex items-center justify-center gap-2 cursor-pointer transition shadow-xl touch-manipulation active:scale-95"
             >
@@ -1764,6 +1830,7 @@ export const CommercialLandingPage: React.FC<CommercialLandingPageProps> = ({
             </button>
 
             <button
+              type="button"
               onClick={() => handleOpenSampleReport('final_cta')}
               className="w-full sm:w-auto min-h-[48px] px-6 py-3.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-white font-bold text-sm sm:text-base flex items-center justify-center gap-2 cursor-pointer transition touch-manipulation active:scale-95"
             >
@@ -1799,17 +1866,23 @@ export const CommercialLandingPage: React.FC<CommercialLandingPageProps> = ({
                 Factory Audit
               </a>
               <button
+                type="button"
                 onClick={() => handleOpenSampleReport('footer')}
                 className="hover:text-white transition cursor-pointer"
               >
                 Sample Report
               </button>
-              <button
-                onClick={() => setIsMethodologyOpen(true)}
+              <a
+                href="#methodology"
+                data-testid="footer-methodology-link"
+                onClick={() => {
+                  setIsMethodologyDrawerOpen(true);
+                  setIsMethodologyOpen(true);
+                }}
                 className="hover:text-white transition cursor-pointer"
               >
                 Methodology
-              </button>
+              </a>
               <a href="#data-trust" className="hover:text-white transition">
                 Data &amp; Trust
               </a>
@@ -1820,6 +1893,7 @@ export const CommercialLandingPage: React.FC<CommercialLandingPageProps> = ({
                 Contact
               </a>
               <button
+                type="button"
                 onClick={handleViewPlatform}
                 className="text-emerald-400 hover:text-emerald-300 font-bold transition cursor-pointer flex items-center gap-1"
               >

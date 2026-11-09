@@ -104,6 +104,7 @@ export const B2BBehavioralSystem: React.FC<B2BBehavioralSystemProps> = ({
 
             {isFounderMode && (
               <button
+                type="button"
                 onClick={onOpenIcebergModal}
                 className="px-3.5 py-2 rounded-xl bg-slate-950 hover:bg-slate-800 border border-slate-700 text-xs font-mono text-slate-300 hover:text-white flex items-center gap-2 transition cursor-pointer self-start md:self-auto shrink-0"
                 title="Inspect the 27 Behavioral Science Foundations"
@@ -115,11 +116,14 @@ export const B2BBehavioralSystem: React.FC<B2BBehavioralSystemProps> = ({
           </div>
 
           {/* Stakeholder Selector Tabs */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5" role="tablist" aria-label="Plant Stakeholder Perspectives">
             {STAKEHOLDER_PERSPECTIVES.map((s) => {
               const isSelected = s.id === activeStakeholderId;
               return (
                 <button
+                  type="button"
+                  role="tab"
+                  aria-selected={isSelected}
                   key={s.id}
                   onClick={() => handleSelectStakeholder(s.id)}
                   className={`p-3.5 rounded-2xl text-left transition cursor-pointer border ${
@@ -193,9 +197,9 @@ export const B2BBehavioralSystem: React.FC<B2BBehavioralSystemProps> = ({
                     Priority Decision Metrics
                   </span>
                   <div className="space-y-2">
-                    {activeStakeholder.keyMetrics.map((metric, i) => (
+                    {activeStakeholder.keyMetrics.map((metric) => (
                       <div
-                        key={i}
+                        key={metric}
                         className="px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-xs font-mono font-bold text-emerald-300 flex items-center gap-2"
                       >
                         <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
@@ -207,6 +211,7 @@ export const B2BBehavioralSystem: React.FC<B2BBehavioralSystemProps> = ({
 
                 <div className="space-y-2 pt-2 border-t border-slate-800">
                   <button
+                    type="button"
                     data-testid={`request-audit-stakeholder-${activeStakeholder.id}`}
                     onClick={() =>
                       onRequestAudit(
@@ -256,6 +261,8 @@ export const B2BBehavioralSystem: React.FC<B2BBehavioralSystemProps> = ({
                 const isActive = item.id === activeObjectionId;
                 return (
                   <button
+                    type="button"
+                    aria-expanded={isActive}
                     key={item.id}
                     onClick={() => setActiveObjectionId(item.id)}
                     className={`w-full p-3.5 rounded-xl text-left transition cursor-pointer border text-xs leading-snug flex items-center justify-between gap-2 ${
@@ -326,6 +333,7 @@ export const B2BBehavioralSystem: React.FC<B2BBehavioralSystemProps> = ({
                       <strong className="text-white">Next Safe Step:</strong> {selectedObjection.verificationStep}
                     </div>
                     <button
+                      type="button"
                       onClick={() => onViewSampleReport('objection_matrix')}
                       className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-mono text-xs font-bold transition cursor-pointer self-start sm:self-auto shrink-0"
                     >
@@ -358,9 +366,9 @@ export const B2BBehavioralSystem: React.FC<B2BBehavioralSystemProps> = ({
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
-            {CUSTOMER_ANXIETY_MAP.map((item, i) => (
+            {CUSTOMER_ANXIETY_MAP.map((item) => (
               <div
-                key={i}
+                key={item.stage}
                 className="p-4 rounded-2xl bg-slate-950 border border-slate-800 flex flex-col justify-between space-y-3"
               >
                 <div className="space-y-1.5">
@@ -443,6 +451,7 @@ export const BehavioralIcebergModal: React.FC<BehavioralIcebergModalProps> = ({
           </div>
 
           <button
+            type="button"
             onClick={onClose}
             className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition cursor-pointer"
             aria-label="Close modal"
@@ -484,6 +493,7 @@ export const BehavioralIcebergModal: React.FC<BehavioralIcebergModalProps> = ({
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
             <button
+              type="button"
               onClick={() => onSelectVariant('A')}
               className={`p-3 rounded-xl border text-left transition cursor-pointer font-mono text-xs ${
                 currentVariant === 'A'
@@ -496,6 +506,7 @@ export const BehavioralIcebergModal: React.FC<BehavioralIcebergModalProps> = ({
             </button>
 
             <button
+              type="button"
               onClick={() => onSelectVariant('B')}
               className={`p-3 rounded-xl border text-left transition cursor-pointer font-mono text-xs ${
                 currentVariant === 'B'
@@ -508,6 +519,7 @@ export const BehavioralIcebergModal: React.FC<BehavioralIcebergModalProps> = ({
             </button>
 
             <button
+              type="button"
               onClick={() => onSelectVariant('C')}
               className={`p-3 rounded-xl border text-left transition cursor-pointer font-mono text-xs ${
                 currentVariant === 'C'
@@ -556,6 +568,7 @@ export const BehavioralIcebergModal: React.FC<BehavioralIcebergModalProps> = ({
             Validated against empirical manufacturing decision science.
           </span>
           <button
+            type="button"
             onClick={onClose}
             className="px-5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs font-mono cursor-pointer transition"
           >
