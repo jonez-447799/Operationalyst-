@@ -37,10 +37,10 @@ import {
   METHODOLOGY_STAGES,
   DATA_TRUST_ITEMS,
   FAQ_ITEMS,
+  FOUNDER_EXECUTIVE_SIGNOFF,
   getReconciledSampleAuditModes,
   type SampleAuditModeId,
 } from './homepageConfig';
-import { SelfAssessmentWidget } from './SelfAssessmentWidget';
 import { FactoryAuditModal } from './FactoryAuditModal';
 import { SampleAuditReportModal } from './SampleAuditReportModal';
 import { InventoryChecklistModal } from './InventoryChecklistModal';
@@ -50,50 +50,12 @@ import { CampaignAssetStudio } from './CampaignAssetStudio';
 import { trackEvent, trackServerFunnelEvent } from '../utils/analytics';
 import {
   downloadAuditTemplate,
-  downloadPilotDataKitCsv,
   downloadPilotDataKitXlsx,
 } from '../utils/pilotDataKitExporter';
 import { LegalGovernanceModal, LegalGovernanceTab } from './LegalGovernanceModal';
 import type { BuyerPersona } from '../utils/leadValidation';
 import type { SelfAssessmentEvaluation } from '../utils/selfAssessmentScorer';
-import type { VerifiedProofRecord } from '../utils/verifiedProofRegistryStore';
-import type { DeletionCertificateRecord } from '../utils/dataPurgeEngine';
-import { formatCurrency } from '../project1/utils/calculations';
 import { InstantAuditDropzone } from './InstantAuditDropzone';
-
-const DEFAULT_SANDBOX_DEMO_PROOF: VerifiedProofRecord = {
-  proofId: 'PROOF-SANDBOX-DEMO',
-  publishedAt: '2026-10-12T09:00:00.000Z',
-  plantCorridor: 'Ambattur Industrial Estate, Chennai (Sandbox Benchmark)',
-  erpEnvironment: 'Tally Prime + Gate & Stores Registers',
-  linkedWorkspaceId: 'AUDIT-DEMO-P1P4',
-  importRunId: 'IMPRUN-20261012-DEMO',
-  datasetSha256Prefix: 'e3b0c44298fc1c14',
-  clientSignOffConfirmed: true,
-  zeroFabricationAttested: true,
-  industrySector: 'Precision Machined Castings, Flanges & Industrial Valves (Sandbox)',
-  datasetScope: '20 SKUs · 18 Dispatches · 12 Freight LRs · 15 Bins',
-  initialChallenge:
-    'Unverified dead-stock capital lockup across fabrication stores, recurring late OEM gate dispatches, un-audited carrier rate/detention bills, and ghost stock mismatches between Tally book balances and physical racks.',
-  analysisPerformed:
-    'Deterministic 4-Pillar Ingestion & Quarantine Audit across 20 SKUs, 18 OEM dispatches, 12 carrier LR bills, and 15 physical rack bins with Item 07 Reserve Spares protection applied.',
-  verifiedFindings: {
-    p1BookValueInr: 645650,
-    p1DeadStockInr: 223110,
-    p1SlowMovingInr: 63600,
-    p1ReserveSparesProtectedInr: 82500,
-    p2OtifPassPct: 50,
-    p3FreightLeakInr: 13944,
-    p4BinAccuracyPct: 60,
-    p4GhostStockInr: 24240,
-  },
-  actionTaken:
-    'Isolated 8 Dead SKUs (₹2,23,110) while protecting 2 critical CNC/hydraulic spares (₹82,500) under Item 07; raised Siva Transport debit note and scheduled blind morning cycle counts on 6 mismatched bins.',
-  approvedQuotation:
-    'SCHEMA DEMONSTRATION ONLY — Bound to canonical 20-SKU Ambattur Sandbox Snapshot (No external client quotation attached).',
-  documentedLimitations:
-    'Item 07 Scope & Exclusions: Evaluation baseline fixed at 2026-09-20 (Dead Stock > 180d, Carrying Cost 22% p.a.). 2 critical machine/insurance spares (₹82,500) retained as operational insurance and excluded from liquidation targets. 100% of submitted ERP rows passed schema & date validation.',
-};
 
 interface CommercialLandingPageProps {
   onLaunchEngine: (
@@ -115,7 +77,6 @@ interface CommercialLandingPageProps {
 export const CommercialLandingPage: React.FC<CommercialLandingPageProps> = ({
   onLaunchEngine,
   onOpenSampleAuditPage,
-  onOpenLeadInbox,
 }) => {
   // Modal states
   const [isAuditModalOpen, setIsAuditModalOpen] = useState(false);
@@ -132,62 +93,6 @@ export const CommercialLandingPage: React.FC<CommercialLandingPageProps> = ({
   const [isLegalModalOpen, setIsLegalModalOpen] = useState(false);
   const [legalModalTab, setLegalModalTab] = useState<LegalGovernanceTab>('privacy');
   const [sampleModeId, setSampleModeId] = useState<SampleAuditModeId>('illustrative_12400');
-
-  // Phase 7: Verified Proof Registry State
-  const [verifiedProofs, setVerifiedProofs] = useState<VerifiedProofRecord[]>([]);
-  const [sandboxDemoProof, setSandboxDemoProof] = useState<VerifiedProofRecord>(
-    DEFAULT_SANDBOX_DEMO_PROOF
-  );
-  const [showSandboxProofPreview, setShowSandboxProofPreview] = useState<boolean>(false);
-
-  // Phase 8: Cryptographic Deletion Certificate Verification State
-  const [delCertInput, setDelCertInput] = useState<string>('DELCERT-DEMO-P1P4');
-  const [verifiedDelCert, setVerifiedDelCert] = useState<DeletionCertificateRecord | null>(null);
-  const [delCertLoading, setDelCertLoading] = useState<boolean>(false);
-  const [delCertError, setDelCertError] = useState<string | null>(null);
-
-  const handleVerifyDeletionCertificate = async (certIdToCheck: string) => {
-    const cleanId = certIdToCheck.trim();
-    if (!cleanId) return;
-    setDelCertLoading(true);
-    setDelCertError(null);
-    try {
-      const res = await fetch(`/api/deletion-certificates/${encodeURIComponent(cleanId)}`);
-      const data = await res.json().catch(() => null);
-      if (!res.ok || !data?.ok || !data.certificate) {
-        setVerifiedDelCert(null);
-        setDelCertError(
-          data?.error || `Certificate ${cleanId} not found in server Deletion Certificate Ledger.`
-        );
-        setDelCertLoading(false);
-        return;
-      }
-      setVerifiedDelCert(data.certificate as DeletionCertificateRecord);
-    } catch {
-      setDelCertError('Network error while verifying Deletion Certificate.');
-    } finally {
-      setDelCertLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    let active = true;
-    fetch('/api/verified-proofs')
-      .then((res) => res.json())
-      .then((data) => {
-        if (!active || !data?.ok) return;
-        if (Array.isArray(data.proofs)) {
-          setVerifiedProofs(data.proofs);
-        }
-        if (data.sandboxDemonstrationProof) {
-          setSandboxDemoProof(data.sandboxDemonstrationProof);
-        }
-      })
-      .catch(() => {});
-    return () => {
-      active = false;
-    };
-  }, []);
 
   const sampleAuditModes = getReconciledSampleAuditModes();
   const activeSampleMode = sampleAuditModes[sampleModeId] || sampleAuditModes.sandbox_20;
@@ -581,18 +486,6 @@ export const CommercialLandingPage: React.FC<CommercialLandingPageProps> = ({
       </section>
 
       {/* ===================================================================== */}
-      {/* SECTION 4: SELF-ASSESSMENT                                            */}
-      {/* ===================================================================== */}
-      <section className="py-16 sm:py-20 px-4 sm:px-6 max-w-5xl mx-auto space-y-8">
-        <SelfAssessmentWidget
-          onRequestAudit={(diagnostic) =>
-            handleOpenAuditModal('self_assessment', 'GENERAL', diagnostic || null)
-          }
-          onViewSampleReport={() => handleOpenSampleReport('self_assessment')}
-        />
-      </section>
-
-      {/* ===================================================================== */}
       {/* SECTION 5: HOW IT WORKS                                               */}
       {/* ===================================================================== */}
       <section id="how-it-works" className="py-16 sm:py-20 px-4 sm:px-6 bg-slate-900/40 border-y border-slate-850">
@@ -810,33 +703,6 @@ export const CommercialLandingPage: React.FC<CommercialLandingPageProps> = ({
                 <div className="text-[10px] text-slate-400 mt-0.5">
                   {activeSampleMode.topCategorySubtext}
                 </div>
-              </div>
-            </div>
-
-            {/* Connected Multi-Pillar Summary Pills (P2 OTIF, P3 Freight, P4 Bin Accuracy) */}
-            <div className="p-3.5 rounded-xl bg-slate-900/90 border border-slate-800 flex flex-wrap items-center justify-between gap-2 font-mono text-[11px]">
-              <span className="text-slate-400 font-bold uppercase">
-                Connected 4-Pillar Audit Signals:
-              </span>
-              <div className="flex flex-wrap items-center gap-2">
-                <span
-                  data-testid="sample-pill-p2"
-                  className="px-2.5 py-1 rounded-md bg-sky-500/15 border border-sky-500/30 text-sky-300 font-bold"
-                >
-                  {activeSampleMode.p2OtifPill}
-                </span>
-                <span
-                  data-testid="sample-pill-p3"
-                  className="px-2.5 py-1 rounded-md bg-amber-500/15 border border-amber-500/30 text-amber-300 font-bold"
-                >
-                  {activeSampleMode.p3FreightPill}
-                </span>
-                <span
-                  data-testid="sample-pill-p4"
-                  className="px-2.5 py-1 rounded-md bg-purple-500/15 border border-purple-500/30 text-purple-300 font-bold"
-                >
-                  {activeSampleMode.p4BinPill}
-                </span>
               </div>
             </div>
 
@@ -1168,138 +1034,6 @@ export const CommercialLandingPage: React.FC<CommercialLandingPageProps> = ({
             </button>
           </div>
         </div>
-
-        {/* Phase 8: Interactive Cryptographic Deletion Certificate (DELCERT-...) Verifier */}
-        <div
-          data-testid="landing-verify-delcert-panel"
-          className="p-5 rounded-2xl bg-slate-900 border border-sky-500/30 space-y-4 text-xs"
-        >
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div className="space-y-1">
-              <div className="text-xs font-mono font-bold text-sky-400 uppercase flex items-center gap-1.5">
-                <FileCheck2 className="w-4 h-4 text-emerald-400" />
-                <span>
-                  Verify a Deletion Certificate (DELCERT-...) / Inspect Sample Certificate (DELCERT-DEMO-P1P4)
-                </span>
-              </div>
-              <p className="text-xs text-slate-300">
-                IT Heads and CFOs can verify any issued 14-day data purge certificate against the server Deletion Certificate Ledger (<code className="font-mono text-sky-300">/api/deletion-certificates/:id</code>).
-              </p>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2 shrink-0">
-              <input
-                type="text"
-                aria-label="Deletion Certificate ID"
-                data-testid="landing-delcert-input"
-                value={delCertInput}
-                onChange={(e) => setDelCertInput(e.target.value)}
-                placeholder="DELCERT-YYYYMMDD-XXXX"
-                className="px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-white font-mono text-xs w-52 focus:outline-none focus:border-emerald-500"
-              />
-              <button
-                type="button"
-                data-testid="landing-verify-delcert-btn"
-                disabled={delCertLoading}
-                onClick={() => handleVerifyDeletionCertificate(delCertInput)}
-                className="px-3.5 py-2 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 font-mono font-bold text-xs inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
-              >
-                <ShieldCheck className="w-3.5 h-3.5" />
-                <span>{delCertLoading ? 'Verifying...' : 'Verify Certificate'}</span>
-              </button>
-              <button
-                type="button"
-                data-testid="landing-inspect-demo-delcert-btn"
-                disabled={delCertLoading}
-                onClick={() => {
-                  setDelCertInput('DELCERT-DEMO-P1P4');
-                  handleVerifyDeletionCertificate('DELCERT-DEMO-P1P4');
-                }}
-                className="px-3 py-2 rounded-xl bg-slate-950 hover:bg-slate-800 border border-emerald-500/40 text-emerald-300 font-mono font-bold text-xs cursor-pointer"
-              >
-                Inspect Sample (DELCERT-DEMO-P1P4)
-              </button>
-            </div>
-          </div>
-
-          {delCertError && (
-            <div
-              role="alert"
-              className="p-3 rounded-xl bg-rose-950/60 border border-rose-500/40 text-rose-200 font-mono text-xs"
-            >
-              {delCertError}
-            </div>
-          )}
-
-          {verifiedDelCert && (
-            <div
-              data-testid="landing-verified-delcert-card"
-              className="p-4 rounded-xl bg-slate-950 border border-emerald-500/40 space-y-3 font-mono text-xs"
-            >
-              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-2.5">
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                  <span className="font-bold text-emerald-300">
-                    VERIFIED DELETION CERTIFICATE: {verifiedDelCert.certificateId}
-                  </span>
-                  <span className="px-2 py-0.5 rounded bg-slate-900 border border-slate-700 text-slate-300 text-[11px]">
-                    Workspace: {verifiedDelCert.workspaceId}
-                  </span>
-                </div>
-                <span className="text-[11px] text-slate-400">
-                  Issued: {verifiedDelCert.issuedAt.slice(0, 19).replace('T', ' ')} UTC · By:{' '}
-                  {verifiedDelCert.purgedBy}
-                </span>
-              </div>
-
-              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5 text-[11px]">
-                <div className="p-2.5 rounded-lg bg-slate-900 border border-slate-800">
-                  <div className="text-slate-400">P1 SKUs Scrubbed</div>
-                  <div className="text-sm font-bold text-white mt-0.5">
-                    {verifiedDelCert.recordsPurgedSummary.p1SkusPurged} → 0
-                  </div>
-                </div>
-                <div className="p-2.5 rounded-lg bg-slate-900 border border-slate-800">
-                  <div className="text-slate-400">P2 Dispatches</div>
-                  <div className="text-sm font-bold text-white mt-0.5">
-                    {verifiedDelCert.recordsPurgedSummary.p2DispatchesPurged} → 0
-                  </div>
-                </div>
-                <div className="p-2.5 rounded-lg bg-slate-900 border border-slate-800">
-                  <div className="text-slate-400">P3 Freight Trips</div>
-                  <div className="text-sm font-bold text-white mt-0.5">
-                    {verifiedDelCert.recordsPurgedSummary.p3FreightTripsPurged} → 0
-                  </div>
-                </div>
-                <div className="p-2.5 rounded-lg bg-slate-900 border border-slate-800">
-                  <div className="text-slate-400">P4 Bins Scrubbed</div>
-                  <div className="text-sm font-bold text-white mt-0.5">
-                    {verifiedDelCert.recordsPurgedSummary.p4WarehouseBinsPurged} → 0
-                  </div>
-                </div>
-                <div className="p-2.5 rounded-lg bg-slate-900 border border-slate-800">
-                  <div className="text-slate-400">Quarantined Rows</div>
-                  <div className="text-sm font-bold text-emerald-300 mt-0.5">
-                    {verifiedDelCert.recordsPurgedSummary.quarantinedRowsPurged} → 0
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-[11px]">
-                <div className="p-2.5 rounded-lg bg-slate-900 border border-slate-800 truncate">
-                  <span className="text-slate-400">Pre-Purge Dataset SHA-256: </span>
-                  <span className="text-sky-300">{verifiedDelCert.prePurgeDatasetSha256}</span>
-                </div>
-                <div className="p-2.5 rounded-lg bg-slate-900 border border-emerald-500/30 truncate">
-                  <span className="text-slate-400">Post-Purge Zero-Array Hash: </span>
-                  <span className="text-emerald-300">
-                    {verifiedDelCert.postPurgeVerificationHash}
-                  </span>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
       </section>
 
       {/* ===================================================================== */}
@@ -1364,340 +1098,6 @@ export const CommercialLandingPage: React.FC<CommercialLandingPageProps> = ({
       </section>
 
       {/* ===================================================================== */}
-      {/* SECTION 12: VERIFIED PROOF REGISTRY (CRYPTOGRAPHICALLY BOUND 8-FIELD) */}
-      {/* ===================================================================== */}
-      <section
-        id="verified-proof-registry"
-        data-testid="verified-proof-registry-section"
-        className="py-16 sm:py-20 px-4 sm:px-6 max-w-5xl mx-auto space-y-6"
-      >
-        <div className="text-center space-y-2">
-          <span className="text-xs font-mono font-bold text-emerald-400 uppercase tracking-widest">
-            VERIFIED PROOF REGISTRY
-          </span>
-          <h2 className="text-2xl sm:text-3xl font-black text-white">
-            Verified Manufacturing Outcomes
-          </h2>
-          <p className="text-xs text-slate-400 font-mono">
-            {verifiedProofs.length > 0
-              ? 'Cryptographically bound 8-field pilot outcomes derived directly from server-persisted audit snapshots.'
-              : 'Customer evidence will be published here after pilot outcomes have been documented and approved.'}
-          </p>
-        </div>
-
-        {verifiedProofs.length > 0 ? (
-          <div className="space-y-4">
-            {verifiedProofs.map((proof) => (
-              <div
-                key={proof.proofId}
-                data-testid={`verified-proof-card-${proof.proofId}`}
-                className="p-6 rounded-2xl bg-slate-900 border border-emerald-500/40 text-xs space-y-4 shadow-xl"
-              >
-                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-3 font-mono">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="px-2.5 py-1 rounded bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 font-bold">
-                      {proof.proofId}
-                    </span>
-                    <span className="px-2.5 py-1 rounded bg-slate-950 border border-slate-700 text-slate-200 font-bold">
-                      Snapshot: {proof.linkedWorkspaceId}
-                    </span>
-                    {proof.importRunId && (
-                      <span className="px-2.5 py-1 rounded bg-sky-500/15 border border-sky-500/30 text-sky-300 font-bold">
-                        ImportRun: {proof.importRunId}
-                      </span>
-                    )}
-                    {proof.datasetSha256Prefix && (
-                      <span className="px-2.5 py-1 rounded bg-purple-500/15 border border-purple-500/30 text-purple-300 font-bold">
-                        SHA-256: {proof.datasetSha256Prefix}...
-                      </span>
-                    )}
-                  </div>
-                  <span className="text-[11px] text-emerald-400 font-bold">
-                    ✓ Client Sign-Off Confirmed · {new Date(proof.publishedAt).toLocaleDateString()}
-                  </span>
-                </div>
-
-                {/* 8-Field Structured Documentation Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-                  <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-1">
-                    <div className="text-[10px] font-mono uppercase text-emerald-400 font-bold">
-                      01 · Industry Sector
-                    </div>
-                    <div className="text-white font-semibold">{proof.industrySector}</div>
-                  </div>
-
-                  <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-1">
-                    <div className="text-[10px] font-mono uppercase text-emerald-400 font-bold">
-                      02 · Dataset Scope (Derived from Snapshot)
-                    </div>
-                    <div className="text-slate-200 font-mono text-[11px]">{proof.datasetScope}</div>
-                  </div>
-
-                  <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-1">
-                    <div className="text-[10px] font-mono uppercase text-emerald-400 font-bold">
-                      03 · Initial Challenge
-                    </div>
-                    <div className="text-slate-300 leading-relaxed">{proof.initialChallenge}</div>
-                  </div>
-
-                  <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-1">
-                    <div className="text-[10px] font-mono uppercase text-emerald-400 font-bold">
-                      04 · Analysis Performed
-                    </div>
-                    <div className="text-slate-300 leading-relaxed">{proof.analysisPerformed}</div>
-                  </div>
-
-                  <div className="p-3.5 rounded-xl bg-slate-950 border border-emerald-500/30 space-y-2 md:col-span-2">
-                    <div className="text-[10px] font-mono uppercase text-emerald-400 font-bold">
-                      05 · Verified Findings (Cryptographically Bound to {proof.linkedWorkspaceId})
-                    </div>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 font-mono text-[11px]">
-                      <div className="p-2 rounded bg-slate-900 border border-slate-800">
-                        <div className="text-[10px] text-slate-400">Book Value</div>
-                        <div className="font-bold text-white">
-                          {formatCurrency(proof.verifiedFindings.p1BookValueInr)}
-                        </div>
-                      </div>
-                      <div className="p-2 rounded bg-slate-900 border border-slate-800">
-                        <div className="text-[10px] text-rose-400">Dead Stock</div>
-                        <div className="font-bold text-rose-300">
-                          {formatCurrency(proof.verifiedFindings.p1DeadStockInr)}
-                        </div>
-                      </div>
-                      <div className="p-2 rounded bg-slate-900 border border-slate-800">
-                        <div className="text-[10px] text-emerald-400">Protected Spares</div>
-                        <div className="font-bold text-emerald-300">
-                          {formatCurrency(proof.verifiedFindings.p1ReserveSparesProtectedInr)}
-                        </div>
-                      </div>
-                      <div className="p-2 rounded bg-slate-900 border border-slate-800">
-                        <div className="text-[10px] text-sky-400">P2 OTIF %</div>
-                        <div className="font-bold text-sky-300">
-                          {proof.verifiedFindings.p2OtifPassPct.toFixed(1)}%
-                        </div>
-                      </div>
-                      <div className="p-2 rounded bg-slate-900 border border-slate-800">
-                        <div className="text-[10px] text-amber-400">P3 Freight Leak</div>
-                        <div className="font-bold text-amber-300">
-                          {formatCurrency(proof.verifiedFindings.p3FreightLeakInr)}
-                        </div>
-                      </div>
-                      <div className="p-2 rounded bg-slate-900 border border-slate-800">
-                        <div className="text-[10px] text-purple-400">P4 Bin Accuracy</div>
-                        <div className="font-bold text-purple-300">
-                          {proof.verifiedFindings.p4BinAccuracyPct.toFixed(1)}%
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-1">
-                    <div className="text-[10px] font-mono uppercase text-emerald-400 font-bold">
-                      06 · Action Taken
-                    </div>
-                    <div className="text-slate-300 leading-relaxed">{proof.actionTaken}</div>
-                  </div>
-
-                  <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-1">
-                    <div className="text-[10px] font-mono uppercase text-emerald-400 font-bold">
-                      07 · Approved Quotation (Anonymized)
-                    </div>
-                    <div className="text-slate-200 italic leading-relaxed">
-                      {proof.approvedQuotation ||
-                        'Published with written client sign-off under anonymized sector identifier.'}
-                    </div>
-                  </div>
-
-                  <div className="p-3.5 rounded-xl bg-slate-950 border border-amber-500/30 space-y-1 md:col-span-2">
-                    <div className="text-[10px] font-mono uppercase text-amber-400 font-bold">
-                      08 · Documented Limitations &amp; Item 07 Exclusions
-                    </div>
-                    <div className="text-slate-300 text-[11px] font-mono leading-relaxed">
-                      {proof.documentedLimitations}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          /* Honest Empty State + Interactive 8-Field Cryptographic Proof Schema Demonstration Toggle */
-          <div className="p-6 rounded-2xl bg-slate-900 border border-dashed border-slate-800 text-xs font-mono text-slate-400 space-y-4">
-            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-2">
-              <span className="font-bold text-slate-300">
-                Case Study Documentation Schema (Reserved Component)
-              </span>
-              <span>Status: Awaiting Pilot Validations</span>
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px]">
-              <div>• Industry Sector</div>
-              <div>• Dataset Scope</div>
-              <div>• Initial Challenge</div>
-              <div>• Analysis Performed</div>
-              <div>• Verified Findings</div>
-              <div>• Action Taken</div>
-              <div>• Approved Quotation</div>
-              <div>• Documented Limitations</div>
-            </div>
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 border-t border-slate-850">
-              <p className="text-[11px] text-slate-400 font-sans">
-                Note: In strict alignment with ethical persuasion principles, Operationalyst displays zero fabricated customer logos or invented savings figures.
-              </p>
-              <button
-                type="button"
-                data-testid="toggle-sandbox-proof-preview"
-                aria-expanded={showSandboxProofPreview}
-                onClick={() => setShowSandboxProofPreview((prev) => !prev)}
-                className="shrink-0 px-3.5 py-2 rounded-lg bg-slate-950 hover:bg-slate-800 border border-emerald-500/40 text-emerald-300 font-mono font-bold text-[11px] cursor-pointer transition"
-              >
-                {showSandboxProofPreview
-                  ? 'Hide 8-Field Cryptographic Proof Schema'
-                  : 'Preview 8-Field Cryptographic Proof Schema (Bound to Live Sandbox Audit)'}
-              </button>
-            </div>
-
-            {showSandboxProofPreview && (
-              <div
-                data-testid="sandbox-proof-schema-card"
-                className="p-5 rounded-xl bg-slate-950 border border-amber-500/40 space-y-4 text-xs font-sans mt-2"
-              >
-                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-3 font-mono">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="px-2.5 py-1 rounded bg-amber-500/20 border border-amber-500/40 text-amber-300 font-bold text-[10px]">
-                      SCHEMA DEMONSTRATION • BOUND TO SANDBOX SNAPSHOT
-                    </span>
-                    <span className="px-2 py-0.5 rounded bg-slate-900 border border-slate-700 text-emerald-300 text-[11px] font-bold">
-                      {sandboxDemoProof.linkedWorkspaceId}
-                    </span>
-                    {sandboxDemoProof.importRunId && (
-                      <span className="px-2 py-0.5 rounded bg-slate-900 border border-slate-700 text-sky-300 text-[11px]">
-                        {sandboxDemoProof.importRunId}
-                      </span>
-                    )}
-                    {sandboxDemoProof.datasetSha256Prefix && (
-                      <span className="px-2 py-0.5 rounded bg-slate-900 border border-slate-700 text-purple-300 text-[11px]">
-                        SHA-256: {sandboxDemoProof.datasetSha256Prefix}...
-                      </span>
-                    )}
-                  </div>
-                  <span className="text-[11px] text-slate-400">
-                    Record ID: {sandboxDemoProof.proofId}
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
-                  <div className="p-3 rounded-lg bg-slate-900/90 border border-slate-800 space-y-1">
-                    <div className="text-[10px] font-mono uppercase text-emerald-400 font-bold">
-                      01 · Industry Sector
-                    </div>
-                    <div className="text-white font-semibold">{sandboxDemoProof.industrySector}</div>
-                  </div>
-
-                  <div className="p-3 rounded-lg bg-slate-900/90 border border-slate-800 space-y-1">
-                    <div className="text-[10px] font-mono uppercase text-emerald-400 font-bold">
-                      02 · Dataset Scope
-                    </div>
-                    <div className="text-slate-200 font-mono text-[11px]">
-                      {sandboxDemoProof.datasetScope}
-                    </div>
-                  </div>
-
-                  <div className="p-3 rounded-lg bg-slate-900/90 border border-slate-800 space-y-1">
-                    <div className="text-[10px] font-mono uppercase text-emerald-400 font-bold">
-                      03 · Initial Challenge
-                    </div>
-                    <div className="text-slate-300 leading-relaxed">
-                      {sandboxDemoProof.initialChallenge}
-                    </div>
-                  </div>
-
-                  <div className="p-3 rounded-lg bg-slate-900/90 border border-slate-800 space-y-1">
-                    <div className="text-[10px] font-mono uppercase text-emerald-400 font-bold">
-                      04 · Analysis Performed
-                    </div>
-                    <div className="text-slate-300 leading-relaxed">
-                      {sandboxDemoProof.analysisPerformed}
-                    </div>
-                  </div>
-
-                  <div className="p-3 rounded-lg bg-slate-900/90 border border-emerald-500/30 space-y-2 md:col-span-2">
-                    <div className="text-[10px] font-mono uppercase text-emerald-400 font-bold">
-                      05 · Verified Findings (Pulled from {sandboxDemoProof.linkedWorkspaceId})
-                    </div>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 font-mono text-[11px]">
-                      <div className="p-2 rounded bg-slate-950 border border-slate-800">
-                        <div className="text-[10px] text-slate-400">Book Value</div>
-                        <div className="font-bold text-white">
-                          {formatCurrency(sandboxDemoProof.verifiedFindings.p1BookValueInr)}
-                        </div>
-                      </div>
-                      <div className="p-2 rounded bg-slate-950 border border-slate-800">
-                        <div className="text-[10px] text-rose-400">Dead Stock</div>
-                        <div className="font-bold text-rose-300">
-                          {formatCurrency(sandboxDemoProof.verifiedFindings.p1DeadStockInr)}
-                        </div>
-                      </div>
-                      <div className="p-2 rounded bg-slate-950 border border-slate-800">
-                        <div className="text-[10px] text-emerald-400">Protected Spares</div>
-                        <div className="font-bold text-emerald-300">
-                          {formatCurrency(sandboxDemoProof.verifiedFindings.p1ReserveSparesProtectedInr)}
-                        </div>
-                      </div>
-                      <div className="p-2 rounded bg-slate-950 border border-slate-800">
-                        <div className="text-[10px] text-sky-400">P2 OTIF %</div>
-                        <div className="font-bold text-sky-300">
-                          {sandboxDemoProof.verifiedFindings.p2OtifPassPct.toFixed(1)}%
-                        </div>
-                      </div>
-                      <div className="p-2 rounded bg-slate-950 border border-slate-800">
-                        <div className="text-[10px] text-amber-400">P3 Freight Leak</div>
-                        <div className="font-bold text-amber-300">
-                          {formatCurrency(sandboxDemoProof.verifiedFindings.p3FreightLeakInr)}
-                        </div>
-                      </div>
-                      <div className="p-2 rounded bg-slate-950 border border-slate-800">
-                        <div className="text-[10px] text-purple-400">P4 Bin Accuracy</div>
-                        <div className="font-bold text-purple-300">
-                          {sandboxDemoProof.verifiedFindings.p4BinAccuracyPct.toFixed(1)}%
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="p-3 rounded-lg bg-slate-900/90 border border-slate-800 space-y-1">
-                    <div className="text-[10px] font-mono uppercase text-emerald-400 font-bold">
-                      06 · Action Taken
-                    </div>
-                    <div className="text-slate-300 leading-relaxed">
-                      {sandboxDemoProof.actionTaken}
-                    </div>
-                  </div>
-
-                  <div className="p-3 rounded-lg bg-slate-900/90 border border-slate-800 space-y-1">
-                    <div className="text-[10px] font-mono uppercase text-emerald-400 font-bold">
-                      07 · Approved Quotation
-                    </div>
-                    <div className="text-slate-200 italic leading-relaxed">
-                      {sandboxDemoProof.approvedQuotation}
-                    </div>
-                  </div>
-
-                  <div className="p-3 rounded-lg bg-slate-900/90 border border-amber-500/30 space-y-1 md:col-span-2">
-                    <div className="text-[10px] font-mono uppercase text-amber-400 font-bold">
-                      08 · Documented Limitations
-                    </div>
-                    <div className="text-slate-300 font-mono text-[11px] leading-relaxed">
-                      {sandboxDemoProof.documentedLimitations}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-      </section>
-
-      {/* ===================================================================== */}
       {/* SECTION 13: FOUNDER SECTION                                           */}
       {/* ===================================================================== */}
       <section id="about" className="py-16 sm:py-20 px-4 sm:px-6 bg-slate-900/40 border-t border-slate-850">
@@ -1724,11 +1124,14 @@ export const CommercialLandingPage: React.FC<CommercialLandingPageProps> = ({
               </div>
             </div>
 
-            <p className="text-xs sm:text-sm text-slate-300 leading-relaxed font-sans">
-              &ldquo;Operationalyst is being developed to help manufacturing teams convert existing
-              inventory and operational data into clearer review priorities. The current focus is learning
-              directly from manufacturing teams and validating the audit method with real operational use
-              cases.&rdquo;
+            <p
+              data-testid="founder-executive-signoff"
+              className="text-xs sm:text-sm text-slate-300 leading-relaxed font-sans"
+            >
+              &ldquo;
+              {FOUNDER_EXECUTIVE_SIGNOFF ||
+                'Operationalyst isolates stagnant working capital, 22% annual carrying-cost burn, and Pareto 80/20 floor review priorities directly from standard 5-column Tally Prime, SAP, Busy, or Excel stock exports—with zero ERP integration or operational disruption.'}
+              &rdquo;
             </p>
 
             <div className="flex flex-wrap items-center gap-3 text-xs font-mono pt-3 border-t border-slate-850 text-slate-300">
@@ -1925,19 +1328,6 @@ export const CommercialLandingPage: React.FC<CommercialLandingPageProps> = ({
               >
                 Pilot Audit Terms of Service
               </button>
-              <span>·</span>
-              <a
-                href="?view=lead-inbox"
-                onClick={(e) => {
-                  if (onOpenLeadInbox) {
-                    e.preventDefault();
-                    onOpenLeadInbox();
-                  }
-                }}
-                className="text-slate-400 hover:text-emerald-300 transition underline underline-offset-4 cursor-pointer"
-              >
-                Founder Lead Inbox
-              </a>
             </div>
           </div>
         </div>

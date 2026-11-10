@@ -156,12 +156,21 @@ export interface CreatePilotWorkspaceInput {
   anonymizationApplied?: boolean;
   dataQualityOverview?: SnapshotDataQualityOverview;
   assumptionsAndExclusions?: SnapshotAssumptionsAndExclusions;
+  commercialAccessMode?: CommercialAccessMode;
+  invoiceId?: string;
+  invoiceAmountInr?: number;
+  paymentTier?: 'TIER2_FULL_AUDIT' | 'TIER3_MONTHLY_RETAINER';
 }
 
 export type WorkspaceRetentionStatus =
   | 'ACTIVE_RETENTION_WINDOW'
   | 'EXTENDED_BY_CLIENT'
   | 'PURGED';
+
+export type CommercialAccessMode =
+  | 'FULL_UNLOCKED'
+  | 'TEASER_LOCKED'
+  | 'UTR_PENDING_VERIFICATION';
 
 export interface PilotWorkspaceSnapshot {
   workspaceId: string;
@@ -196,6 +205,14 @@ export interface PilotWorkspaceSnapshot {
   purgedAt?: string;
   deletionCertificateId?: string;
   prePurgeSnapshotIntegrityHash?: string;
+  // Phase 15: Teaser vs. Paid Paywall & Direct Bank/UPI Collection Fields
+  commercialAccessMode?: CommercialAccessMode;
+  invoiceId?: string;
+  invoiceAmountInr?: number;
+  submittedUtrNumber?: string;
+  paidByEmail?: string;
+  paymentTier?: 'TIER2_FULL_AUDIT' | 'TIER3_MONTHLY_RETAINER';
+  paymentVerifiedAt?: string;
 }
 
 export interface PilotWorkspaceValidationResult {
@@ -220,6 +237,10 @@ export interface PilotWorkspaceValidationResult {
     anonymizationApplied?: boolean;
     dataQualityOverview?: SnapshotDataQualityOverview;
     assumptionsAndExclusions?: SnapshotAssumptionsAndExclusions;
+    commercialAccessMode?: CommercialAccessMode;
+    invoiceId?: string;
+    invoiceAmountInr?: number;
+    paymentTier?: 'TIER2_FULL_AUDIT' | 'TIER3_MONTHLY_RETAINER';
   };
   error?: string;
   fieldErrors?: Record<string, string>;
@@ -500,6 +521,21 @@ export function validatePilotWorkspacePayload(raw: unknown): PilotWorkspaceValid
     body.assumptionsAndExclusions && typeof body.assumptionsAndExclusions === 'object'
       ? (body.assumptionsAndExclusions as SnapshotAssumptionsAndExclusions)
       : undefined;
+  const commercialAccessMode: CommercialAccessMode | undefined =
+    body.commercialAccessMode === 'TEASER_LOCKED' ||
+    body.commercialAccessMode === 'UTR_PENDING_VERIFICATION' ||
+    body.commercialAccessMode === 'FULL_UNLOCKED'
+      ? body.commercialAccessMode
+      : undefined;
+  const invoiceId = sanitizeText(body.invoiceId);
+  const invoiceAmountInr =
+    typeof body.invoiceAmountInr === 'number' && body.invoiceAmountInr > 0
+      ? Math.round(body.invoiceAmountInr)
+      : undefined;
+  const paymentTier =
+    body.paymentTier === 'TIER3_MONTHLY_RETAINER' || body.paymentTier === 'TIER2_FULL_AUDIT'
+      ? body.paymentTier
+      : undefined;
 
   return {
     ok: true,
@@ -526,6 +562,10 @@ export function validatePilotWorkspacePayload(raw: unknown): PilotWorkspaceValid
       ...(typeof anonymizationApplied === 'boolean' ? { anonymizationApplied } : {}),
       ...(dataQualityOverview ? { dataQualityOverview } : {}),
       ...(assumptionsAndExclusions ? { assumptionsAndExclusions } : {}),
+      ...(commercialAccessMode ? { commercialAccessMode } : {}),
+      ...(invoiceId ? { invoiceId } : {}),
+      ...(invoiceAmountInr ? { invoiceAmountInr } : {}),
+      ...(paymentTier ? { paymentTier } : {}),
     },
   };
 }
@@ -753,6 +793,36 @@ export function normalizeWorkspaceRetentionSnapshot(
           )
           .digest('hex');
 
+  const commercialAccessMode: CommercialAccessMode =
+    raw.commercialAccessMode === 'TEASER_LOCKED' ||
+    raw.commercialAccessMode === 'UTR_PENDING_VERIFICATION' ||
+    raw.commercialAccessMode === 'FULL_UNLOCKED'
+      ? raw.commercialAccessMode
+      : 'FULL_UNLOCKED';
+
+  const datePart =
+    typeof raw.createdAt === 'string' && raw.createdAt.length >= 10
+      ? raw.createdAt.slice(0, 10).replace(/-/g, '')
+      : '20261109';
+  const idSuffix =
+    typeof raw.workspaceId === 'string' && raw.workspaceId.trim()
+      ? raw.workspaceId.replace(/[^A-Z0-9]/gi, '').slice(-4).toUpperCase().padStart(4, '0')
+      : '0001';
+  const invoiceId =
+    typeof raw.invoiceId === 'string' && raw.invoiceId.trim()
+      ? raw.invoiceId.trim()
+      : `INV-${datePart}-${idSuffix}`;
+
+  const paymentTier: 'TIER2_FULL_AUDIT' | 'TIER3_MONTHLY_RETAINER' =
+    raw.paymentTier === 'TIER3_MONTHLY_RETAINER' ? 'TIER3_MONTHLY_RETAINER' : 'TIER2_FULL_AUDIT';
+
+  const invoiceAmountInr =
+    typeof raw.invoiceAmountInr === 'number' && raw.invoiceAmountInr > 0
+      ? Math.round(raw.invoiceAmountInr)
+      : paymentTier === 'TIER3_MONTHLY_RETAINER'
+      ? 24999
+      : 14999;
+
   return {
     ...raw,
     evaluatedSkus,
@@ -767,6 +837,10 @@ export function normalizeWorkspaceRetentionSnapshot(
     retentionExpiresAt,
     retentionStatus,
     prePurgeSnapshotIntegrityHash,
+    commercialAccessMode,
+    invoiceId,
+    invoiceAmountInr,
+    paymentTier,
   };
 }
 
@@ -907,6 +981,10 @@ export async function createPilotWorkspaceSnapshot(
       retentionPolicyDays,
       retentionExpiresAt,
       retentionStatus: 'ACTIVE_RETENTION_WINDOW',
+      ...(valid.commercialAccessMode ? { commercialAccessMode: valid.commercialAccessMode } : {}),
+      ...(valid.invoiceId ? { invoiceId: valid.invoiceId } : {}),
+      ...(valid.invoiceAmountInr ? { invoiceAmountInr: valid.invoiceAmountInr } : {}),
+      ...(valid.paymentTier ? { paymentTier: valid.paymentTier } : {}),
     });
 
     existing.push(snapshot);
@@ -1213,3 +1291,139 @@ export async function updatePilotWorkspaceSnapshotRules(
     return { status: 'OK', snapshot: updatedSnapshot };
   });
 }
+
+export interface SubmitPaymentUtrPayload {
+  utrNumber: string;
+  paidByEmail?: string;
+  tier?: 'TIER2_FULL_AUDIT' | 'TIER3_MONTHLY_RETAINER';
+  shareToken?: string;
+  isAdmin?: boolean;
+}
+
+/**
+ * Validates and records a client-submitted 12-digit UTR / Bank Reference number on a workspace snapshot,
+ * transitioning commercialAccessMode from TEASER_LOCKED to UTR_PENDING_VERIFICATION.
+ */
+export async function submitPilotWorkspacePaymentUtr(
+  workspaceId: string,
+  payload: SubmitPaymentUtrPayload,
+  filePath: string = DEFAULT_WORKSPACES_FILE_PATH
+): Promise<
+  | { ok: true; status: 'OK'; snapshot: PilotWorkspaceSnapshot; error?: string }
+  | { ok: false; status: 'NOT_FOUND' | 'UNAUTHORIZED' | 'INVALID_UTR'; error: string }
+> {
+  const cleanUtr = sanitizeText(payload?.utrNumber).replace(/\s+/g, '').toUpperCase();
+  if (!cleanUtr || cleanUtr.length < 6 || cleanUtr.length > 32 || !/^[A-Z0-9_-]+$/.test(cleanUtr)) {
+    return {
+      ok: false,
+      status: 'INVALID_UTR',
+      error: 'Please enter a valid 12-digit UTR or Bank Reference number (6–32 alphanumeric characters).',
+    };
+  }
+
+  return withSerializedLock(filePath, async () => {
+    const records = await readAllWorkspacesUnsafe(filePath);
+    let idx = records.findIndex((w) => w.workspaceId === workspaceId);
+
+    if (idx === -1 && workspaceId === PUBLIC_DEMO_WORKSPACE_ID) {
+      const demoSnap = buildPublicDemoMultiPillarSnapshot();
+      records.push(demoSnap);
+      idx = records.length - 1;
+    }
+
+    if (idx === -1) {
+      return {
+        ok: false,
+        status: 'NOT_FOUND',
+        error: `Pilot Audit Workspace '${workspaceId}' not found.`,
+      };
+    }
+
+    const current = records[idx];
+    if (
+      payload.shareToken !== undefined &&
+      !payload.isAdmin &&
+      workspaceId !== PUBLIC_DEMO_WORKSPACE_ID
+    ) {
+      const providedToken = payload.shareToken.trim();
+      if (!providedToken || providedToken !== current.shareToken) {
+        return {
+          ok: false,
+          status: 'UNAUTHORIZED',
+          error: 'Unauthorized: Valid walkthrough shareToken is required to submit UTR payment reference.',
+        };
+      }
+    }
+
+    const tier: 'TIER2_FULL_AUDIT' | 'TIER3_MONTHLY_RETAINER' =
+      payload.tier === 'TIER3_MONTHLY_RETAINER' ? 'TIER3_MONTHLY_RETAINER' : 'TIER2_FULL_AUDIT';
+    const cleanEmail = sanitizeText(payload.paidByEmail);
+
+    const updatedSnapshot = normalizeWorkspaceRetentionSnapshot({
+      ...current,
+      updatedAt: new Date().toISOString(),
+      commercialAccessMode: 'UTR_PENDING_VERIFICATION',
+      submittedUtrNumber: cleanUtr,
+      ...(cleanEmail ? { paidByEmail: cleanEmail } : {}),
+      paymentTier: tier,
+      invoiceAmountInr: tier === 'TIER3_MONTHLY_RETAINER' ? 24999 : 14999,
+    });
+
+    records[idx] = updatedSnapshot;
+    await writeAllWorkspacesUnsafe(filePath, records);
+    return { ok: true, status: 'OK', snapshot: updatedSnapshot };
+  });
+}
+
+/**
+ * Founder 1-click verification of bank credit: unlocks commercialAccessMode to FULL_UNLOCKED
+ * and stamps paymentVerifiedAt.
+ */
+export async function verifyPilotWorkspacePaymentUnlock(
+  workspaceId: string,
+  options?: { verifiedBy?: string; utrNumber?: string },
+  filePath: string = DEFAULT_WORKSPACES_FILE_PATH
+): Promise<
+  | { ok: true; status: 'OK'; snapshot: PilotWorkspaceSnapshot; error?: string }
+  | { ok: false; status: 'NOT_FOUND'; error: string }
+> {
+  return withSerializedLock(filePath, async () => {
+    const records = await readAllWorkspacesUnsafe(filePath);
+    let idx = records.findIndex((w) => w.workspaceId === workspaceId);
+
+    if (idx === -1 && workspaceId === PUBLIC_DEMO_WORKSPACE_ID) {
+      const demoSnap = buildPublicDemoMultiPillarSnapshot();
+      records.push(demoSnap);
+      idx = records.length - 1;
+    }
+
+    if (idx === -1) {
+      return {
+        ok: false,
+        status: 'NOT_FOUND',
+        error: `Pilot Audit Workspace '${workspaceId}' not found.`,
+      };
+    }
+
+    const current = records[idx];
+    const nowIso = new Date().toISOString();
+    const overrideUtr = sanitizeText(options?.utrNumber).replace(/\s+/g, '').toUpperCase();
+
+    const updatedSnapshot = normalizeWorkspaceRetentionSnapshot({
+      ...current,
+      updatedAt: nowIso,
+      commercialAccessMode: 'FULL_UNLOCKED',
+      paymentVerifiedAt: nowIso,
+      ...(overrideUtr
+        ? { submittedUtrNumber: overrideUtr }
+        : current.submittedUtrNumber
+        ? { submittedUtrNumber: current.submittedUtrNumber }
+        : {}),
+    });
+
+    records[idx] = updatedSnapshot;
+    await writeAllWorkspacesUnsafe(filePath, records);
+    return { ok: true, status: 'OK', snapshot: updatedSnapshot };
+  });
+}
+

@@ -18,6 +18,8 @@ import {
   listPilotWorkspaceSnapshots,
   getAuthorizedPilotWorkspaceSnapshot,
   updatePilotWorkspaceSnapshotRules,
+  submitPilotWorkspacePaymentUtr,
+  verifyPilotWorkspacePaymentUnlock,
   type UpdateSnapshotRulesPayload,
 } from "./src/utils/pilotWorkspaceStore.ts";
 import {
@@ -64,6 +66,18 @@ import {
   getFunnelAnalyticsDropOffReport,
   resetFunnelAnalyticsEvents,
 } from "./src/utils/funnelAnalyticsStore.ts";
+import {
+  getFounderBillingConfig,
+  updateFounderBillingConfig,
+} from "./src/utils/founderBillingStore.ts";
+import {
+  getAgentWorkforceState,
+  decomposeFounderRevenueGoal,
+  triggerLeadArrivalAgentPipeline,
+  triggerIngestionAgentPipeline,
+  queueAgentUtrVerificationTask,
+  decideAgentWorkforceTask,
+} from "./src/utils/agentWorkforceEngine.ts";
 import { isValidPlantId } from "./src/data/multiPlantBaselines.ts";
 const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000; // 15 minutes
 const RATE_LIMIT_MAX_REQUESTS = 5;
@@ -204,6 +218,8 @@ async function startServer() {
           record.selfAssessmentScore !== undefined ? ` · Diagnostic Score ${record.selfAssessmentScore}/100` : ""
         }`,
       }).catch(() => {});
+
+      void triggerLeadArrivalAgentPipeline(record).catch(() => {});
 
       console.log(
         `[PILOT_LEAD_CAPTURED] leadId=${record.leadId} company="${record.companyName}" location="${record.plantLocation}"`
@@ -782,6 +798,12 @@ async function startServer() {
         });
       }
 
+      void triggerIngestionAgentPipeline(
+        isDemoLead ? "PILOT-DEMO-SANDBOX" : leadId,
+        ingestionResult.importRun,
+        ingestionResult.snapshot
+      ).catch(() => {});
+
       return res.status(201).json({
         ok: true,
         importRun: ingestionResult.importRun,
@@ -1279,6 +1301,283 @@ async function startServer() {
       return res.status(500).json({
         ok: false,
         error: "Failed to reset conversion funnel analytics.",
+      });
+    }
+  });
+
+  // 30. Phase 15 Protected Agent Workforce State: GET /api/admin/agent-workforce
+  app.get("/api/admin/agent-workforce", async (req, res) => {
+    const auth = requireAdminAuth(req, res);
+    if (!auth) return;
+
+    try {
+      const state = await getAgentWorkforceState();
+      return res.json({
+        ok: true,
+        state,
+      });
+    } catch (err) {
+      console.error("[GET_AGENT_WORKFORCE_ERROR]", err);
+      return res.status(500).json({
+        ok: false,
+        error: "Failed to load 5-Agent Autonomous Revenue Workforce state.",
+      });
+    }
+  });
+
+  // 31. Phase 15 Protected CEO Goal Decomposition: POST /api/admin/agent-workforce/goal
+  app.post("/api/admin/agent-workforce/goal", async (req, res) => {
+    const auth = requireAdminAuth(req, res);
+    if (!auth) return;
+
+    const body = (req.body && typeof req.body === "object" ? req.body : {}) as Record<
+      string,
+      unknown
+    >;
+    const goalText =
+      typeof body.goalText === "string" && body.goalText.trim()
+        ? body.goalText.trim()
+        : "Close 5 Paid Plant Audits in Chennai This Month — ₹74,995 Target";
+    const targetRevenueInr =
+      typeof body.targetRevenueInr === "number" ? body.targetRevenueInr : undefined;
+
+    try {
+      const result = await decomposeFounderRevenueGoal(goalText, targetRevenueInr);
+      await recordServerAuditEvent({
+        actor: "C. Jones Snowin (CEO Orchestrator)",
+        category: "GOVERNANCE",
+        action: "CEO_REVENUE_GOAL_DECOMPOSED",
+        details: `Decomposed revenue goal '${result.goal.goalText}' (${result.goal.goalId}) into ${result.tasksCreated.length} deterministic agent tasks (₹0.00 token spend).`,
+      }).catch(() => {});
+
+      return res.status(201).json({
+        ok: true,
+        goal: result.goal,
+        tasksCreated: result.tasksCreated,
+        state: result.state,
+      });
+    } catch (err) {
+      console.error("[DECOMPOSE_AGENT_GOAL_ERROR]", err);
+      return res.status(500).json({
+        ok: false,
+        error: "Failed to decompose founder revenue goal.",
+      });
+    }
+  });
+
+  // 32. Phase 15 Protected Agent Task Decision: POST /api/admin/agent-workforce/tasks/:taskId/decision
+  app.post("/api/admin/agent-workforce/tasks/:taskId/decision", async (req, res) => {
+    const auth = requireAdminAuth(req, res);
+    if (!auth) return;
+
+    const taskId = req.params.taskId?.trim();
+    if (!taskId) {
+      return res.status(400).json({
+        ok: false,
+        error: "Task ID parameter is required.",
+      });
+    }
+
+    const body = (req.body && typeof req.body === "object" ? req.body : {}) as Record<
+      string,
+      unknown
+    >;
+    const decision = body.decision === "REJECT" ? "REJECT" : "APPROVE";
+    const notes = typeof body.notes === "string" ? body.notes : undefined;
+
+    try {
+      const result = await decideAgentWorkforceTask(taskId, decision, notes);
+      if (!result.ok) {
+        return res.status(404).json(result);
+      }
+
+      return res.json({
+        ok: true,
+        task: result.task,
+        state: result.state,
+      });
+    } catch (err) {
+      console.error("[DECIDE_AGENT_TASK_ERROR]", err);
+      return res.status(500).json({
+        ok: false,
+        error: "Failed to process agent task decision.",
+      });
+    }
+  });
+
+  // 33. Phase 15 Public Founder Billing Config: GET /api/founder-billing/public
+  app.get("/api/founder-billing/public", async (_req, res) => {
+    try {
+      const config = await getFounderBillingConfig();
+      return res.json({
+        ok: true,
+        config,
+      });
+    } catch (err) {
+      console.error("[GET_FOUNDER_BILLING_ERROR]", err);
+      return res.status(500).json({
+        ok: false,
+        error: "Failed to load Founder Billing configuration.",
+      });
+    }
+  });
+
+  // 34. Phase 15 Protected Update Founder Billing Config: PUT /api/admin/founder-billing
+  app.put("/api/admin/founder-billing", async (req, res) => {
+    const auth = requireAdminAuth(req, res);
+    if (!auth) return;
+
+    try {
+      const config = await updateFounderBillingConfig(
+        req.body && typeof req.body === "object" ? req.body : {}
+      );
+      await recordServerAuditEvent({
+        actor: "C. Jones Snowin (Founder Admin)",
+        category: "GOVERNANCE",
+        action: "FOUNDER_BILLING_CONFIG_UPDATED",
+        details: `Updated Founder Payout Config: UPI=${config.upiId}, Tier2=₹${config.tier2FullAuditPriceInr}, Tier3=₹${config.tier3MonthlyRetainerInr}`,
+      }).catch(() => {});
+
+      return res.json({
+        ok: true,
+        config,
+      });
+    } catch (err) {
+      console.error("[UPDATE_FOUNDER_BILLING_ERROR]", err);
+      return res.status(500).json({
+        ok: false,
+        error: "Failed to update Founder Billing configuration.",
+      });
+    }
+  });
+
+  // 35. Phase 15 Public UTR Payment Submission: POST /api/pilot-workspaces/:workspaceId/submit-payment
+  app.post("/api/pilot-workspaces/:workspaceId/submit-payment", async (req, res) => {
+    const workspaceId = req.params.workspaceId?.trim();
+    if (!workspaceId) {
+      return res.status(400).json({
+        ok: false,
+        error: "Workspace ID parameter is required.",
+      });
+    }
+
+    const body = (req.body && typeof req.body === "object" ? req.body : {}) as Record<
+      string,
+      unknown
+    >;
+    const shareToken =
+      (typeof req.query.token === "string" ? req.query.token.trim() : "") ||
+      (typeof body.shareToken === "string" ? body.shareToken.trim() : "") ||
+      (typeof body.token === "string" ? body.token.trim() : "") ||
+      undefined;
+    const adminAuth = isAdminAuthenticated(req);
+    const tier =
+      body.tier === "TIER3_MONTHLY_RETAINER" ? "TIER3_MONTHLY_RETAINER" : "TIER2_FULL_AUDIT";
+    const utrNumber = typeof body.utrNumber === "string" ? body.utrNumber : "";
+    const paidByEmail = typeof body.paidByEmail === "string" ? body.paidByEmail : undefined;
+
+    try {
+      const result = await submitPilotWorkspacePaymentUtr(workspaceId, {
+        utrNumber,
+        paidByEmail,
+        tier,
+        shareToken,
+        isAdmin: adminAuth.authenticated,
+      });
+
+      if (!result.ok) {
+        const statusCode =
+          result.status === "NOT_FOUND"
+            ? 404
+            : result.status === "UNAUTHORIZED"
+            ? 401
+            : 400;
+        return res.status(statusCode).json({
+          ok: false,
+          error: result.error,
+        });
+      }
+
+      const queuedTask = await queueAgentUtrVerificationTask(
+        result.snapshot,
+        result.snapshot.submittedUtrNumber || utrNumber,
+        paidByEmail,
+        tier
+      ).catch(() => null);
+
+      await recordServerAuditEvent({
+        actor: paidByEmail || `${result.snapshot.companyName} (Walkthrough Client)`,
+        category: "PILOT_WALKTHROUGH",
+        action: "UTR_PAYMENT_SUBMITTED",
+        details: `Submitted UTR ${result.snapshot.submittedUtrNumber} for workspace ${result.snapshot.workspaceId} (${tier} · ₹${result.snapshot.invoiceAmountInr || 14999})`,
+      }).catch(() => {});
+
+      return res.json({
+        ok: true,
+        snapshot: result.snapshot,
+        queuedTask,
+      });
+    } catch (err) {
+      console.error("[SUBMIT_PAYMENT_UTR_ERROR]", err);
+      return res.status(500).json({
+        ok: false,
+        error: "Failed to record UTR payment reference.",
+      });
+    }
+  });
+
+  // 36. Phase 15 Protected Founder Payment Verification & Unlock: POST /api/admin/pilot-workspaces/:workspaceId/verify-payment
+  app.post("/api/admin/pilot-workspaces/:workspaceId/verify-payment", async (req, res) => {
+    const auth = requireAdminAuth(req, res);
+    if (!auth) return;
+
+    const workspaceId = req.params.workspaceId?.trim();
+    if (!workspaceId) {
+      return res.status(400).json({
+        ok: false,
+        error: "Workspace ID parameter is required.",
+      });
+    }
+
+    const body = (req.body && typeof req.body === "object" ? req.body : {}) as Record<
+      string,
+      unknown
+    >;
+    const utrNumber = typeof body.utrNumber === "string" ? body.utrNumber : undefined;
+
+    try {
+      const result = await verifyPilotWorkspacePaymentUnlock(workspaceId, {
+        verifiedBy: "C. Jones Snowin",
+        utrNumber,
+      });
+
+      if (!result.ok) {
+        return res.status(404).json({
+          ok: false,
+          error: result.error,
+        });
+      }
+
+      await recordServerAuditEvent({
+        actor: "C. Jones Snowin (Founder Admin)",
+        category: "PILOT_WALKTHROUGH",
+        action: "PAYMENT_VERIFIED_UNLOCKED",
+        details: `Verified bank credit (UTR: ${
+          result.snapshot.submittedUtrNumber || "VERIFIED"
+        }) and unlocked full 4-pillar audit + 6-Sheet .XLSX workbook for ${
+          result.snapshot.workspaceId
+        } (${result.snapshot.companyName}).`,
+      }).catch(() => {});
+
+      return res.json({
+        ok: true,
+        snapshot: result.snapshot,
+      });
+    } catch (err) {
+      console.error("[VERIFY_PAYMENT_UNLOCK_ERROR]", err);
+      return res.status(500).json({
+        ok: false,
+        error: "Failed to verify payment and unlock workspace.",
       });
     }
   });

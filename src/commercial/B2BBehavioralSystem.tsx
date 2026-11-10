@@ -346,52 +346,6 @@ export const B2BBehavioralSystem: React.FC<B2BBehavioralSystemProps> = ({
           </div>
         </div>
       </section>
-
-      {/* ===================================================================== */}
-      {/* 3. ZERO-SURPRISE PILOT AUDIT WORKFLOW                                 */}
-      {/* ===================================================================== */}
-      <section className="py-12 px-4 sm:px-6 bg-slate-900/40 border border-slate-850 rounded-3xl">
-        <div className="max-w-5xl mx-auto space-y-8">
-          <div className="text-center space-y-3">
-            <span className="text-xs font-mono font-bold text-emerald-400 uppercase tracking-widest">
-              CLEAR 5-STEP ENGAGEMENT WORKFLOW
-            </span>
-            <h2 className="text-2xl sm:text-3xl font-black text-white">
-              What Happens at Every Stage — With Zero Surprises
-            </h2>
-            <p className="text-sm text-slate-300 max-w-2xl mx-auto leading-relaxed">
-              Every stage of a Pilot Factory Audit has clear boundaries so your operations, stores, and
-              finance teams stay in full control of scope and data.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
-            {CUSTOMER_ANXIETY_MAP.map((item) => (
-              <div
-                key={item.stage}
-                className="p-4 rounded-2xl bg-slate-950 border border-slate-800 flex flex-col justify-between space-y-3"
-              >
-                <div className="space-y-1.5">
-                  <div className="text-xs font-mono font-bold text-emerald-400">{item.stage}</div>
-                  <div className="text-[11px] font-mono text-slate-400 font-bold uppercase">
-                    {item.touchpoint}
-                  </div>
-                  <p className="text-xs text-rose-300/90 italic font-sans leading-snug pt-1">
-                    {item.unspokenAnxiety}
-                  </p>
-                </div>
-
-                <div className="pt-2 border-t border-slate-850 space-y-1">
-                  <div className="text-[10px] font-mono text-slate-400 uppercase font-bold">Safeguard:</div>
-                  <p className="text-[11px] text-slate-300 font-sans leading-relaxed">
-                    {item.institutionalSafeguard}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
     </div>
   );
 };

@@ -23,9 +23,24 @@ import {
   Trash2,
   CheckCircle2,
   FileCheck2,
+  CreditCard,
+  Copy,
+  FileText,
+  ExternalLink,
+  Unlock,
 } from 'lucide-react';
-import { PilotWorkspaceSnapshot } from '../utils/pilotWorkspaceStore';
+import {
+  PilotWorkspaceSnapshot,
+  CommercialAccessMode,
+} from '../utils/pilotWorkspaceStore';
 import type { DeletionCertificateRecord } from '../utils/dataPurgeEngine';
+import {
+  FounderBillingConfig,
+  CommercialBillingTier,
+  DEFAULT_FOUNDER_BILLING_CONFIG,
+  readFounderBillingFromBrowser,
+  generateProformaInvoice,
+} from '../utils/founderBillingStore';
 import { formatCurrency, formatIndianLakhsCrores } from '../project1/utils/calculations';
 import { sanitizeSpreadsheetCell } from '../utils/importValidation';
 import { FourPillarSensitivitySimulatorPanel } from '../components/FourPillarSensitivitySimulatorPanel';
@@ -72,6 +87,121 @@ export const PilotFindingsWalkthroughView: React.FC<PilotFindingsWalkthroughView
   const [retentionBusy, setRetentionBusy] = useState<boolean>(false);
   const [retentionNotice, setRetentionNotice] = useState<string | null>(null);
   const [retentionError, setRetentionError] = useState<string | null>(null);
+
+  // Phase 15: Teaser-to-Paid Walkthrough Paywall, Proforma Invoice & UTR Unlock State
+  const [billingConfig, setBillingConfig] = useState<FounderBillingConfig>(() =>
+    readFounderBillingFromBrowser()
+  );
+  const [paywallPreviewOverride, setPaywallPreviewOverride] = useState<
+    'AUTO' | CommercialAccessMode
+  >(() => {
+    try {
+      const sp = new URLSearchParams(window.location.search);
+      const pw = sp.get('paywall')?.toLowerCase();
+      if (pw === 'teaser' || pw === 'locked') return 'TEASER_LOCKED';
+      if (pw === 'utr' || pw === 'pending') return 'UTR_PENDING_VERIFICATION';
+      if (pw === 'unlocked' || pw === 'paid') return 'FULL_UNLOCKED';
+    } catch {}
+    return 'AUTO';
+  });
+  const [selectedBillingTier, setSelectedBillingTier] =
+    useState<CommercialBillingTier>('TIER2_FULL_AUDIT');
+  const [utrInput, setUtrInput] = useState<string>('');
+  const [utrEmailInput, setUtrEmailInput] = useState<string>('');
+  const [submittingUtr, setSubmittingUtr] = useState<boolean>(false);
+  const [utrNotice, setUtrNotice] = useState<string | null>(null);
+  const [utrError, setUtrError] = useState<string | null>(null);
+  const [copiedUpi, setCopiedUpi] = useState<boolean>(false);
+  const [showProformaInvoiceModal, setShowProformaInvoiceModal] = useState<boolean>(false);
+
+  const loadFounderBillingConfig = async () => {
+    try {
+      const res = await fetch('/api/founder-billing/public');
+      const data = await res.json().catch(() => null);
+      if (res.ok && data?.ok && data.config) {
+        setBillingConfig(data.config as FounderBillingConfig);
+      }
+    } catch {
+      setBillingConfig(readFounderBillingFromBrowser());
+    }
+  };
+
+  const handleSubmitPaymentUtr = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!snapshot) return;
+    const cleanUtr = utrInput.trim().replace(/\s+/g, '').toUpperCase();
+    if (cleanUtr.length < 6 || cleanUtr.length > 32 || !/^[A-Z0-9_-]+$/.test(cleanUtr)) {
+      setUtrError(
+        'Please enter a valid 12-digit UTR or Bank Reference number (6–32 alphanumeric characters).'
+      );
+      return;
+    }
+
+    setSubmittingUtr(true);
+    setUtrError(null);
+    setUtrNotice(null);
+
+    try {
+      const res = await fetch(
+        `/api/pilot-workspaces/${encodeURIComponent(snapshot.workspaceId)}/submit-payment`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            utrNumber: cleanUtr,
+            paidByEmail: utrEmailInput.trim() || undefined,
+            tier: selectedBillingTier,
+            shareToken: shareToken || snapshot.shareToken,
+          }),
+        }
+      );
+      const data = await res.json().catch(() => null);
+      if (res.ok && data?.ok && data.snapshot) {
+        setSnapshot(data.snapshot as PilotWorkspaceSnapshot);
+        setPaywallPreviewOverride('UTR_PENDING_VERIFICATION');
+        setUtrNotice(
+          `UTR Reference ${cleanUtr} recorded and queued for Agent 05 & Founder verification. Status: UTR_PENDING_VERIFICATION.`
+        );
+      } else {
+        // Fallback for static browser preview if API is unreachable
+        const fallbackSnap: PilotWorkspaceSnapshot = {
+          ...snapshot,
+          commercialAccessMode: 'UTR_PENDING_VERIFICATION',
+          submittedUtrNumber: cleanUtr,
+          paidByEmail: utrEmailInput.trim() || undefined,
+          paymentTier: selectedBillingTier,
+        };
+        setSnapshot(fallbackSnap);
+        setPaywallPreviewOverride('UTR_PENDING_VERIFICATION');
+        setUtrNotice(
+          `UTR Reference ${cleanUtr} recorded for verification. Status: UTR_PENDING_VERIFICATION.`
+        );
+      }
+    } catch {
+      const fallbackSnap: PilotWorkspaceSnapshot = {
+        ...snapshot,
+        commercialAccessMode: 'UTR_PENDING_VERIFICATION',
+        submittedUtrNumber: cleanUtr,
+        paidByEmail: utrEmailInput.trim() || undefined,
+        paymentTier: selectedBillingTier,
+      };
+      setSnapshot(fallbackSnap);
+      setPaywallPreviewOverride('UTR_PENDING_VERIFICATION');
+      setUtrNotice(
+        `UTR Reference ${cleanUtr} recorded for verification. Status: UTR_PENDING_VERIFICATION.`
+      );
+    } finally {
+      setSubmittingUtr(false);
+    }
+  };
+
+  const handleCopyUpiId = async () => {
+    try {
+      await navigator.clipboard.writeText(billingConfig.upiId || DEFAULT_FOUNDER_BILLING_CONFIG.upiId);
+      setCopiedUpi(true);
+      setTimeout(() => setCopiedUpi(false), 2500);
+    } catch {}
+  };
 
   const loadDeletionCertificate = async (certId: string) => {
     if (!certId) return;
@@ -216,6 +346,7 @@ export const PilotFindingsWalkthroughView: React.FC<PilotFindingsWalkthroughView
 
   useEffect(() => {
     loadSnapshot(workspaceId, shareToken);
+    loadFounderBillingConfig();
   }, []);
 
   const handleDownloadFindingsXlsx = () => {
@@ -416,6 +547,25 @@ export const PilotFindingsWalkthroughView: React.FC<PilotFindingsWalkthroughView
   const p4Summary = snapshot?.multiModuleSummary?.p4;
   const hasMultiModules = Boolean(p2Summary || p3Summary || p4Summary);
 
+  const effectiveAccessMode: CommercialAccessMode =
+    paywallPreviewOverride !== 'AUTO'
+      ? paywallPreviewOverride
+      : snapshot?.commercialAccessMode || 'FULL_UNLOCKED';
+  const isPaywallLocked =
+    effectiveAccessMode === 'TEASER_LOCKED' ||
+    effectiveAccessMode === 'UTR_PENDING_VERIFICATION';
+  const proformaInvoice = snapshot
+    ? generateProformaInvoice(
+        {
+          ...snapshot,
+          commercialAccessMode: effectiveAccessMode,
+        },
+        null,
+        billingConfig,
+        selectedBillingTier
+      )
+    : null;
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans">
       {/* Top Bar */}
@@ -450,6 +600,15 @@ export const PilotFindingsWalkthroughView: React.FC<PilotFindingsWalkthroughView
               <>
                 <button
                   type="button"
+                  data-testid="walkthrough-open-proforma-btn"
+                  onClick={() => setShowProformaInvoiceModal(true)}
+                  className="px-3.5 py-2 rounded-lg bg-slate-950 hover:bg-slate-800 border border-amber-500/40 text-amber-300 text-xs font-mono font-bold inline-flex items-center gap-1.5 cursor-pointer"
+                >
+                  <FileText className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Proforma Invoice ({proformaInvoice?.invoiceId || 'INV-...'})</span>
+                </button>
+                <button
+                  type="button"
                   data-testid="walkthrough-print-2page-btn"
                   onClick={() => window.print()}
                   className="px-3.5 py-2 rounded-lg bg-slate-950 hover:bg-slate-800 border border-slate-700 text-slate-200 text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer"
@@ -457,14 +616,32 @@ export const PilotFindingsWalkthroughView: React.FC<PilotFindingsWalkthroughView
                   <Printer className="w-3.5 h-3.5 text-sky-400" />
                   <span>Print / Save 2-Page Executive PDF Briefing</span>
                 </button>
-                <button
-                  type="button"
-                  onClick={handleDownloadFindingsXlsx}
-                  className="px-3.5 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer"
-                >
-                  <Download className="w-3.5 h-3.5" />
-                  <span>Download Findings (.XLSX)</span>
-                </button>
+                {isPaywallLocked ? (
+                  <button
+                    type="button"
+                    data-testid="walkthrough-locked-xlsx-btn"
+                    onClick={() => {
+                      const el = document.getElementById('walkthrough-paywall-checkout-card');
+                      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }}
+                    className="px-3.5 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <Lock className="w-3.5 h-3.5" />
+                    <span>
+                      Unlock 6-Sheet .XLSX (₹
+                      {(proformaInvoice?.amountInr || 14999).toLocaleString('en-IN')})
+                    </span>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleDownloadFindingsXlsx}
+                    className="px-3.5 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>Download Findings (.XLSX)</span>
+                  </button>
+                )}
               </>
             )}
             <button
@@ -537,6 +714,81 @@ export const PilotFindingsWalkthroughView: React.FC<PilotFindingsWalkthroughView
           </div>
         ) : (
           <div className="space-y-6">
+            {/* Phase 15: Interactive Client Paywall Mode Preview Bar */}
+            <section
+              data-testid="walkthrough-paywall-preview-bar"
+              className="rounded-2xl border border-amber-500/40 bg-slate-900/95 p-4 sm:p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-3 text-xs no-print"
+            >
+              <div className="space-y-1">
+                <div className="flex flex-wrap items-center gap-2 font-mono">
+                  <span className="px-2.5 py-0.5 rounded bg-amber-500/20 border border-amber-500/40 text-amber-300 font-bold uppercase text-[11px]">
+                    Preview Client Paywall Mode: Free 3-SKU Teaser vs. ₹14,999 Unlocked
+                  </span>
+                  <span
+                    data-testid="walkthrough-access-mode-badge"
+                    className={`px-2 py-0.5 rounded font-bold text-[11px] border ${
+                      effectiveAccessMode === 'TEASER_LOCKED'
+                        ? 'bg-rose-500/20 border-rose-500/40 text-rose-300'
+                        : effectiveAccessMode === 'UTR_PENDING_VERIFICATION'
+                        ? 'bg-amber-500/20 border-amber-500/40 text-amber-300'
+                        : 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300'
+                    }`}
+                  >
+                    Access Mode: {effectiveAccessMode}
+                  </span>
+                </div>
+                <p className="text-slate-300">
+                  Toggle how plant owners experience this walkthrough before and after paying the{' '}
+                  <strong className="text-white">
+                    ₹{(billingConfig.tier2FullAuditPriceInr || 14999).toLocaleString('en-IN')}
+                  </strong>{' '}
+                  Tier-2 Full Audit fee via 0%-fee UPI (<code className="text-emerald-300">{billingConfig.upiId}</code>) or NEFT/IMPS.
+                </p>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2 font-mono shrink-0">
+                <button
+                  type="button"
+                  data-testid="preview-mode-teaser-btn"
+                  onClick={() => setPaywallPreviewOverride('TEASER_LOCKED')}
+                  className={`px-3 py-1.5 rounded-lg border text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer transition ${
+                    effectiveAccessMode === 'TEASER_LOCKED'
+                      ? 'bg-amber-500 text-slate-950 border-amber-400'
+                      : 'bg-slate-950 text-slate-300 border-slate-700 hover:text-white'
+                  }`}
+                >
+                  <Lock className="w-3.5 h-3.5" />
+                  <span>Free 3-SKU Teaser (Locked)</span>
+                </button>
+                <button
+                  type="button"
+                  data-testid="preview-mode-utr-pending-btn"
+                  onClick={() => setPaywallPreviewOverride('UTR_PENDING_VERIFICATION')}
+                  className={`px-3 py-1.5 rounded-lg border text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer transition ${
+                    effectiveAccessMode === 'UTR_PENDING_VERIFICATION'
+                      ? 'bg-sky-500 text-slate-950 border-sky-400'
+                      : 'bg-slate-950 text-slate-300 border-slate-700 hover:text-white'
+                  }`}
+                >
+                  <Clock className="w-3.5 h-3.5" />
+                  <span>UTR Submitted (Pending)</span>
+                </button>
+                <button
+                  type="button"
+                  data-testid="preview-mode-unlocked-btn"
+                  onClick={() => setPaywallPreviewOverride('FULL_UNLOCKED')}
+                  className={`px-3 py-1.5 rounded-lg border text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer transition ${
+                    effectiveAccessMode === 'FULL_UNLOCKED'
+                      ? 'bg-emerald-500 text-slate-950 border-emerald-400'
+                      : 'bg-slate-950 text-slate-300 border-slate-700 hover:text-white'
+                  }`}
+                >
+                  <Unlock className="w-3.5 h-3.5" />
+                  <span>₹14,999 Unlocked (All 20 SKUs)</span>
+                </button>
+              </div>
+            </section>
+
             {/* Phase 8: 14-Day Data Retention & Governance Bar */}
             <section
               data-testid="walkthrough-retention-bar"
@@ -1265,9 +1517,18 @@ export const PilotFindingsWalkthroughView: React.FC<PilotFindingsWalkthroughView
                         Evaluated SKU Priority Schedule ({snapshot.evaluatedSkus.length} SKUs)
                       </h3>
                       <p className="text-xs text-slate-400">
-                        Sorted by Dead/Slow status and Rupee exposure so shop-floor and procurement teams can act on the highest-impact lines first.
+                        {isPaywallLocked
+                          ? `Showing Top 3 Dormant SKUs in Free Executive Teaser Mode. Rows #4–#${snapshot.evaluatedSkus.length} and the 6-Sheet .XLSX Action Workbook are locked behind the ₹${(
+                              proformaInvoice?.amountInr || 14999
+                            ).toLocaleString('en-IN')} Direct Bank/UPI Paywall.`
+                          : 'Sorted by Dead/Slow status and Rupee exposure so shop-floor and procurement teams can act on the highest-impact lines first.'}
                       </p>
                     </div>
+                    {isPaywallLocked && (
+                      <span className="px-2.5 py-1 rounded-md bg-amber-500/15 border border-amber-500/40 text-amber-300 font-mono text-[11px] font-bold">
+                        3 OF {snapshot.evaluatedSkus.length} SKUS VISIBLE IN TEASER
+                      </span>
+                    )}
                   </div>
 
                   <div className="overflow-x-auto">
@@ -1295,40 +1556,281 @@ export const PilotFindingsWalkthroughView: React.FC<PilotFindingsWalkthroughView
                             if (sDiff !== 0) return sDiff;
                             return (b.closingValue || 0) - (a.closingValue || 0);
                           })
-                          .map((sku) => (
-                            <tr key={sku.id} className="hover:bg-slate-950/50">
-                              <td className="py-3 px-4 font-bold text-white">{sku.itemCode}</td>
-                              <td className="py-3 px-4 text-slate-200 font-sans">{sku.itemName}</td>
-                              <td className="py-3 px-4 text-slate-400">{sku.category}</td>
-                              <td className="py-3 px-4 text-right text-slate-200">{sku.qtyOnHand}</td>
-                              <td className="py-3 px-4 text-right text-slate-300">
-                                {formatCurrency(sku.costRate)}
-                              </td>
-                              <td className="py-3 px-4 text-right font-bold text-white">
-                                {formatCurrency(sku.closingValue || 0)}
-                              </td>
-                              <td className="py-3 px-4 text-center font-bold text-slate-200">
-                                {sku.daysIdle}d
-                              </td>
-                              <td className="py-3 px-4 text-center">
-                                <span
-                                  className={`inline-block px-2 py-0.5 rounded border text-[10px] font-bold ${
-                                    sku.status === 'Dead'
-                                      ? 'bg-rose-500/15 text-rose-300 border-rose-500/40'
-                                      : sku.status === 'Slow'
-                                      ? 'bg-amber-500/15 text-amber-300 border-amber-500/40'
-                                      : 'bg-emerald-500/15 text-emerald-300 border-emerald-500/40'
-                                  }`}
-                                >
-                                  {sku.status} • Class {sku.abcClass}
-                                </span>
-                              </td>
-                              <td className="py-3 px-4 text-slate-300 font-sans">{sku.action}</td>
-                            </tr>
-                          ))}
+                          .map((sku, idx) => {
+                            const isRowLocked = isPaywallLocked && idx >= 3;
+                            return (
+                              <tr
+                                key={sku.id}
+                                data-testid={
+                                  isRowLocked
+                                    ? `walkthrough-locked-sku-row-${idx + 1}`
+                                    : `walkthrough-visible-sku-row-${idx + 1}`
+                                }
+                                className={
+                                  isRowLocked
+                                    ? 'bg-slate-950/80 select-none blur-[4px] opacity-50 pointer-events-none'
+                                    : 'hover:bg-slate-950/50'
+                                }
+                              >
+                                <td className="py-3 px-4 font-bold text-white">
+                                  {isRowLocked ? `LOCKED-SKU-${idx + 1}` : sku.itemCode}
+                                </td>
+                                <td className="py-3 px-4 text-slate-200 font-sans">
+                                  {isRowLocked
+                                    ? 'Locked in Free 3-SKU Teaser — Unlock Full Audit'
+                                    : sku.itemName}
+                                </td>
+                                <td className="py-3 px-4 text-slate-400">{sku.category}</td>
+                                <td className="py-3 px-4 text-right text-slate-200">
+                                  {sku.qtyOnHand}
+                                </td>
+                                <td className="py-3 px-4 text-right text-slate-300">
+                                  {formatCurrency(sku.costRate)}
+                                </td>
+                                <td className="py-3 px-4 text-right font-bold text-white">
+                                  {formatCurrency(sku.closingValue || 0)}
+                                </td>
+                                <td className="py-3 px-4 text-center font-bold text-slate-200">
+                                  {sku.daysIdle}d
+                                </td>
+                                <td className="py-3 px-4 text-center">
+                                  <span
+                                    className={`inline-block px-2 py-0.5 rounded border text-[10px] font-bold ${
+                                      sku.status === 'Dead'
+                                        ? 'bg-rose-500/15 text-rose-300 border-rose-500/40'
+                                        : sku.status === 'Slow'
+                                        ? 'bg-amber-500/15 text-amber-300 border-amber-500/40'
+                                        : 'bg-emerald-500/15 text-emerald-300 border-emerald-500/40'
+                                    }`}
+                                  >
+                                    {sku.status} • Class {sku.abcClass}
+                                  </span>
+                                </td>
+                                <td className="py-3 px-4 text-slate-300 font-sans">
+                                  {isRowLocked
+                                    ? 'Unlock ₹14,999 Audit to view SKU-level disposition & vendor contra plan'
+                                    : sku.action}
+                                </td>
+                              </tr>
+                            );
+                          })}
                       </tbody>
                     </table>
                   </div>
+
+                  {/* Phase 15: High-Converting Teaser-to-Paid Checkout & 1-Click UTR Unlock Card */}
+                  {isPaywallLocked && proformaInvoice && (
+                    <div
+                      id="walkthrough-paywall-checkout-card"
+                      data-testid="walkthrough-paywall-checkout-card"
+                      className="p-6 sm:p-8 bg-gradient-to-b from-slate-900 via-slate-950 to-slate-950 border-t-2 border-amber-500/50 space-y-6 no-print"
+                    >
+                      <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4 border-b border-slate-800 pb-5">
+                        <div className="space-y-2 max-w-3xl">
+                          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-amber-500/15 border border-amber-500/40 text-amber-300 text-xs font-mono font-bold uppercase">
+                            <Lock className="w-3.5 h-3.5" />
+                            <span>
+                              {effectiveAccessMode === 'UTR_PENDING_VERIFICATION'
+                                ? `UTR SUBMITTED (${
+                                    snapshot.submittedUtrNumber || utrInput || 'PENDING'
+                                  }) • AWAITING 1-CLICK FOUNDER BANK VERIFICATION`
+                                : `TEASER PAYWALL ACTIVE • ${Math.max(
+                                    0,
+                                    snapshot.evaluatedSkus.length - 3
+                                  )} PRIORITY SKUS & 6-SHEET .XLSX WORKBOOK LOCKED`}
+                            </span>
+                          </div>
+                          <h4 className="text-lg sm:text-2xl font-black text-white">
+                            Unlock Complete 4-Pillar Plant Audit &amp; 6-Sheet Excel Action Plan — ₹
+                            {proformaInvoice.amountInr.toLocaleString('en-IN')}
+                          </h4>
+                          <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
+                            Your Top 3 Dormant SKUs above represent only the initial sample slice. Unlock all{' '}
+                            <strong className="text-white">{snapshot.evaluatedSkus.length} evaluated SKUs</strong>,
+                            the complete P2 Gate OTIF &amp; P3 Freight Leakage schedules, and the downloadable{' '}
+                            <strong className="text-emerald-300">6-Sheet .XLSX Action Workbook</strong> via direct
+                            0%-fee UPI or NEFT/IMPS transfer to founder{' '}
+                            <strong className="text-white">{billingConfig.beneficiaryName}</strong>.
+                          </p>
+                        </div>
+
+                        {/* Tier Selector */}
+                        <div className="flex flex-col gap-2 font-mono text-xs shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => setSelectedBillingTier('TIER2_FULL_AUDIT')}
+                            className={`px-3.5 py-2 rounded-xl border text-left cursor-pointer transition ${
+                              selectedBillingTier === 'TIER2_FULL_AUDIT'
+                                ? 'bg-emerald-500/20 border-emerald-500 text-emerald-200 font-bold'
+                                : 'bg-slate-900 border-slate-800 text-slate-400'
+                            }`}
+                          >
+                            <div>Tier 2: Full 4-Pillar Plant Audit</div>
+                            <div className="text-sm font-black text-white">
+                              ₹{(billingConfig.tier2FullAuditPriceInr || 14999).toLocaleString('en-IN')} One-Time
+                            </div>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setSelectedBillingTier('TIER3_MONTHLY_RETAINER')}
+                            className={`px-3.5 py-2 rounded-xl border text-left cursor-pointer transition ${
+                              selectedBillingTier === 'TIER3_MONTHLY_RETAINER'
+                                ? 'bg-sky-500/20 border-sky-500 text-sky-200 font-bold'
+                                : 'bg-slate-900 border-slate-800 text-slate-400'
+                            }`}
+                          >
+                            <div>Tier 3: Monthly Control Tower Retainer</div>
+                            <div className="text-sm font-black text-white">
+                              ₹{(billingConfig.tier3MonthlyRetainerInr || 24999).toLocaleString('en-IN')} / Month
+                            </div>
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* 3 Direct Payment Actions (UPI + Proforma Invoice + Optional Razorpay) */}
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 font-mono text-xs">
+                        {/* 1. Direct UPI (0% Fee) */}
+                        <div className="p-4 rounded-xl bg-slate-900 border border-emerald-500/40 space-y-3">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[11px] font-bold text-emerald-400 uppercase">
+                              OPTION A • 1-CLICK UPI (0% GATEWAY FEE)
+                            </span>
+                            <CreditCard className="w-4 h-4 text-emerald-400" />
+                          </div>
+                          <div className="text-slate-300 text-[11px]">
+                            UPI ID: <strong className="text-white">{billingConfig.upiId}</strong>
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            <a
+                              href={proformaInvoice.upiPaymentUri}
+                              data-testid="walkthrough-upi-pay-link"
+                              className="flex-1 px-3 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-center inline-flex items-center justify-center gap-1.5"
+                            >
+                              <span>
+                                Pay ₹{proformaInvoice.amountInr.toLocaleString('en-IN')} via UPI App (0% Fee)
+                              </span>
+                            </a>
+                            <button
+                              type="button"
+                              data-testid="walkthrough-copy-upi-btn"
+                              onClick={handleCopyUpiId}
+                              className="px-2.5 py-2 rounded-lg bg-slate-950 hover:bg-slate-800 border border-slate-700 text-slate-200 inline-flex items-center gap-1 cursor-pointer"
+                            >
+                              <Copy className="w-3.5 h-3.5" />
+                              <span>{copiedUpi ? 'Copied' : 'Copy UPI'}</span>
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* 2. Official Printable Proforma Invoice (NEFT / IMPS) */}
+                        <div className="p-4 rounded-xl bg-slate-900 border border-amber-500/40 space-y-3">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[11px] font-bold text-amber-400 uppercase">
+                              OPTION B • ACCOUNTS TEAM NEFT / IMPS
+                            </span>
+                            <FileText className="w-4 h-4 text-amber-400" />
+                          </div>
+                          <div className="text-slate-300 text-[11px]">
+                            Invoice Ref: <strong className="text-white">{proformaInvoice.invoiceId}</strong> · SAC 998311
+                          </div>
+                          <button
+                            type="button"
+                            data-testid="walkthrough-view-proforma-invoice-btn"
+                            onClick={() => setShowProformaInvoiceModal(true)}
+                            className="w-full px-3 py-2 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/50 text-amber-200 font-bold inline-flex items-center justify-center gap-1.5 cursor-pointer"
+                          >
+                            <Printer className="w-3.5 h-3.5" />
+                            <span>
+                              View / Print Official Proforma Invoice ({proformaInvoice.invoiceId})
+                            </span>
+                          </button>
+                        </div>
+
+                        {/* 3. Optional Razorpay Link */}
+                        <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-3">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[11px] font-bold text-sky-400 uppercase">
+                              OPTION C • CARD / NETBANKING GATEWAY
+                            </span>
+                            <ExternalLink className="w-4 h-4 text-sky-400" />
+                          </div>
+                          <div className="text-slate-300 text-[11px]">
+                            Corporate Credit Card or NetBanking checkout link:
+                          </div>
+                          {proformaInvoice.razorpayPaymentLink ? (
+                            <a
+                              href={proformaInvoice.razorpayPaymentLink}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              data-testid="walkthrough-razorpay-link"
+                              className="w-full px-3 py-2 rounded-lg bg-sky-500/20 hover:bg-sky-500/30 border border-sky-500/40 text-sky-200 font-bold inline-flex items-center justify-center gap-1.5"
+                            >
+                              <span>Pay via Razorpay (Card / NetBanking)</span>
+                              <ExternalLink className="w-3.5 h-3.5" />
+                            </a>
+                          ) : (
+                            <div className="px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-slate-400 text-[11px]">
+                              Direct UPI / NEFT preferred (0% gateway surcharge).
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* 1-Click 12-Digit UTR Submission Form */}
+                      <form
+                        onSubmit={handleSubmitPaymentUtr}
+                        className="p-4 sm:p-5 rounded-xl bg-slate-900 border border-slate-800 space-y-3 font-mono text-xs"
+                      >
+                        <div className="font-bold text-white">
+                          Already Paid via UPI / NEFT / IMPS? Enter 12-Digit UTR / Bank Reference Number to Unlock:
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                          <input
+                            type="text"
+                            data-testid="walkthrough-utr-input"
+                            value={utrInput}
+                            onChange={(e) => setUtrInput(e.target.value)}
+                            placeholder="12-Digit UTR (e.g. 431298765432)"
+                            className="px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-white font-mono text-xs"
+                          />
+                          <input
+                            type="email"
+                            value={utrEmailInput}
+                            onChange={(e) => setUtrEmailInput(e.target.value)}
+                            placeholder="Accounts / Work Email for Paid Receipt"
+                            className="px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-white font-mono text-xs"
+                          />
+                          <button
+                            type="submit"
+                            data-testid="walkthrough-submit-utr-btn"
+                            disabled={submittingUtr}
+                            className="px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs cursor-pointer disabled:opacity-50"
+                          >
+                            {submittingUtr
+                              ? 'Submitting UTR Reference...'
+                              : 'Submit UTR & Queue Instant Unlock'}
+                          </button>
+                        </div>
+
+                        {utrNotice && (
+                          <div
+                            data-testid="walkthrough-utr-notice"
+                            className="p-3 rounded-lg bg-emerald-950/60 border border-emerald-500/40 text-emerald-200 text-xs"
+                          >
+                            {utrNotice}
+                          </div>
+                        )}
+                        {utrError && (
+                          <div
+                            role="alert"
+                            className="p-3 rounded-lg bg-rose-950/60 border border-rose-500/40 text-rose-200 text-xs"
+                          >
+                            {utrError}
+                          </div>
+                        )}
+                      </form>
+                    </div>
+                  )}
                 </section>
               </>
             )}
@@ -1861,6 +2363,128 @@ export const PilotFindingsWalkthroughView: React.FC<PilotFindingsWalkthroughView
           </div>
         )}
       </main>
+
+      {/* Phase 15: Official Printable Proforma Invoice (INV-...) Modal */}
+      {showProformaInvoiceModal && proformaInvoice && (
+        <div
+          data-testid="proforma-invoice-modal"
+          className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto"
+        >
+          <div className="bg-slate-900 border border-amber-500/40 rounded-2xl max-w-3xl w-full p-6 sm:p-8 space-y-6 text-xs font-mono">
+            <div className="flex flex-wrap items-start justify-between gap-4 border-b border-slate-800 pb-4">
+              <div className="space-y-1">
+                <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded bg-amber-500/20 border border-amber-500/40 text-amber-300 font-bold uppercase text-[11px]">
+                  OFFICIAL B2B PROFORMA INVOICE /PAID RECEIPT • {proformaInvoice.invoiceId}
+                </div>
+                <h3 className="text-lg sm:text-xl font-black text-white font-sans">
+                  Operationalyst (Snowin Ventures, Chennai)
+                </h3>
+                <p className="text-slate-400">
+                  Beneficiary: <strong className="text-white">{proformaInvoice.neftImpsInstructions.beneficiaryName}</strong>
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2 no-print">
+                <button
+                  type="button"
+                  data-testid="print-proforma-invoice-btn"
+                  onClick={() => window.print()}
+                  className="px-3.5 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold inline-flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Printer className="w-3.5 h-3.5" />
+                  <span>Print / Save Invoice PDF</span>
+                </button>
+                <button
+                  type="button"
+                  data-testid="close-proforma-invoice-btn"
+                  onClick={() => setShowProformaInvoiceModal(false)}
+                  className="px-3 py-2 rounded-lg bg-slate-950 hover:bg-slate-800 border border-slate-700 text-slate-300 cursor-pointer"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-1">
+                <div className="text-[10px] text-slate-400 uppercase">Billed To (Client Plant)</div>
+                <div className="text-sm font-bold text-white font-sans">{proformaInvoice.companyName}</div>
+                <div className="text-slate-300">{proformaInvoice.plantLocation}</div>
+                <div className="text-slate-400 text-[11px]">
+                  Workspace Ref: {proformaInvoice.workspaceId}
+                </div>
+              </div>
+
+              <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-1">
+                <div className="text-[10px] text-slate-400 uppercase">Invoice Metadata &amp; Status</div>
+                <div className="text-sm font-bold text-amber-300">{proformaInvoice.invoiceId}</div>
+                <div className="text-slate-300">
+                  Date: {proformaInvoice.issuedAt.slice(0, 10)} · Currency: INR
+                </div>
+                <div className="text-emerald-300 font-bold">
+                  Status: {proformaInvoice.paymentStatus}
+                  {proformaInvoice.utrReferenceNumber
+                    ? ` (UTR: ${proformaInvoice.utrReferenceNumber})`
+                    : ''}
+                </div>
+              </div>
+            </div>
+
+            {/* Line Items Table */}
+            <div className="rounded-xl border border-slate-800 overflow-hidden">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-slate-950 text-slate-400 border-b border-slate-800 uppercase text-[10px]">
+                    <th className="py-2.5 px-4">Description</th>
+                    <th className="py-2.5 px-4">SAC Code</th>
+                    <th className="py-2.5 px-4 text-right">Qty</th>
+                    <th className="py-2.5 px-4 text-right">Total (INR)</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800">
+                  {proformaInvoice.lineItems.map((item, i) => (
+                    <tr key={i} className="bg-slate-900">
+                      <td className="py-3 px-4 text-slate-200 font-sans">{item.description}</td>
+                      <td className="py-3 px-4 text-slate-400">{item.hsnSacCode}</td>
+                      <td className="py-3 px-4 text-right text-slate-200">{item.qty}</td>
+                      <td className="py-3 px-4 text-right font-bold text-white">
+                        ₹{item.lineTotalInr.toLocaleString('en-IN')}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Direct NEFT / IMPS & UPI Remittance Instructions */}
+            <div className="p-4 rounded-xl bg-slate-950 border border-emerald-500/30 space-y-2">
+              <div className="text-emerald-400 font-bold uppercase text-[11px]">
+                Direct Bank NEFT / IMPS &amp; 0%-Fee UPI Remittance Details
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-slate-300">
+                <div>
+                  Beneficiary: <strong className="text-white">{proformaInvoice.neftImpsInstructions.beneficiaryName}</strong>
+                </div>
+                <div>
+                  UPI ID (0% Fee): <strong className="text-emerald-300">{proformaInvoice.neftImpsInstructions.upiId}</strong>
+                </div>
+                <div>
+                  Bank Name: <strong className="text-white">{proformaInvoice.neftImpsInstructions.bankName}</strong>
+                </div>
+                <div>
+                  Account No: <strong className="text-white">{proformaInvoice.neftImpsInstructions.accountNumber}</strong>
+                </div>
+                <div>
+                  IFSC Code: <strong className="text-white">{proformaInvoice.neftImpsInstructions.ifscCode}</strong>
+                </div>
+                <div>
+                  Remittance Note: <strong className="text-amber-300">{proformaInvoice.neftImpsInstructions.paymentNote}</strong>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -1,5 +1,21 @@
 [
   {
+    "eventId": "EVT-20261109-394C",
+    "timestamp": "2026-11-09T14:20:25.327Z",
+    "actor": "Ambattur Fabrication Sample Plant (20-SKU Sandbox) (Walkthrough Client)",
+    "category": "PILOT_WALKTHROUGH",
+    "action": "UTR_PAYMENT_SUBMITTED",
+    "details": "Submitted UTR 431298765432 for workspace AUDIT-DEMO-P1P4 (TIER2_FULL_AUDIT · ₹14999)"
+  },
+  {
+    "eventId": "EVT-20261109-0249",
+    "timestamp": "2026-11-09T14:20:16.189Z",
+    "actor": "C. Jones Snowin (CEO Orchestrator)",
+    "category": "GOVERNANCE",
+    "action": "CEO_REVENUE_GOAL_DECOMPOSED",
+    "details": "Decomposed revenue goal 'Close 5 Paid Plant Audits in Chennai This Month — ₹74,995 Target (5 × ₹14,999 Direct Bank / UPI Collection)' (GOAL-20261109-1250) into 5 deterministic agent tasks (₹0.00 token spend)."
+  },
+  {
     "eventId": "EVT-20261108-F586",
     "timestamp": "2026-11-08T11:22:57.948Z",
     "actor": "Vikram Deshmukh (GM Operations) (Deshmukh Precision Forgings)",

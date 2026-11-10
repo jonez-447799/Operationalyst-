@@ -56,6 +56,7 @@ import { CloudRunSystemBackupPanel } from '../components/CloudRunSystemBackupPan
 interface FounderLeadInboxProps {
   onBackToHome: () => void;
   onOpenPlatform: () => void;
+  onOpenAgentWorkforce?: () => void;
   onOpenWalkthrough?: (workspaceId: string, shareToken: string) => void;
   onOpenUploadPortal?: (leadId: string, uploadToken?: string) => void;
 }
@@ -105,6 +106,7 @@ function loadPlantP1ToP4Dataset(plantId: PlantId): {
 export const FounderLeadInbox: React.FC<FounderLeadInboxProps> = ({
   onBackToHome,
   onOpenPlatform,
+  onOpenAgentWorkforce,
   onOpenWalkthrough,
   onOpenUploadPortal,
 }) => {
@@ -711,6 +713,21 @@ export const FounderLeadInbox: React.FC<FounderLeadInboxProps> = ({
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              data-testid="open-agent-workforce-btn"
+              onClick={() => {
+                if (onOpenAgentWorkforce) {
+                  onOpenAgentWorkforce();
+                } else if (typeof window !== 'undefined') {
+                  window.location.href = '?view=agent-workforce';
+                }
+              }}
+              className="px-3.5 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-mono font-bold inline-flex items-center gap-1.5 cursor-pointer"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>AI Agent Workforce &amp; Billing</span>
+            </button>
             <button
               type="button"
               onClick={() => downloadPilotDataKitXlsx()}

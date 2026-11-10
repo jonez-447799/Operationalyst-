@@ -875,19 +875,6 @@ export const FactoryAuditPage: React.FC<FactoryAuditPageProps> = ({
             >
               Pilot Audit Terms of Service
             </button>
-            <span>·</span>
-            <a
-              href="?view=lead-inbox"
-              onClick={(e) => {
-                if (onOpenLeadInbox) {
-                  e.preventDefault();
-                  onOpenLeadInbox();
-                }
-              }}
-              className="text-slate-400 hover:text-emerald-300 underline underline-offset-4 cursor-pointer"
-            >
-              Founder Lead Inbox
-            </a>
           </div>
         </div>
       </footer>

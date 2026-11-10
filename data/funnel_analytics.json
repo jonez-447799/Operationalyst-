@@ -185,5 +185,13 @@
     "metadata": {
       "sourceSection": "landing_page_load"
     }
+  },
+  {
+    "eventId": "FNLEVT-20261109-C01A",
+    "timestamp": "2026-11-09T13:37:09.478Z",
+    "eventType": "LANDING_PAGE_VIEW",
+    "metadata": {
+      "sourceSection": "landing_page_load"
+    }
   }
 ]

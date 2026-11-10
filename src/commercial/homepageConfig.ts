@@ -414,10 +414,13 @@ export interface CustomerAnxietyStage {
   behavioralMechanism: string;
 }
 
+export const FOUNDER_EXECUTIVE_SIGNOFF =
+  'Operationalyst isolates stagnant working capital, 22% annual carrying-cost burn, and Pareto 80/20 floor review priorities directly from standard 5-column Tally Prime, SAP, Busy, or Excel stock exports—with zero ERP integration or operational disruption.';
+
 export const CUSTOMER_ANXIETY_MAP: CustomerAnxietyStage[] = [
   {
-    stage: '1. First Visit',
-    touchpoint: 'Commercial Landing Page',
+    stage: '1. Scope Alignment',
+    touchpoint: '5-Column Stock Export Check',
     unspokenAnxiety: '“Is this real software, or another over-hyped tech landing page making exaggerated claims?”',
     institutionalSafeguard: 'Zero fake testimonials, zero invented customer logos, zero countdown timers. Explicit watermark on all sample reports.',
     behavioralMechanism: 'Credibility signaling via specificity and epistemic honesty.',

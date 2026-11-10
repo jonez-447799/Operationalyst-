@@ -3846,6 +3846,305 @@ test('Phase 13 Executive Workspace Banner & Operator Tools Gating: Verifies clea
   assert.ok(appShellSrc.includes('onOpenPilotAuditModal={() => setShowPilotAuditModal(true)}'));
 });
 
+// ============================================================================
+// PHASE 14 TESTS: Surgical Removal of the 5 Remaining Landing Page Red Flags
+// in CommercialLandingPage.tsx, B2BBehavioralSystem.tsx, and homepageConfig.ts
+// ============================================================================
+
+test('Phase 14 Landing Page Red-Flag Removal & Executive Founder Sign-Off Guard: Verifies zero occurrences of Awaiting Pilot Validations, ethical persuasion principles, learning directly from manufacturing teams, 1. First Visit, or Founder Lead Inbox on the public landing page', async () => {
+  const fs = await import('fs/promises');
+  const path = await import('path');
+  const { FOUNDER_EXECUTIVE_SIGNOFF } = await import('../commercial/homepageConfig');
+
+  const landingSrc = await fs.readFile(
+    path.join(process.cwd(), 'src/commercial/CommercialLandingPage.tsx'),
+    'utf-8'
+  );
+  const configSrc = await fs.readFile(
+    path.join(process.cwd(), 'src/commercial/homepageConfig.ts'),
+    'utf-8'
+  );
+  const behavioralSrc = await fs.readFile(
+    path.join(process.cwd(), 'src/commercial/B2BBehavioralSystem.tsx'),
+    'utf-8'
+  );
+
+  const forbiddenStrings = [
+    'Awaiting Pilot Validations',
+    'ethical persuasion principles',
+    'learning directly from manufacturing teams',
+    '1. First Visit',
+    'Founder Lead Inbox',
+  ];
+
+  for (const forbidden of forbiddenStrings) {
+    assert.equal(
+      landingSrc.includes(forbidden),
+      false,
+      `CommercialLandingPage.tsx must not contain "${forbidden}"`
+    );
+    assert.equal(
+      configSrc.includes(forbidden),
+      false,
+      `homepageConfig.ts must not contain "${forbidden}"`
+    );
+    assert.equal(
+      behavioralSrc.includes(forbidden),
+      false,
+      `B2BBehavioralSystem.tsx must not contain "${forbidden}"`
+    );
+  }
+
+  // Also verify SelfAssessmentWidget, DELCERT box, and P2/P3/P4 connected pills are removed from CommercialLandingPage.tsx
+  assert.equal(landingSrc.includes('SelfAssessmentWidget'), false);
+  assert.equal(landingSrc.includes('Connected 4-Pillar Audit Signals:'), false);
+  assert.equal(
+    landingSrc.includes('Verify a Deletion Certificate (DELCERT-...) / Inspect Sample Certificate'),
+    false
+  );
+  assert.equal(behavioralSrc.includes('CLEAR 5-STEP ENGAGEMENT WORKFLOW'), false);
+
+  // Verify the Executive Operations Sign-Off is present in both homepageConfig.ts and CommercialLandingPage.tsx
+  const expectedQuote =
+    'Operationalyst isolates stagnant working capital, 22% annual carrying-cost burn, and Pareto 80/20 floor review priorities directly from standard 5-column Tally Prime, SAP, Busy, or Excel stock exports—with zero ERP integration or operational disruption.';
+  assert.equal(FOUNDER_EXECUTIVE_SIGNOFF, expectedQuote);
+  assert.ok(landingSrc.includes(expectedQuote));
+});
+
+// ============================================================================
+// PHASE 15 TESTS: Paperclip-Style 5-Agent Autonomous Revenue Workforce,
+// Direct Bank/UPI/Razorpay Collection Engine, Printable Proforma Invoices (INV-...),
+// Teaser-to-Paid Walkthrough Paywall (₹14,999 / ₹24,999), and 1-Click UTR Payment Unlock
+// ============================================================================
+
+test('Phase 15 UPI Deep-Link & Billing Config Store: buildUpiPaymentUri generates valid NPCI UPI payment links with ₹14,999 / ₹24,999 amounts and founder beneficiary details', async () => {
+  const fs = await import('fs/promises');
+  const path = await import('path');
+  const os = await import('os');
+  const {
+    DEFAULT_FOUNDER_BILLING_CONFIG,
+    buildUpiPaymentUri,
+    getFounderBillingConfig,
+    updateFounderBillingConfig,
+  } = await import('../utils/founderBillingStore');
+
+  const uriTier2 = buildUpiPaymentUri(
+    DEFAULT_FOUNDER_BILLING_CONFIG,
+    14999,
+    'INV-20261109-4410',
+    'Ambattur Fabrication Sample Plant'
+  );
+
+  assert.ok(uriTier2.startsWith('upi://pay?pa=cjonessnowin@okaxis&pn='));
+  assert.ok(uriTier2.includes('C.%20Jones%20Snowin'));
+  assert.ok(uriTier2.includes('&am=14999&cu=INR&tn=INV-20261109-4410-Ambattur_Fabrication_Sample_Plant'));
+
+  const uriTier3 = buildUpiPaymentUri(
+    DEFAULT_FOUNDER_BILLING_CONFIG,
+    24999,
+    'INV-20261109-9902',
+    'Hosur Auto Components'
+  );
+  assert.ok(uriTier3.includes('&am=24999&cu=INR&tn=INV-20261109-9902-Hosur_Auto_Components'));
+
+  const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'op-billing-test-'));
+  const billingFile = path.join(tmpDir, 'founder_billing.json');
+  try {
+    const initial = await getFounderBillingConfig(billingFile);
+    assert.equal(initial.upiId, 'cjonessnowin@okaxis');
+    assert.equal(initial.tier2FullAuditPriceInr, 14999);
+    assert.equal(initial.tier3MonthlyRetainerInr, 24999);
+
+    const updated = await updateFounderBillingConfig(
+      {
+        upiId: 'snowinventures@hdfcbank',
+        bankName: 'HDFC Bank — Ambattur Industrial Branch',
+        accountNumber: '50200098765432',
+        ifscCode: 'HDFC0001234',
+      },
+      billingFile
+    );
+    assert.equal(updated.upiId, 'snowinventures@hdfcbank');
+    assert.equal(updated.accountNumber, '50200098765432');
+    assert.equal(updated.ifscCode, 'HDFC0001234');
+  } finally {
+    await fs.rm(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('Phase 15 Proforma Invoice Generation (INV-YYYYMMDD-XXXX): generateProformaInvoice produces deterministic B2B invoice metadata, SAC 998311 line items, and NEFT/IMPS instructions', async () => {
+  const {
+    DEFAULT_FOUNDER_BILLING_CONFIG,
+    generateProformaInvoice,
+  } = await import('../utils/founderBillingStore');
+  const { buildPublicDemoMultiPillarSnapshot } = await import('../utils/pilotWorkspaceStore');
+
+  const demoSnap = buildPublicDemoMultiPillarSnapshot();
+  const invTier2 = generateProformaInvoice(
+    demoSnap,
+    {
+      leadId: 'PILOT-20261109-001',
+      fullName: 'R. Karthikeyan',
+      companyName: 'Ambattur Fabrication Sample Plant (20-SKU Sandbox)',
+      plantLocation: 'Ambattur Industrial Estate, Chennai',
+      workEmail: 'karthik@ambatturfab.in',
+    },
+    DEFAULT_FOUNDER_BILLING_CONFIG,
+    'TIER2_FULL_AUDIT'
+  );
+
+  assert.match(invTier2.invoiceId, /^INV-\d{8}-[A-Z0-9]{4}$/);
+  assert.equal(invTier2.amountInr, 14999);
+  assert.equal(invTier2.currency, 'INR');
+  assert.equal(invTier2.paymentStatus, 'UNPAID_PROFORMA');
+  assert.equal(invTier2.lineItems.length, 1);
+  assert.equal(invTier2.lineItems[0].hsnSacCode, '998311');
+  assert.equal(invTier2.lineItems[0].lineTotalInr, 14999);
+  assert.equal(
+    invTier2.neftImpsInstructions.beneficiaryName,
+    'C. Jones Snowin (Operationalyst / Snowin Ventures)'
+  );
+  assert.ok(invTier2.upiPaymentUri.includes('am=14999'));
+});
+
+test('Phase 15 Teaser-to-Paid Paywall & UTR Payment Unlock: Creating a workspace in TEASER_LOCKED mode, submitting a 12-digit UTR number transitions it to UTR_PENDING_VERIFICATION, and founder verification transitions it to FULL_UNLOCKED', async () => {
+  const fs = await import('fs/promises');
+  const path = await import('path');
+  const os = await import('os');
+  const {
+    createPilotWorkspaceSnapshot,
+    submitPilotWorkspacePaymentUtr,
+    verifyPilotWorkspacePaymentUnlock,
+  } = await import('../utils/pilotWorkspaceStore');
+  const { AMBATTUR_FABRICATION_SAMPLE } = await import('../project1/data/initialData');
+
+  const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'op-paywall-test-'));
+  const wsFile = path.join(tmpDir, 'pilot_workspaces.json');
+
+  try {
+    const created = await createPilotWorkspaceSnapshot(
+      {
+        companyName: 'Sriperumbudur Precision Castings Pvt Ltd',
+        plantLocation: 'Sriperumbudur SIPCOT, Chennai',
+        skus: AMBATTUR_FABRICATION_SAMPLE,
+        commercialAccessMode: 'TEASER_LOCKED',
+      },
+      wsFile
+    );
+
+    assert.equal(created.commercialAccessMode, 'TEASER_LOCKED');
+    assert.equal(created.invoiceAmountInr, 14999);
+    assert.match(created.invoiceId || '', /^INV-\d{8}-[A-Z0-9]{4}$/);
+
+    // Reject invalid short UTR
+    const badUtrRes = await submitPilotWorkspacePaymentUtr(
+      created.workspaceId,
+      { utrNumber: '123', shareToken: created.shareToken },
+      wsFile
+    );
+    assert.equal(badUtrRes.ok, false);
+
+    // Submit valid 12-digit UTR
+    const utrRes = await submitPilotWorkspacePaymentUtr(
+      created.workspaceId,
+      {
+        utrNumber: '431298765432',
+        paidByEmail: 'accounts@sriperumbudurcastings.in',
+        tier: 'TIER2_FULL_AUDIT',
+        shareToken: created.shareToken,
+      },
+      wsFile
+    );
+    assert.equal(utrRes.ok, true);
+    if (utrRes.ok) {
+      assert.equal(utrRes.snapshot.commercialAccessMode, 'UTR_PENDING_VERIFICATION');
+      assert.equal(utrRes.snapshot.submittedUtrNumber, '431298765432');
+      assert.equal(utrRes.snapshot.paidByEmail, 'accounts@sriperumbudurcastings.in');
+    }
+
+    // Founder 1-click bank verification unlocks workspace to FULL_UNLOCKED
+    const unlockRes = await verifyPilotWorkspacePaymentUnlock(
+      created.workspaceId,
+      { verifiedBy: 'C. Jones Snowin' },
+      wsFile
+    );
+    assert.equal(unlockRes.ok, true);
+    if (unlockRes.ok) {
+      assert.equal(unlockRes.snapshot.commercialAccessMode, 'FULL_UNLOCKED');
+      assert.equal(unlockRes.snapshot.submittedUtrNumber, '431298765432');
+      assert.ok(unlockRes.snapshot.paymentVerifiedAt);
+    }
+  } finally {
+    await fs.rm(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('Phase 15 Paperclip 5-Agent Workforce Engine & Zero-Cost Guardrail: decomposeFounderRevenueGoal creates tasks across all 5 agents (AGENT_01 through AGENT_05) while enforcing ₹0.00 API token budget cap', async () => {
+  const fs = await import('fs/promises');
+  const path = await import('path');
+  const os = await import('os');
+  const {
+    CANONICAL_FIVE_AGENTS,
+    decomposeFounderRevenueGoal,
+    decideAgentWorkforceTask,
+  } = await import('../utils/agentWorkforceEngine');
+
+  assert.equal(CANONICAL_FIVE_AGENTS.length, 5);
+  assert.deepEqual(
+    CANONICAL_FIVE_AGENTS.map((a) => a.agentId),
+    [
+      'AGENT_01_CEO_ORCHESTRATOR',
+      'AGENT_02_SDR_OUTREACH',
+      'AGENT_03_ERP_INGESTION',
+      'AGENT_04_AUDIT_ANALYST',
+      'AGENT_05_COMMERCIAL_CLOSER',
+    ]
+  );
+
+  const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'op-agent-wf-test-'));
+  const wfFile = path.join(tmpDir, 'agent_workforce.json');
+
+  try {
+    const res = await decomposeFounderRevenueGoal(
+      'Close 5 Paid Plant Audits in Chennai This Month — ₹74,995 Target',
+      undefined,
+      wfFile
+    );
+
+    assert.equal(res.ok, true);
+    assert.equal(res.goal.targetRevenueInr, 74995);
+    assert.equal(res.goal.targetPaidAuditsCount, 5);
+    assert.equal(res.goal.apiTokenBudgetCapInr, 0);
+    assert.equal(res.goal.computeCostSpentInr, 0);
+    assert.equal(res.tasksCreated.length, 5);
+    assert.equal(res.state.budgetGuardrail.apiTokenBudgetCapInr, 0);
+    assert.equal(res.state.budgetGuardrail.computeCostSpentInr, 0);
+
+    for (const task of res.tasksCreated) {
+      assert.equal(task.computeCostInr, 0);
+    }
+
+    const sdrTask = res.tasksCreated.find((t) => t.agentCode === 'AGENT_02');
+    assert.ok(sdrTask);
+    assert.equal(sdrTask.status, 'AWAITING_FOUNDER_APPROVAL');
+
+    const decisionRes = await decideAgentWorkforceTask(
+      sdrTask.taskId,
+      'APPROVE',
+      'Approved by Founder in unit test',
+      wfFile
+    );
+    assert.equal(decisionRes.ok, true);
+    if (decisionRes.ok) {
+      assert.equal(decisionRes.task.status, 'COMPLETED');
+      assert.equal(decisionRes.task.computeCostInr, 0);
+    }
+  } finally {
+    await fs.rm(tmpDir, { recursive: true, force: true });
+  }
+});
+
+
 
 
 

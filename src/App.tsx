@@ -41,6 +41,7 @@ import { FactoryAuditPage } from './commercial/FactoryAuditPage';
 import { SampleAuditPage } from './commercial/SampleAuditPage';
 import { AdToDemoFunnelModal } from './commercial/AdToDemoFunnelModal';
 import { FounderLeadInbox } from './commercial/FounderLeadInbox';
+import { AgentWorkforceDashboard } from './commercial/AgentWorkforceDashboard';
 import { PilotFindingsWalkthroughView } from './commercial/PilotFindingsWalkthroughView';
 import { ApprovedPilotUploadView } from './commercial/ApprovedPilotUploadView';
 import { AppShell } from './dashboard/AppShell';
@@ -53,6 +54,7 @@ type ArchitectureVersion =
   | 'sample_audit'
   | 'ad_funnel'
   | 'lead_inbox'
+  | 'agent_workforce'
   | 'pilot_findings'
   | 'pilot_upload'
   | 'ceo_master'
@@ -120,6 +122,15 @@ function parseRequestedArchitecture(): ArchitectureVersion | null {
         explicitParam === 'findings'
       ) {
         return 'pilot_findings';
+      }
+      if (
+        explicitParam === 'agent-workforce' ||
+        explicitParam === 'agent_workforce' ||
+        explicitParam === 'agents' ||
+        explicitParam === 'workforce' ||
+        explicitParam === 'paperclip'
+      ) {
+        return 'agent_workforce';
       }
       if (
         explicitParam === 'lead-inbox' ||
@@ -401,6 +412,43 @@ export default function App() {
     );
   }
 
+  if (versionMode === 'agent_workforce') {
+    return (
+      <div className="min-h-screen bg-slate-950 text-slate-100">
+        <AgentWorkforceDashboard
+          onBackToHome={() => {
+            setVersionMode('commercial_home');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
+          onOpenLeadInbox={() => {
+            try {
+              window.history.pushState({}, '', '?view=lead-inbox');
+            } catch {}
+            setVersionMode('lead_inbox');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
+          onOpenPlatform={() => {
+            setVersionMode('ceo_master');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
+          onOpenWalkthrough={(workspaceId, shareToken) => {
+            try {
+              window.history.pushState(
+                {},
+                '',
+                `?view=pilot-findings&id=${encodeURIComponent(
+                  workspaceId
+                )}&token=${encodeURIComponent(shareToken)}&paywall=teaser`
+              );
+            } catch {}
+            setVersionMode('pilot_findings');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
+        />
+      </div>
+    );
+  }
+
   if (versionMode === 'lead_inbox') {
     return (
       <div className="min-h-screen bg-slate-950 text-slate-100">
@@ -411,6 +459,13 @@ export default function App() {
           }}
           onOpenPlatform={() => {
             setVersionMode('ceo_master');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
+          onOpenAgentWorkforce={() => {
+            try {
+              window.history.pushState({}, '', '?view=agent-workforce');
+            } catch {}
+            setVersionMode('agent_workforce');
             window.scrollTo({ top: 0, behavior: 'smooth' });
           }}
           onOpenWalkthrough={(workspaceId, shareToken) => {
