@@ -1,0 +1,65 @@
+name: Autonomous Market Intelligence & Trend Radar
+
+on:
+  schedule:
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+    inputs:
+      focus_area:
+        description: 'Target Industrial Cluster or Domain Focus'
+        required: false
+        default: 'Indian MSME & Automotive/Engineering Manufacturing Inventory Intelligence'
+
+permissions:
+  contents: write
+  issues: write
+  models: read
+
+jobs:
+  market-radar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Execute Market Intelligence Radar Script
+        env:
+          FOCUS_AREA: ${{ github.event.inputs.focus_area || 'Indian MSME & Automotive/Engineering Manufacturing Inventory Intelligence' }}
+        run: node scripts/market-radar.mjs
+
+      - name: Commit Updated Strategic Report
+        run: |
+          git config --local user.name "github-actions[bot]"
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git add docs/market-intelligence/latest-market-radar.md
+          git commit -m "chore(radar): update strategic market intelligence report [skip ci]" || true
+          git push origin master || true
+
+      - name: Create Actionable PRD Issue
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh issue create \
+            --title "[Radar PRD] Indian MSME Working Capital & Dead Stock Optimization Engine" \
+            --label "agent-ready-spec" \
+            --body "## Build-Ready Feature Specification (PRD)
+
+### 1. Problem Statement
+Auto-component & engineering MSMEs across Ambattur, Sriperumbudur, Oragadam, Pune, and Coimbatore face working-capital locks due to high non-moving inventory holding costs (22% annual rate).
+
+### 2. Deterministic Formula / Metric Addition
+- Dormancy Bracket calculation: \`ΔDays = AsOfDate - LastMovementDate\`
+- Annual Carrying Cost: \`AnnualBurn = BookValue * 0.22\`
+- Pareto 80/20 Cumulative Value Concentration
+
+### 3. Target UI Component Target
+\`src/components/DeadStockAnalysis.tsx\`
+
+### 4. Verification Criteria
+- 100% In-Browser parsing & zero server upload.
+- Verified against \`scripts/supervision-gate.mjs\`." || true
