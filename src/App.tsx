@@ -88,8 +88,12 @@ function parseRequestedArchitecture(): ArchitectureVersion | null {
     )?.toLowerCase();
 
     const pathnameLower = window.location.pathname.toLowerCase();
-    // Check for /platform or /audit in pathname
-    if (pathnameLower.includes('/platform')) {
+    // Check for /app, /platform, or /audit in pathname
+    if (
+      pathnameLower === '/app' ||
+      pathnameLower.endsWith('/app') ||
+      pathnameLower.includes('/platform')
+    ) {
       return 'ceo_master';
     }
     if (pathnameLower === '/audit' || pathnameLower.endsWith('/audit')) {
@@ -648,6 +652,9 @@ export default function App() {
         onSelectPlant={(id) => setActivePlantId(id)}
         onSelectPeriod={(id) => setActivePeriodId(id)}
         onOpenPublicHome={() => {
+          try {
+            window.history.pushState({}, '', '/');
+          } catch {}
           setVersionMode('commercial_home');
           window.scrollTo({ top: 0, behavior: 'smooth' });
         }}

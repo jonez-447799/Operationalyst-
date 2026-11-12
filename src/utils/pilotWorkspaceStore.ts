@@ -18,6 +18,7 @@ import { INITIAL_TRIPS, DEFAULT_RULES as P3_DEFAULT_RULES } from '../project3/da
 import type { AuditItem, AuditRules as P4RulesConfig } from '../project4/types/audit.ts';
 import { computeSummary, calculateItemFields } from '../project4/utils/auditCalculations.ts';
 import { INITIAL_SAMPLE_SKUS, DEFAULT_RULES as P4_DEFAULT_RULES } from '../project4/data/sampleData.ts';
+import { syncRecordToCloud } from './cloudPersistenceStore.ts';
 
 export type StockRuleConfig = RulesConfig;
 export type SKUItem = StockItem;
@@ -989,6 +990,7 @@ export async function createPilotWorkspaceSnapshot(
 
     existing.push(snapshot);
     await writeAllWorkspacesUnsafe(filePath, existing);
+    void syncRecordToCloud('pilot_workspaces', snapshot.workspaceId, snapshot).catch(() => {});
     return snapshot;
   });
 }
@@ -1288,6 +1290,7 @@ export async function updatePilotWorkspaceSnapshotRules(
 
     records[idx] = updatedSnapshot;
     await writeAllWorkspacesUnsafe(filePath, records);
+    void syncRecordToCloud('pilot_workspaces', updatedSnapshot.workspaceId, updatedSnapshot).catch(() => {});
     return { status: 'OK', snapshot: updatedSnapshot };
   });
 }
@@ -1371,6 +1374,7 @@ export async function submitPilotWorkspacePaymentUtr(
 
     records[idx] = updatedSnapshot;
     await writeAllWorkspacesUnsafe(filePath, records);
+    void syncRecordToCloud('pilot_workspaces', updatedSnapshot.workspaceId, updatedSnapshot).catch(() => {});
     return { ok: true, status: 'OK', snapshot: updatedSnapshot };
   });
 }
@@ -1423,6 +1427,7 @@ export async function verifyPilotWorkspacePaymentUnlock(
 
     records[idx] = updatedSnapshot;
     await writeAllWorkspacesUnsafe(filePath, records);
+    void syncRecordToCloud('pilot_workspaces', updatedSnapshot.workspaceId, updatedSnapshot).catch(() => {});
     return { ok: true, status: 'OK', snapshot: updatedSnapshot };
   });
 }

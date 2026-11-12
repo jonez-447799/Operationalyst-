@@ -1,4 +1,4 @@
-import { AuditLogEntry, UserRole } from '../types';
+import type { AuditLogEntry, UserRole } from '../types.ts';
 
 /**
  * Generates a non-cryptographic local reference ID for browser-stored demonstration activity entries.

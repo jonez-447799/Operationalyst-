@@ -280,7 +280,7 @@ export const FAQ_ITEMS = [
   },
   {
     q: 'Is the pilot free or paid?',
-    a: 'Founder-led pilot audits are conducted on a collaborative validation basis with a limited number of manufacturing teams at zero upfront software cost and zero automatic subscription obligation.',
+    a: 'Every approved 5-column submission receives a Free 3-SKU Diagnostic Teaser & Executive Exposure Summary (₹0) upfront, with an optional ₹14,999 one-time unlock for the complete Full-Plant SKU Recovery Plan and 6-Sheet Excel Action Workbook—with zero automatic subscriptions.',
   },
   {
     q: 'How is submitted data handled?',

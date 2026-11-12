@@ -40,6 +40,8 @@ import {
   DEFAULT_FOUNDER_BILLING_CONFIG,
   readFounderBillingFromBrowser,
   generateProformaInvoice,
+  generatePaidReceipt,
+  generateUpiQrCodeSvg,
 } from '../utils/founderBillingStore';
 import { formatCurrency, formatIndianLakhsCrores } from '../project1/utils/calculations';
 import { sanitizeSpreadsheetCell } from '../utils/importValidation';
@@ -61,17 +63,27 @@ export const PilotFindingsWalkthroughView: React.FC<PilotFindingsWalkthroughView
   const [workspaceId, setWorkspaceId] = useState<string>(() => {
     try {
       const sp = new URLSearchParams(window.location.search);
-      return sp.get('id')?.trim() || sp.get('workspaceId')?.trim() || '';
+      return (
+        sp.get('id')?.trim() ||
+        sp.get('workspaceId')?.trim() ||
+        'AUDIT-DEMO-P1P4'
+      );
     } catch {
-      return '';
+      return 'AUDIT-DEMO-P1P4';
     }
   });
   const [shareToken, setShareToken] = useState<string>(() => {
     try {
       const sp = new URLSearchParams(window.location.search);
-      return sp.get('token')?.trim() || '';
-    } catch {
+      const explicitId = sp.get('id')?.trim() || sp.get('workspaceId')?.trim();
+      const explicitToken = sp.get('token')?.trim();
+      if (explicitToken) return explicitToken;
+      if (!explicitId || explicitId === 'AUDIT-DEMO-P1P4') {
+        return 'operationalyst-public-demo-token';
+      }
       return '';
+    } catch {
+      return 'operationalyst-public-demo-token';
     }
   });
 
@@ -113,6 +125,8 @@ export const PilotFindingsWalkthroughView: React.FC<PilotFindingsWalkthroughView
   const [utrError, setUtrError] = useState<string | null>(null);
   const [copiedUpi, setCopiedUpi] = useState<boolean>(false);
   const [showProformaInvoiceModal, setShowProformaInvoiceModal] = useState<boolean>(false);
+  const [showPaidReceiptModal, setShowPaidReceiptModal] = useState<boolean>(false);
+  const [upiQrSvg, setUpiQrSvg] = useState<string>('');
 
   const loadFounderBillingConfig = async () => {
     try {
@@ -566,6 +580,33 @@ export const PilotFindingsWalkthroughView: React.FC<PilotFindingsWalkthroughView
       )
     : null;
 
+  const paidReceipt = snapshot
+    ? generatePaidReceipt(
+        {
+          ...snapshot,
+          commercialAccessMode: effectiveAccessMode,
+        },
+        null,
+        billingConfig,
+        selectedBillingTier
+      )
+    : null;
+
+  useEffect(() => {
+    let active = true;
+    const uri = proformaInvoice?.upiPaymentUri || '';
+    if (uri) {
+      generateUpiQrCodeSvg(uri)
+        .then((svg) => {
+          if (active) setUpiQrSvg(svg);
+        })
+        .catch(() => {});
+    }
+    return () => {
+      active = false;
+    };
+  }, [proformaInvoice?.upiPaymentUri]);
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans">
       {/* Top Bar */}
@@ -607,6 +648,17 @@ export const PilotFindingsWalkthroughView: React.FC<PilotFindingsWalkthroughView
                   <FileText className="w-3.5 h-3.5 text-amber-400" />
                   <span>Proforma Invoice ({proformaInvoice?.invoiceId || 'INV-...'})</span>
                 </button>
+                {effectiveAccessMode === 'FULL_UNLOCKED' && paidReceipt && (
+                  <button
+                    type="button"
+                    data-testid="walkthrough-view-paid-receipt-btn"
+                    onClick={() => setShowPaidReceiptModal(true)}
+                    className="px-3.5 py-2 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/50 text-emerald-300 text-xs font-mono font-bold inline-flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>View / Print Official Paid Receipt ({paidReceipt.receiptId})</span>
+                  </button>
+                )}
                 <button
                   type="button"
                   data-testid="walkthrough-print-2page-btn"
@@ -738,11 +790,15 @@ export const PilotFindingsWalkthroughView: React.FC<PilotFindingsWalkthroughView
                   </span>
                 </div>
                 <p className="text-slate-300">
-                  Toggle how plant owners experience this walkthrough before and after paying the{' '}
-                  <strong className="text-white">
-                    ₹{(billingConfig.tier2FullAuditPriceInr || 14999).toLocaleString('en-IN')}
+                  Every approved submission receives a{' '}
+                  <strong className="text-emerald-300">
+                    Free 3-SKU Diagnostic Teaser &amp; Executive Exposure Summary
                   </strong>{' '}
-                  Tier-2 Full Audit fee via 0%-fee UPI (<code className="text-emerald-300">{billingConfig.upiId}</code>) or NEFT/IMPS.
+                  upfront, with an optional{' '}
+                  <strong className="text-white">
+                    ₹{(billingConfig.tier2FullAuditPriceInr || 14999).toLocaleString('en-IN')} Full Plant Audit &amp; 6-Sheet Action Workbook
+                  </strong>{' '}
+                  unlock via 0%-fee UPI (<code className="text-emerald-300">{billingConfig.upiId || '9080540047@yespop'}</code>) or NEFT/IMPS.
                 </p>
               </div>
 
@@ -1689,17 +1745,31 @@ export const PilotFindingsWalkthroughView: React.FC<PilotFindingsWalkthroughView
 
                       {/* 3 Direct Payment Actions (UPI + Proforma Invoice + Optional Razorpay) */}
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 font-mono text-xs">
-                        {/* 1. Direct UPI (0% Fee) */}
+                        {/* 1. Direct UPI (0% Fee) + Scannable Desktop QR Code */}
                         <div className="p-4 rounded-xl bg-slate-900 border border-emerald-500/40 space-y-3">
                           <div className="flex items-center justify-between">
                             <span className="text-[11px] font-bold text-emerald-400 uppercase">
-                              OPTION A • 1-CLICK UPI (0% GATEWAY FEE)
+                              OPTION A • 1-CLICK UPI &amp; QR (0% GATEWAY FEE)
                             </span>
                             <CreditCard className="w-4 h-4 text-emerald-400" />
                           </div>
                           <div className="text-slate-300 text-[11px]">
                             UPI ID: <strong className="text-white">{billingConfig.upiId}</strong>
                           </div>
+                          {upiQrSvg && (
+                            <div
+                              data-testid="walkthrough-upi-qr-code"
+                              className="p-2.5 rounded-xl bg-white text-slate-950 flex flex-col items-center justify-center gap-1.5 shadow-sm"
+                            >
+                              <div
+                                className="w-36 h-36 flex items-center justify-center [&>svg]:w-full [&>svg]:h-full"
+                                dangerouslySetInnerHTML={{ __html: upiQrSvg }}
+                              />
+                              <div className="text-[10px] font-bold text-slate-900 text-center">
+                                Scan with GPay / PhonePe / Paytm / Any UPI App
+                              </div>
+                            </div>
+                          )}
                           <div className="flex flex-wrap gap-2">
                             <a
                               href={proformaInvoice.upiPaymentUri}
@@ -2456,31 +2526,153 @@ export const PilotFindingsWalkthroughView: React.FC<PilotFindingsWalkthroughView
               </table>
             </div>
 
-            {/* Direct NEFT / IMPS & UPI Remittance Instructions */}
-            <div className="p-4 rounded-xl bg-slate-950 border border-emerald-500/30 space-y-2">
-              <div className="text-emerald-400 font-bold uppercase text-[11px]">
-                Direct Bank NEFT / IMPS &amp; 0%-Fee UPI Remittance Details
+            {/* Direct NEFT / IMPS & UPI Remittance Instructions + Scannable QR Code */}
+            <div className="p-4 rounded-xl bg-slate-950 border border-emerald-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="space-y-2 flex-1">
+                <div className="text-emerald-400 font-bold uppercase text-[11px]">
+                  Direct Bank NEFT / IMPS &amp; 0%-Fee UPI Remittance Details
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-slate-300">
+                  <div>
+                    Beneficiary: <strong className="text-white">{proformaInvoice.neftImpsInstructions.beneficiaryName}</strong>
+                  </div>
+                  <div>
+                    UPI ID (0% Fee): <strong className="text-emerald-300">{proformaInvoice.neftImpsInstructions.upiId}</strong>
+                  </div>
+                  <div>
+                    Bank Name: <strong className="text-white">{proformaInvoice.neftImpsInstructions.bankName}</strong>
+                  </div>
+                  <div>
+                    Account No: <strong className="text-white">{proformaInvoice.neftImpsInstructions.accountNumber}</strong>
+                  </div>
+                  <div>
+                    IFSC Code: <strong className="text-white">{proformaInvoice.neftImpsInstructions.ifscCode}</strong>
+                  </div>
+                  <div>
+                    Remittance Note: <strong className="text-amber-300">{proformaInvoice.neftImpsInstructions.paymentNote}</strong>
+                  </div>
+                  <div>
+                    Udyam MSME Reg: <strong className="text-sky-300">{proformaInvoice.udyamMsmeNumber}</strong>
+                  </div>
+                  <div>
+                    GST Status:{' '}
+                    <strong className="text-slate-200">
+                      {proformaInvoice.gstinOptional
+                        ? `GSTIN: ${proformaInvoice.gstinOptional}`
+                        : 'MSME Exempt / SAC 998311'}
+                    </strong>
+                  </div>
+                </div>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-slate-300">
-                <div>
-                  Beneficiary: <strong className="text-white">{proformaInvoice.neftImpsInstructions.beneficiaryName}</strong>
+
+              {upiQrSvg && (
+                <div
+                  data-testid="proforma-invoice-upi-qr"
+                  className="p-2.5 rounded-xl bg-white text-slate-950 flex flex-col items-center justify-center gap-1 shrink-0"
+                >
+                  <div
+                    className="w-28 h-28 flex items-center justify-center [&>svg]:w-full [&>svg]:h-full"
+                    dangerouslySetInnerHTML={{ __html: upiQrSvg }}
+                  />
+                  <div className="text-[9px] font-bold text-slate-900 text-center">
+                    Scan to Pay ₹{proformaInvoice.amountInr.toLocaleString('en-IN')}
+                  </div>
                 </div>
-                <div>
-                  UPI ID (0% Fee): <strong className="text-emerald-300">{proformaInvoice.neftImpsInstructions.upiId}</strong>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Phase 17: Official Printable Paid Receipt (RCPT-...) Modal */}
+      {showPaidReceiptModal && paidReceipt && (
+        <div
+          data-testid="paid-receipt-modal"
+          className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto"
+        >
+          <div className="bg-slate-900 border border-emerald-500/50 rounded-2xl max-w-3xl w-full p-6 sm:p-8 space-y-6 text-xs font-mono">
+            <div className="flex flex-wrap items-start justify-between gap-4 border-b border-slate-800 pb-4">
+              <div className="space-y-1">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded bg-emerald-500/20 border border-emerald-500/50 text-emerald-300 font-bold uppercase text-[11px]">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>OFFICIAL B2B PAID RECEIPT • {paidReceipt.receiptId} • {paidReceipt.stamp}</span>
                 </div>
-                <div>
-                  Bank Name: <strong className="text-white">{proformaInvoice.neftImpsInstructions.bankName}</strong>
-                </div>
-                <div>
-                  Account No: <strong className="text-white">{proformaInvoice.neftImpsInstructions.accountNumber}</strong>
-                </div>
-                <div>
-                  IFSC Code: <strong className="text-white">{proformaInvoice.neftImpsInstructions.ifscCode}</strong>
-                </div>
-                <div>
-                  Remittance Note: <strong className="text-amber-300">{proformaInvoice.neftImpsInstructions.paymentNote}</strong>
+                <h3 className="text-lg sm:text-xl font-black text-white font-sans">
+                  {paidReceipt.sellerBrand} ({paidReceipt.sellerLocation})
+                </h3>
+                <p className="text-slate-400">
+                  Beneficiary: <strong className="text-white">{paidReceipt.beneficiaryName}</strong> · Udyam MSME: <strong className="text-sky-300">{paidReceipt.udyamMsmeNumber}</strong>
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2 no-print">
+                <button
+                  type="button"
+                  data-testid="print-paid-receipt-btn"
+                  onClick={() => window.print()}
+                  className="px-3.5 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold inline-flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Printer className="w-3.5 h-3.5" />
+                  <span>Print / Save Paid Receipt PDF</span>
+                </button>
+                <button
+                  type="button"
+                  data-testid="close-paid-receipt-btn"
+                  onClick={() => setShowPaidReceiptModal(false)}
+                  className="px-3 py-2 rounded-lg bg-slate-950 hover:bg-slate-800 border border-slate-700 text-slate-300 cursor-pointer"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-1">
+                <div className="text-[10px] text-slate-400 uppercase">Received From (Client Plant)</div>
+                <div className="text-sm font-bold text-white font-sans">{paidReceipt.companyName}</div>
+                <div className="text-slate-300">{paidReceipt.plantLocation}</div>
+                <div className="text-slate-400 text-[11px]">
+                  Workspace Ref: {paidReceipt.workspaceId} · Invoice Ref: {paidReceipt.invoiceId}
                 </div>
               </div>
+
+              <div className="p-4 rounded-xl bg-slate-950 border border-emerald-500/40 space-y-1">
+                <div className="text-[10px] text-emerald-400 uppercase font-bold">
+                  Payment Verification &amp; UTR Stamp
+                </div>
+                <div className="text-sm font-black text-emerald-300">
+                  {paidReceipt.stamp} — ₹{paidReceipt.amountPaidInr.toLocaleString('en-IN')} INR
+                </div>
+                <div className="text-slate-200">
+                  Verified UTR / Bank Ref: <strong className="text-white">{paidReceipt.utrNumber}</strong>
+                </div>
+                <div className="text-slate-400 text-[11px]">
+                  Paid At: {paidReceipt.paidAt.slice(0, 19).replace('T', ' ')} UTC · Verified By: {paidReceipt.verifiedBy}
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-slate-800 overflow-hidden">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-slate-950 text-slate-400 border-b border-slate-800 uppercase text-[10px]">
+                    <th className="py-2.5 px-4">Description</th>
+                    <th className="py-2.5 px-4">SAC Code</th>
+                    <th className="py-2.5 px-4 text-right">Amount Paid (INR)</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800">
+                  {paidReceipt.lineItems.map((item, i) => (
+                    <tr key={i} className="bg-slate-900">
+                      <td className="py-3 px-4 text-slate-200 font-sans">{item.description}</td>
+                      <td className="py-3 px-4 text-slate-400">{item.hsnSacCode}</td>
+                      <td className="py-3 px-4 text-right font-bold text-emerald-300">
+                        ₹{item.lineTotalInr.toLocaleString('en-IN')}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
         </div>

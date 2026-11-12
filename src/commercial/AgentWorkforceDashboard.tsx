@@ -7,37 +7,46 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   ArrowLeft,
   Bot,
-  Cpu,
   CheckCircle2,
-  Clock,
   CreditCard,
-  ShieldCheck,
   Sparkles,
   Inbox,
   Play,
   Save,
   Copy,
   Unlock,
-  ExternalLink,
-  KeyRound,
   RefreshCw,
-  FileText,
+  BellRing,
+  Database,
+  Send,
 } from 'lucide-react';
 import {
-  AgentWorkforceState,
-  AgentWorkforceTask,
+  type AgentWorkforceState,
+  type AgentWorkforceTask,
   readAgentWorkforceStateFromBrowser,
   saveAgentWorkforceStateToBrowser,
   buildDecomposedGoalTasks,
-} from '../utils/agentWorkforceEngine';
+} from '../utils/agentWorkforceEngine.ts';
 import {
-  FounderBillingConfig,
-  DEFAULT_FOUNDER_BILLING_CONFIG,
+  type FounderBillingConfig,
+  LIVE_FOUNDER_UPI_ID,
   readFounderBillingFromBrowser,
   saveFounderBillingToBrowser,
   buildUpiPaymentUri,
-} from '../utils/founderBillingStore';
-import type { PilotWorkspaceSnapshot } from '../utils/pilotWorkspaceStore';
+} from '../utils/founderBillingStore.ts';
+import { SUPABASE_TABLE_SQL_SNIPPET } from '../utils/cloudPersistenceStore.ts';
+import {
+  type FounderAlertDeliveryLog,
+  readFounderAlertLogsFromBrowser,
+  saveFounderAlertLogsToBrowser,
+} from '../utils/founderAlertNotifier.ts';
+import type { PilotWorkspaceSnapshot } from '../utils/pilotWorkspaceStore.ts';
+import {
+  type OutboundTargetCompany,
+  readOutboundCrmFromBrowser,
+  saveOutboundCrmToBrowser,
+} from '../data/outboundTargetCompanies.ts';
+import { OutboundSalesCrmPanel } from './OutboundSalesCrmPanel.tsx';
 
 interface AgentWorkforceDashboardProps {
   onBackToHome: () => void;
@@ -69,7 +78,20 @@ export const AgentWorkforceDashboard: React.FC<AgentWorkforceDashboardProps> = (
   const [billingConfig, setBillingConfig] = useState<FounderBillingConfig>(() =>
     readFounderBillingFromBrowser()
   );
+  const [alertLogs, setAlertLogs] = useState<FounderAlertDeliveryLog[]>(() =>
+    readFounderAlertLogsFromBrowser()
+  );
+  const [supabaseSqlSnippet, setSupabaseSqlSnippet] = useState<string>(
+    SUPABASE_TABLE_SQL_SNIPPET
+  );
+  const [showSqlSnippet, setShowSqlSnippet] = useState<boolean>(false);
+  const [copiedSql, setCopiedSql] = useState<boolean>(false);
+  const [sendingTestAlert, setSendingTestAlert] = useState<boolean>(false);
+
   const [workspaces, setWorkspaces] = useState<PilotWorkspaceSnapshot[]>([]);
+  const [outboundCompanies, setOutboundCompanies] = useState<OutboundTargetCompany[]>(
+    () => readOutboundCrmFromBrowser()
+  );
   const [goalInput, setGoalInput] = useState<string>(
     'Close 5 Paid Plant Audits in Chennai This Month — ₹74,995 Target'
   );
@@ -86,12 +108,18 @@ export const AgentWorkforceDashboard: React.FC<AgentWorkforceDashboardProps> = (
     setLoading(true);
     setErrorMsg(null);
     try {
-      const [wfRes, billRes, wsRes] = await Promise.all([
+      const [wfRes, adminBillRes, pubBillRes, wsRes, crmRes] = await Promise.all([
         fetch('/api/admin/agent-workforce', {
+          headers: { 'x-admin-key': keyToUse.trim() },
+        }),
+        fetch('/api/admin/founder-billing', {
           headers: { 'x-admin-key': keyToUse.trim() },
         }),
         fetch('/api/founder-billing/public'),
         fetch('/api/admin/pilot-workspaces', {
+          headers: { 'x-admin-key': keyToUse.trim() },
+        }),
+        fetch('/api/admin/outbound-crm', {
           headers: { 'x-admin-key': keyToUse.trim() },
         }),
       ]);
@@ -105,15 +133,36 @@ export const AgentWorkforceDashboard: React.FC<AgentWorkforceDashboardProps> = (
         }
       }
 
-      const billData = await billRes.json().catch(() => null);
-      if (billRes.ok && billData?.ok && billData.config) {
-        setBillingConfig(billData.config as FounderBillingConfig);
-        saveFounderBillingToBrowser(billData.config as FounderBillingConfig);
+      const adminBillData = await adminBillRes.json().catch(() => null);
+      if (adminBillRes.ok && adminBillData?.ok && adminBillData.config) {
+        setBillingConfig(adminBillData.config as FounderBillingConfig);
+        saveFounderBillingToBrowser(adminBillData.config as FounderBillingConfig);
+        if (Array.isArray(adminBillData.alertLogs)) {
+          setAlertLogs(adminBillData.alertLogs as FounderAlertDeliveryLog[]);
+          saveFounderAlertLogsToBrowser(adminBillData.alertLogs as FounderAlertDeliveryLog[]);
+        }
+        if (typeof adminBillData.supabaseSqlSnippet === 'string') {
+          setSupabaseSqlSnippet(adminBillData.supabaseSqlSnippet);
+        }
+      } else {
+        const pubBillData = await pubBillRes.json().catch(() => null);
+        if (pubBillRes.ok && pubBillData?.ok && pubBillData.config) {
+          setBillingConfig(pubBillData.config as FounderBillingConfig);
+          saveFounderBillingToBrowser(pubBillData.config as FounderBillingConfig);
+        }
       }
 
       const wsData = await wsRes.json().catch(() => null);
       if (wsRes.ok && wsData?.ok && Array.isArray(wsData.workspaces)) {
         setWorkspaces(wsData.workspaces as PilotWorkspaceSnapshot[]);
+      }
+
+      const crmData = await crmRes.json().catch(() => null);
+      if (crmRes.ok && crmData?.ok && Array.isArray(crmData.companies)) {
+        const syncedCrm = saveOutboundCrmToBrowser(
+          crmData.companies as OutboundTargetCompany[]
+        );
+        setOutboundCompanies(syncedCrm);
       }
 
       try {
@@ -123,6 +172,8 @@ export const AgentWorkforceDashboard: React.FC<AgentWorkforceDashboardProps> = (
       // Static browser fallback
       setWorkforceState(readAgentWorkforceStateFromBrowser());
       setBillingConfig(readFounderBillingFromBrowser());
+      setAlertLogs(readFounderAlertLogsFromBrowser());
+      setOutboundCompanies(readOutboundCrmFromBrowser());
     } finally {
       setLoading(false);
     }
@@ -199,7 +250,6 @@ export const AgentWorkforceDashboard: React.FC<AgentWorkforceDashboardProps> = (
     setErrorMsg(null);
 
     try {
-      // If this is a UTR verification task and founder clicks APPROVE, also unlock the linked workspace
       if (
         decision === 'APPROVE' &&
         task.taskType === 'UTR_PAYMENT_VERIFICATION' &&
@@ -249,7 +299,6 @@ export const AgentWorkforceDashboard: React.FC<AgentWorkforceDashboardProps> = (
             : `Task ${task.taskId} rejected.`
         );
       } else {
-        // Browser fallback
         const nextTasks = workforceState.tasks.map((t) =>
           t.taskId === task.taskId
             ? {
@@ -358,7 +407,7 @@ export const AgentWorkforceDashboard: React.FC<AgentWorkforceDashboardProps> = (
         setBillingConfig(data.config as FounderBillingConfig);
         saveFounderBillingToBrowser(data.config as FounderBillingConfig);
         setNoticeMsg(
-          `Saved Founder Bank, UPI (${data.config.upiId}) & Tier Pricing (₹${data.config.tier2FullAuditPriceInr.toLocaleString(
+          `Saved Founder Bank, UPI (${data.config.upiId}), Cloud & Alert Settings (₹${data.config.tier2FullAuditPriceInr.toLocaleString(
             'en-IN'
           )} / ₹${data.config.tier3MonthlyRetainerInr.toLocaleString('en-IN')}).`
         );
@@ -374,6 +423,81 @@ export const AgentWorkforceDashboard: React.FC<AgentWorkforceDashboardProps> = (
     } finally {
       setSavingBilling(false);
     }
+  };
+
+  const handleSendTestPaymentAlert = async () => {
+    setSendingTestAlert(true);
+    setNoticeMsg(null);
+    setErrorMsg(null);
+
+    try {
+      const res = await fetch('/api/admin/test-founder-alert', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-admin-key': adminKey.trim(),
+        },
+        body: JSON.stringify({
+          utrNumber: 'TESTUTR9080540047',
+          companyName: 'Ambattur Precision Forge (Founder Test Payment Alert)',
+        }),
+      });
+      const data = await res.json().catch(() => null);
+      if (res.ok && data?.ok && data.alertLog) {
+        const updatedLogs = Array.isArray(data.alertLogs)
+          ? (data.alertLogs as FounderAlertDeliveryLog[])
+          : [data.alertLog as FounderAlertDeliveryLog, ...alertLogs].slice(0, 20);
+        setAlertLogs(updatedLogs);
+        saveFounderAlertLogsToBrowser(updatedLogs);
+        setNoticeMsg(
+          `Test Payment Alert (${data.alertLog.alertId}) dispatched for ₹${(
+            billingConfig.tier2FullAuditPriceInr || 14999
+          ).toLocaleString('en-IN')} to UPI ${
+            billingConfig.upiId || LIVE_FOUNDER_UPI_ID
+          } — Status: ${data.alertLog.overallStatus} (Email: ${data.alertLog.emailStatus}, Webhook: ${data.alertLog.webhookStatus}).`
+        );
+      } else {
+        const fallbackEntry: FounderAlertDeliveryLog = {
+          alertId: `ALERT-LOCAL-${Date.now().toString(16).slice(-4).toUpperCase()}`,
+          timestamp: new Date().toISOString(),
+          eventType: 'TEST_PAYMENT_ALERT',
+          title: `[TEST UTR PAYMENT ALERT] ₹${(
+            billingConfig.tier2FullAuditPriceInr || 14999
+          ).toLocaleString('en-IN')} Submitted — Ambattur Precision Forge`,
+          summary: `UTR TESTUTR9080540047 submitted for AUDIT-DEMO-P1P4 (₹14,999 to UPI ${
+            billingConfig.upiId || LIVE_FOUNDER_UPI_ID
+          }).`,
+          companyName: 'Ambattur Precision Forge (Founder Test Payment Alert)',
+          workspaceId: 'AUDIT-DEMO-P1P4',
+          utrNumber: 'TESTUTR9080540047',
+          amountInr: billingConfig.tier2FullAuditPriceInr || 14999,
+          upiId: billingConfig.upiId || LIVE_FOUNDER_UPI_ID,
+          actionUrl: '?view=agent-workforce',
+          recipientEmail: billingConfig.founderAlertEmail || 'joneszz2004@gmail.com',
+          webhookConfigured: Boolean(billingConfig.founderWebhookUrl),
+          emailStatus: 'SKIPPED_NOT_CONFIGURED',
+          webhookStatus: 'SKIPPED_NOT_CONFIGURED',
+          overallStatus: 'SKIPPED_NOT_CONFIGURED',
+        };
+        const updated = saveFounderAlertLogsToBrowser([fallbackEntry, ...alertLogs]);
+        setAlertLogs(updated);
+        setNoticeMsg(
+          `Logged Test Payment Alert (${fallbackEntry.alertId}) for UPI ${fallbackEntry.upiId}.`
+        );
+      }
+    } catch {
+      setErrorMsg('Unable to trigger test founder alert.');
+    } finally {
+      setSendingTestAlert(false);
+    }
+  };
+
+  const handleCopySupabaseSql = async () => {
+    try {
+      await navigator.clipboard.writeText(supabaseSqlSnippet);
+      setCopiedSql(true);
+      setTimeout(() => setCopiedSql(false), 2500);
+    } catch {}
   };
 
   const pendingTasks = workforceState.tasks.filter(
@@ -410,7 +534,7 @@ export const AgentWorkforceDashboard: React.FC<AgentWorkforceDashboardProps> = (
                   Paperclip 5-Agent Autonomous Revenue Workforce &amp; Direct Bank Billing
                 </h1>
                 <p className="text-[11px] text-slate-400 font-mono">
-                  100% Deterministic Execution · ₹0.00 API Token Spend · Direct UPI / NEFT Collection to C. Jones Snowin
+                  100% Deterministic Execution · ₹0.00 API Token Spend · Live UPI ({billingConfig.upiId || LIVE_FOUNDER_UPI_ID}) to C. Jones Snowin
                 </p>
               </div>
             </div>
@@ -716,21 +840,21 @@ export const AgentWorkforceDashboard: React.FC<AgentWorkforceDashboardProps> = (
           </div>
         </section>
 
-        {/* Section 4: Founder Bank, UPI & Tier Pricing Settings Drawer */}
+        {/* Section 4: Founder Bank, UPI (`9080540047@yespop`), Cloud Sync & Instant Alerts Drawer */}
         <section
           data-testid="founder-billing-settings-panel"
-          className="bg-slate-900 border border-slate-800 rounded-2xl p-5 sm:p-6 space-y-5"
+          className="bg-slate-900 border border-slate-800 rounded-2xl p-5 sm:p-6 space-y-6"
         >
           <div className="flex flex-wrap items-start justify-between gap-4 border-b border-slate-800 pb-4">
             <div className="space-y-1">
               <div className="text-[11px] font-mono font-bold text-emerald-400 uppercase">
-                DIRECT BANK, UPI &amp; RAZORPAY PAYOUT CONFIGURATION (`./data/founder_billing.json`)
+                DIRECT BANK, UPI (`9080540047@yespop`), SUPABASE CLOUD SYNC &amp; INSTANT ALERTS (`./data/founder_billing.json`)
               </div>
               <h2 className="text-base sm:text-lg font-bold text-white">
-                Founder Bank Account, 0%-Fee UPI ID &amp; Audit Tier Pricing
+                Founder Bank Account, 0%-Fee UPI ID (`{billingConfig.upiId || LIVE_FOUNDER_UPI_ID}`) &amp; Audit Tier Pricing
               </h2>
               <p className="text-xs text-slate-400">
-                Configure where client payments land when unlocking the ₹14,999 Full 4-Pillar Audit or ₹24,999 Monthly Retainer.
+                Configure where client payments land when unlocking the ₹14,999 Full 4-Pillar Audit or ₹24,999 Monthly Retainer, plus optional Supabase cloud persistence and instant Resend / Webhook alerts.
               </p>
             </div>
 
@@ -747,7 +871,7 @@ export const AgentWorkforceDashboard: React.FC<AgentWorkforceDashboardProps> = (
             </div>
           </div>
 
-          <form onSubmit={handleSaveBillingSettings} className="space-y-4 text-xs font-mono">
+          <form onSubmit={handleSaveBillingSettings} className="space-y-6 text-xs font-mono">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               <div className="space-y-1">
                 <label className="text-slate-300 font-bold block">
@@ -769,7 +893,7 @@ export const AgentWorkforceDashboard: React.FC<AgentWorkforceDashboardProps> = (
 
               <div className="space-y-1">
                 <label className="text-emerald-300 font-bold block">
-                  Founder UPI ID (0% Gateway Fee)
+                  Founder UPI ID (0% Gateway Fee · Live Default: 9080540047@yespop)
                 </label>
                 <input
                   type="text"
@@ -886,6 +1010,44 @@ export const AgentWorkforceDashboard: React.FC<AgentWorkforceDashboardProps> = (
 
               <div className="space-y-1">
                 <label className="text-slate-300 font-bold block">
+                  Udyam MSME Registration No. (Snowin Ventures)
+                </label>
+                <input
+                  type="text"
+                  data-testid="billing-udyam-msme-input"
+                  value={billingConfig.udyamMsmeNumber || ''}
+                  onChange={(e) =>
+                    setBillingConfig((prev) => ({
+                      ...prev,
+                      udyamMsmeNumber: e.target.value,
+                    }))
+                  }
+                  placeholder="UDYAM-TN-02-XXXXXXX"
+                  className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-white"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-slate-300 font-bold block">
+                  GSTIN (Optional — Blank = Exempt / Below Threshold)
+                </label>
+                <input
+                  type="text"
+                  data-testid="billing-gstin-input"
+                  value={billingConfig.gstinOptional || ''}
+                  onChange={(e) =>
+                    setBillingConfig((prev) => ({
+                      ...prev,
+                      gstinOptional: e.target.value,
+                    }))
+                  }
+                  placeholder="Optional 15-Digit GSTIN (or leave blank)"
+                  className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-white"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-slate-300 font-bold block">
                   Admin Key (`x-admin-key`)
                 </label>
                 <input
@@ -897,7 +1059,166 @@ export const AgentWorkforceDashboard: React.FC<AgentWorkforceDashboardProps> = (
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-3 pt-2">
+            {/* Phase 16 Sub-Section: Cloud Sync (Supabase) & Instant Phone/Email Alerts */}
+            <div
+              data-testid="cloud-sync-and-alerts-section"
+              className="p-4 sm:p-5 rounded-xl bg-slate-950 border border-sky-500/30 space-y-4"
+            >
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-3">
+                <div className="space-y-1">
+                  <div className="inline-flex items-center gap-1.5 text-sky-400 font-bold uppercase text-[11px]">
+                    <Database className="w-3.5 h-3.5" />
+                    <span>CLOUD SYNC (SUPABASE REST) &amp; INSTANT PHONE/EMAIL ALERTS</span>
+                  </div>
+                  <p className="text-slate-400 text-[11px] font-sans">
+                    100% optional: When configured, every new pilot lead, Step-2 CSV upload, and 12-digit UTR payment (`{billingConfig.upiId || LIVE_FOUNDER_UPI_ID}`) automatically syncs to Supabase and dispatches an instant email/webhook alert.
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    data-testid="copy-supabase-sql-btn"
+                    onClick={handleCopySupabaseSql}
+                    className="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-sky-500/40 text-sky-300 text-[11px] font-bold inline-flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <Copy className="w-3.5 h-3.5" />
+                    <span>
+                      {copiedSql
+                        ? 'Copied Supabase SQL Snippet!'
+                        : 'Copy Supabase SQL Table Snippet'}
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowSqlSnippet((prev) => !prev)}
+                    className="px-2.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-300 text-[11px] cursor-pointer"
+                  >
+                    {showSqlSnippet ? 'Hide SQL' : 'View SQL'}
+                  </button>
+                  <button
+                    type="button"
+                    data-testid="send-test-alert-btn"
+                    disabled={sendingTestAlert}
+                    onClick={handleSendTestPaymentAlert}
+                    className="px-3.5 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-[11px] inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                  >
+                    <Send className="w-3.5 h-3.5" />
+                    <span>
+                      {sendingTestAlert ? 'Sending Alert...' : 'Send Test Payment Alert'}
+                    </span>
+                  </button>
+                </div>
+              </div>
+
+              {showSqlSnippet && (
+                <pre
+                  data-testid="supabase-sql-snippet-box"
+                  className="p-3 rounded-lg bg-slate-900 border border-slate-800 text-sky-200 text-[11px] overflow-x-auto leading-relaxed"
+                >
+                  {supabaseSqlSnippet}
+                </pre>
+              )}
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="space-y-1">
+                  <label className="text-slate-300 font-bold block">
+                    Founder Alert Email (Resend Destination)
+                  </label>
+                  <input
+                    type="email"
+                    data-testid="billing-founder-alert-email-input"
+                    value={billingConfig.founderAlertEmail || ''}
+                    onChange={(e) =>
+                      setBillingConfig((prev) => ({
+                        ...prev,
+                        founderAlertEmail: e.target.value,
+                      }))
+                    }
+                    placeholder="joneszz2004@gmail.com"
+                    className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-800 text-white"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-slate-300 font-bold block">
+                    Resend Email API Key (Optional)
+                  </label>
+                  <input
+                    type="password"
+                    data-testid="billing-resend-api-key-input"
+                    value={billingConfig.resendApiKey || ''}
+                    onChange={(e) =>
+                      setBillingConfig((prev) => ({
+                        ...prev,
+                        resendApiKey: e.target.value,
+                      }))
+                    }
+                    placeholder="re_123456789..."
+                    className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-800 text-white"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-slate-300 font-bold block">
+                    Slack / Discord / WhatsApp Webhook URL
+                  </label>
+                  <input
+                    type="url"
+                    data-testid="billing-webhook-url-input"
+                    value={billingConfig.founderWebhookUrl || ''}
+                    onChange={(e) =>
+                      setBillingConfig((prev) => ({
+                        ...prev,
+                        founderWebhookUrl: e.target.value,
+                      }))
+                    }
+                    placeholder="https://hooks.slack.com/services/..."
+                    className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-800 text-white"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-sky-300 font-bold block">
+                    Supabase Project URL (Optional Cloud Sync)
+                  </label>
+                  <input
+                    type="url"
+                    data-testid="billing-supabase-url-input"
+                    value={billingConfig.supabaseUrl || ''}
+                    onChange={(e) =>
+                      setBillingConfig((prev) => ({
+                        ...prev,
+                        supabaseUrl: e.target.value,
+                      }))
+                    }
+                    placeholder="https://xyzcompany.supabase.co"
+                    className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-800 text-white"
+                  />
+                </div>
+
+                <div className="space-y-1 sm:col-span-2">
+                  <label className="text-sky-300 font-bold block">
+                    Supabase Service Role Key (Server-Only · Masked on Public Routes)
+                  </label>
+                  <input
+                    type="password"
+                    data-testid="billing-supabase-key-input"
+                    value={billingConfig.supabaseServiceKey || ''}
+                    onChange={(e) =>
+                      setBillingConfig((prev) => ({
+                        ...prev,
+                        supabaseServiceKey: e.target.value,
+                      }))
+                    }
+                    placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                    className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-800 text-white"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-1">
               <button
                 type="submit"
                 data-testid="save-founder-billing-btn"
@@ -907,13 +1228,80 @@ export const AgentWorkforceDashboard: React.FC<AgentWorkforceDashboardProps> = (
                 <Save className="w-4 h-4" />
                 <span>
                   {savingBilling
-                    ? 'Saving Payout Settings...'
-                    : 'Save Founder Bank, UPI & Pricing Settings'}
+                    ? 'Saving Payout & Cloud Settings...'
+                    : 'Save Founder Bank, UPI, Cloud & Alert Settings'}
                 </span>
               </button>
             </div>
           </form>
+
+          {/* Last 20 Alert Delivery Logs */}
+          <div
+            data-testid="founder-alert-logs-panel"
+            className="pt-4 border-t border-slate-800 space-y-3"
+          >
+            <div className="flex items-center justify-between gap-2">
+              <div className="inline-flex items-center gap-2 text-xs font-mono font-bold text-amber-300 uppercase">
+                <BellRing className="w-3.5 h-3.5" />
+                <span>Last 20 Founder Alert Delivery Logs (`./data/founder_alert_logs.json`)</span>
+              </div>
+              <span className="text-[11px] font-mono text-slate-400">
+                Total Logged: {alertLogs.length} / 20 Max
+              </span>
+            </div>
+
+            {alertLogs.length === 0 ? (
+              <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 text-xs font-mono text-slate-400">
+                No founder alerts logged yet. Click &ldquo;Send Test Payment Alert&rdquo; above or submit a Pilot Lead / UTR Payment to verify instant delivery logging.
+              </div>
+            ) : (
+              <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+                {alertLogs.slice(0, 20).map((log) => (
+                  <div
+                    key={log.alertId}
+                    data-testid={`alert-log-row-${log.alertId}`}
+                    className="p-3 rounded-xl bg-slate-950 border border-slate-800 flex flex-wrap items-center justify-between gap-2 font-mono text-[11px]"
+                  >
+                    <div className="space-y-0.5">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-emerald-300 font-bold">{log.alertId}</span>
+                        <span className="px-2 py-0.5 rounded bg-slate-900 border border-slate-700 text-sky-300">
+                          {log.eventType}
+                        </span>
+                        <span className="text-white font-bold">{log.title}</span>
+                      </div>
+                      <div className="text-slate-400">{log.summary}</div>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span
+                        className={`px-2 py-0.5 rounded border font-bold ${
+                          log.overallStatus === 'SENT'
+                            ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300'
+                            : log.overallStatus === 'FAILED'
+                            ? 'bg-rose-500/20 border-rose-500/40 text-rose-300'
+                            : 'bg-slate-900 border-slate-700 text-slate-300'
+                        }`}
+                      >
+                        {log.overallStatus}
+                      </span>
+                      <span className="text-slate-500">
+                        {new Date(log.timestamp).toLocaleTimeString()}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </section>
+
+        {/* 4. Phase 18: Built-In 50-Company Chennai & Hosur Outbound Sales CRM & 1-Click Pitch Launcher */}
+        <OutboundSalesCrmPanel
+          companies={outboundCompanies}
+          adminKey={adminKey}
+          onCompaniesChange={setOutboundCompanies}
+          onNotice={(msg) => setNoticeMsg(msg)}
+        />
       </main>
     </div>
   );

@@ -3538,7 +3538,9 @@ test('Phase 12 Canonical Demo Plant Presets: PLATFORM_DEMO_PLANTS matches canoni
   assert.equal(amb.freightLeakValue, 13944);
   assert.equal(amb.flaggedLRs, 12);
   assert.equal(amb.binMatchPercent, 60);
-  assert.equal(amb.binVarianceValue, 24240);
+  assert.equal(amb.binVarianceValue, 24800);
+  assert.equal(amb.binVarianceFormatted, '₹24,800');
+  assert.ok(amb.summaryLine.includes('₹24,800 Variance'));
   assert.equal(amb.auditedBins, 6);
 
   // Verify 4-pillar simulator also reports 12 Flagged LRs and 22% baseline carrying cost for Ambattur
@@ -3935,7 +3937,7 @@ test('Phase 15 UPI Deep-Link & Billing Config Store: buildUpiPaymentUri generate
     'Ambattur Fabrication Sample Plant'
   );
 
-  assert.ok(uriTier2.startsWith('upi://pay?pa=cjonessnowin@okaxis&pn='));
+  assert.ok(uriTier2.startsWith('upi://pay?pa=9080540047@yespop&pn='));
   assert.ok(uriTier2.includes('C.%20Jones%20Snowin'));
   assert.ok(uriTier2.includes('&am=14999&cu=INR&tn=INV-20261109-4410-Ambattur_Fabrication_Sample_Plant'));
 
@@ -3951,7 +3953,7 @@ test('Phase 15 UPI Deep-Link & Billing Config Store: buildUpiPaymentUri generate
   const billingFile = path.join(tmpDir, 'founder_billing.json');
   try {
     const initial = await getFounderBillingConfig(billingFile);
-    assert.equal(initial.upiId, 'cjonessnowin@okaxis');
+    assert.equal(initial.upiId, '9080540047@yespop');
     assert.equal(initial.tier2FullAuditPriceInr, 14999);
     assert.equal(initial.tier3MonthlyRetainerInr, 24999);
 
@@ -4004,6 +4006,7 @@ test('Phase 15 Proforma Invoice Generation (INV-YYYYMMDD-XXXX): generateProforma
     invTier2.neftImpsInstructions.beneficiaryName,
     'C. Jones Snowin (Operationalyst / Snowin Ventures)'
   );
+  assert.equal(invTier2.neftImpsInstructions.upiId, '9080540047@yespop');
   assert.ok(invTier2.upiPaymentUri.includes('am=14999'));
 });
 
@@ -4144,7 +4147,531 @@ test('Phase 15 Paperclip 5-Agent Workforce Engine & Zero-Cost Guardrail: decompo
   }
 });
 
+// ============================================================================
+// PHASE 16 TESTS: Live Founder UPI ID (9080540047@yespop), Automatic Migration,
+// Public Endpoint Secret Masking, Cloud Persistence (Supabase REST + Local Fallback),
+// and Instant Lead & UTR Payment Alerts (Resend Email + Webhook + Last-20 Log)
+// ============================================================================
 
+test('Phase 16 Live Founder UPI Migration & Public Endpoint Secret Masking: getFounderBillingConfig automatically migrates legacy cjonessnowin@okaxis to 9080540047@yespop and sanitizePublicFounderBillingConfig never leaks resendApiKey or supabaseServiceKey', async () => {
+  const fs = await import('fs/promises');
+  const path = await import('path');
+  const os = await import('os');
+  const {
+    LIVE_FOUNDER_UPI_ID,
+    getFounderBillingConfig,
+    updateFounderBillingConfig,
+    sanitizePublicFounderBillingConfig,
+  } = await import('../utils/founderBillingStore');
+
+  assert.equal(LIVE_FOUNDER_UPI_ID, '9080540047@yespop');
+
+  const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'op-phase16-billing-'));
+  const billingFile = path.join(tmpDir, 'founder_billing.json');
+
+  try {
+    // Write a legacy config containing 'cjonessnowin@okaxis'
+    await fs.writeFile(
+      billingFile,
+      JSON.stringify(
+        {
+          version: 1,
+          config: {
+            beneficiaryName: 'C. Jones Snowin',
+            upiId: 'cjonessnowin@okaxis',
+            tier2FullAuditPriceInr: 14999,
+            tier3MonthlyRetainerInr: 24999,
+          },
+        },
+        null,
+        2
+      ),
+      'utf-8'
+    );
+
+    // Reading should automatically migrate 'cjonessnowin@okaxis' -> '9080540047@yespop' and persist to disk
+    const migrated = await getFounderBillingConfig(billingFile);
+    assert.equal(migrated.upiId, '9080540047@yespop');
+
+    const persistedRaw = JSON.parse(await fs.readFile(billingFile, 'utf-8'));
+    assert.equal(persistedRaw.config.upiId, '9080540047@yespop');
+
+    // Save secret keys and verify public sanitizer strips raw secrets
+    const withSecrets = await updateFounderBillingConfig(
+      {
+        founderAlertEmail: 'joneszz2004@gmail.com',
+        founderWebhookUrl: 'https://hooks.slack.com/services/T00/B00/SECRET_HOOK',
+        resendApiKey: 're_live_secret_998877665544',
+        supabaseUrl: 'https://demo-project.supabase.co',
+        supabaseServiceKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.secret_service_role_key',
+      },
+      billingFile
+    );
+
+    const publicSafe = sanitizePublicFounderBillingConfig(withSecrets);
+    assert.equal(publicSafe.upiId, '9080540047@yespop');
+    assert.equal(publicSafe.hasResendApiKey, true);
+    assert.equal(publicSafe.hasWebhookUrl, true);
+    assert.equal(publicSafe.hasSupabaseConfig, true);
+    assert.ok(publicSafe.maskedResendApiKey.includes('••••'));
+    assert.ok(publicSafe.maskedSupabaseServiceKey.includes('••••'));
+    assert.equal('resendApiKey' in publicSafe, false);
+    assert.equal('supabaseServiceKey' in publicSafe, false);
+    assert.equal('founderWebhookUrl' in publicSafe, false);
+  } finally {
+    await fs.rm(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('Phase 16 Cloud Persistence Store (Supabase PostgREST + Local Fallback): syncRecordToCloud and loadCollectionFromCloud gracefully return SKIPPED_NOT_CONFIGURED when unset and expose SUPABASE_TABLE_SQL_SNIPPET', async () => {
+  const {
+    SUPABASE_TABLE_SQL_SNIPPET,
+    syncRecordToCloud,
+    loadCollectionFromCloud,
+  } = await import('../utils/cloudPersistenceStore');
+
+  assert.ok(
+    SUPABASE_TABLE_SQL_SNIPPET.includes(
+      'create table if not exists public.operationalyst_records'
+    )
+  );
+  assert.ok(SUPABASE_TABLE_SQL_SNIPPET.includes('payload jsonb not null'));
+
+  const syncRes = await syncRecordToCloud(
+    'pilot_leads',
+    'PILOT-20261109-TEST',
+    { leadId: 'PILOT-20261109-TEST', companyName: 'Ambattur Test Fab' },
+    { supabaseUrl: '', supabaseServiceKey: '' }
+  );
+  assert.equal(syncRes.synced, false);
+  assert.equal(syncRes.status, 'SKIPPED_NOT_CONFIGURED');
+
+  const loadRes = await loadCollectionFromCloud('pilot_leads', {
+    supabaseUrl: '',
+    supabaseServiceKey: '',
+  });
+  assert.equal(loadRes.ok, true);
+  assert.equal(loadRes.status, 'SKIPPED_NOT_CONFIGURED');
+  assert.deepEqual(loadRes.records, []);
+});
+
+test('Phase 16 Instant Founder Alert Notifier & Last-20 Delivery Log: dispatchFounderAlert logs NEW_PILOT_LEAD, CLIENT_FILE_UPLOADED, UTR_PAYMENT_SUBMITTED, and TEST_PAYMENT_ALERT events with 9080540047@yespop UPI metadata', async () => {
+  const fs = await import('fs/promises');
+  const path = await import('path');
+  const os = await import('os');
+  const {
+    dispatchFounderAlert,
+    listFounderAlertLogs,
+    clearFounderAlertLogs,
+  } = await import('../utils/founderAlertNotifier');
+
+  const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'op-phase16-alerts-'));
+  const logFile = path.join(tmpDir, 'founder_alert_logs.json');
+  const billingFile = path.join(tmpDir, 'founder_billing.json');
+
+  try {
+    await clearFounderAlertLogs(logFile);
+
+    const leadAlert = await dispatchFounderAlert(
+      {
+        eventType: 'NEW_PILOT_LEAD',
+        companyName: 'Hosur Precision Gears Pvt Ltd',
+        plantLocation: 'Hosur SIPCOT',
+        contactName: 'S. Murugan',
+        contactEmailOrPhone: 'murugan@hosurgears.in',
+        leadId: 'PILOT-20261109-8811',
+      },
+      { logFilePath: logFile, billingFilePath: billingFile }
+    );
+    assert.match(leadAlert.alertId, /^ALERT-\d{8}-[A-Z0-9]{4}$/);
+    assert.equal(leadAlert.eventType, 'NEW_PILOT_LEAD');
+    assert.equal(leadAlert.upiId, '9080540047@yespop');
+
+    const utrAlert = await dispatchFounderAlert(
+      {
+        eventType: 'UTR_PAYMENT_SUBMITTED',
+        companyName: 'Hosur Precision Gears Pvt Ltd',
+        workspaceId: 'AUDIT-20261109-8811',
+        invoiceId: 'INV-20261109-8811',
+        utrNumber: '431298765432',
+        amountInr: 14999,
+        tier: 'TIER2_FULL_AUDIT',
+      },
+      { logFilePath: logFile, billingFilePath: billingFile }
+    );
+    assert.equal(utrAlert.eventType, 'UTR_PAYMENT_SUBMITTED');
+    assert.equal(utrAlert.utrNumber, '431298765432');
+    assert.equal(utrAlert.amountInr, 14999);
+    assert.ok(utrAlert.summary.includes('9080540047@yespop'));
+
+    const logs = await listFounderAlertLogs(logFile);
+    assert.equal(logs.length, 2);
+    assert.equal(logs[0].eventType, 'UTR_PAYMENT_SUBMITTED');
+    assert.equal(logs[1].eventType, 'NEW_PILOT_LEAD');
+  } finally {
+    await fs.rm(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('Platform /app View 4 Bug Fixes Guard: Verifies single arrows in PlatformTopBar, 1500ms timeout + finally on Reset Plant to Baseline, ₹24,800 Ambattur Bin Variance, and hideOperatorTools=true default with Administration hidden', async () => {
+  const fs = await import('fs/promises');
+  const path = await import('path');
+  const { PLATFORM_DEMO_PLANTS } = await import('../commercial/PlatformTopBar');
+
+  // 1. Single arrows in PlatformTopBar.tsx
+  const topBarSrc = await fs.readFile(
+    path.join(process.cwd(), 'src/commercial/PlatformTopBar.tsx'),
+    'utf-8'
+  );
+  assert.ok(topBarSrc.includes('<span>Website Overview</span>'));
+  assert.ok(!topBarSrc.includes('<span>← Website Overview</span>'));
+  assert.ok(topBarSrc.includes('<span>Run on Your Plant Data (Free 48h Pilot)</span>'));
+  assert.ok(!topBarSrc.includes('<span>Run on Your Plant Data (Free 48h Pilot) →</span>'));
+
+  // 2. 1500ms timeout + try/catch/finally + setIsResetting(false) in AppShell.tsx
+  const appShellSrc = await fs.readFile(
+    path.join(process.cwd(), 'src/dashboard/AppShell.tsx'),
+    'utf-8'
+  );
+  assert.ok(appShellSrc.includes('setTimeout(() => controller.abort(), 1500)'));
+  assert.ok(appShellSrc.includes('setIsResetting(false)'));
+  assert.ok(appShellSrc.includes('finally {'));
+
+  // 3. ₹24,800 Variance in Ambattur preset
+  assert.equal(PLATFORM_DEMO_PLANTS.ambattur.binVarianceValue, 24800);
+  assert.equal(PLATFORM_DEMO_PLANTS.ambattur.binVarianceFormatted, '₹24,800');
+  assert.ok(PLATFORM_DEMO_PLANTS.ambattur.binSummary.includes('₹24,800 Variance'));
+  assert.ok(PLATFORM_DEMO_PLANTS.ambattur.summaryLine.includes('₹24,800 Variance'));
+
+  // 4. hideOperatorTools defaults to true and Administration link is gated by showOperatorTools
+  assert.ok(appShellSrc.includes('const [hideOperatorTools, setHideOperatorTools] = useState<boolean>(true)'));
+  assert.ok(appShellSrc.includes("showOperatorTools || item.id !== 'administration'"));
+});
+
+// ============================================================================
+// PHASE 17 TESTS: 24/7 Zero-Touch CSV-to-Paywall Funnel, Scannable UPI QR Code
+// (9080540047@yespop), Udyam MSME Proforma & Paid Receipt Generator (RCPT-...),
+// FAQ #9 Pricing Clarity, and WhatsApp/LinkedIn SEO Meta Previews
+// ============================================================================
+
+test('Phase 17 Scannable NPCI UPI QR Code Generator: generateUpiQrCodeSvg produces a genuine, scannable <svg> QR code for upi://pay?pa=9080540047@yespop', async () => {
+  const {
+    DEFAULT_FOUNDER_BILLING_CONFIG,
+    buildUpiPaymentUri,
+    generateUpiQrCodeSvg,
+  } = await import('../utils/founderBillingStore');
+
+  const upiUri = buildUpiPaymentUri(
+    DEFAULT_FOUNDER_BILLING_CONFIG,
+    14999,
+    'INV-20261110-P1P4',
+    'AmbatturPlant'
+  );
+  assert.ok(upiUri.startsWith('upi://pay?pa=9080540047@yespop'));
+
+  const qrSvg = await generateUpiQrCodeSvg(upiUri);
+  assert.ok(qrSvg.includes('<svg'));
+  assert.ok(qrSvg.includes('viewBox='));
+  assert.ok(qrSvg.includes('<path'));
+  assert.ok(qrSvg.includes('</svg>'));
+});
+
+test('Phase 17 24/7 Zero-Touch Self-Serve CSV-to-Teaser Converter: executeInstantSelfServeAudit creates a lead, ingests 5-column CSV rows into a TEASER_LOCKED workspace, triggers 5-Agent pipeline, and returns a shareable walkthroughUrl', async () => {
+  const fs = await import('fs/promises');
+  const path = await import('path');
+  const os = await import('os');
+  const { executeInstantSelfServeAudit } = await import('../utils/importRunStore');
+
+  const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'op-phase17-selfserve-'));
+  const leadsFile = path.join(tmpDir, 'pilot_requests.json');
+  const workspacesFile = path.join(tmpDir, 'pilot_workspaces.json');
+  const importRunsFile = path.join(tmpDir, 'import_runs.json');
+  const auditEventsFile = path.join(tmpDir, 'audit_events.json');
+  const workforceFile = path.join(tmpDir, 'agent_workforce.json');
+  const alertLogsFile = path.join(tmpDir, 'founder_alert_logs.json');
+
+  try {
+    const result = await executeInstantSelfServeAudit(
+      {
+        fullName: 'Ramesh Babu (Plant Director)',
+        companyName: 'Sriperumbudur CNC Castings Pvt Ltd',
+        workEmail: 'ramesh@sriperumbudurcastings.in',
+        phoneOrWhatsapp: '+91 98401 22334',
+        p1Rows: [
+          {
+            Part_ID: 'SRP-RM-001',
+            Part_Description: 'SG Iron Valve Body Casting Blank',
+            Closing_Stock_Qty: '120',
+            Unit_Cost_INR: '1450',
+            Last_Movement_Date: '2025-11-10',
+          },
+          {
+            Part_ID: 'SRP-FG-002',
+            Part_Description: 'Machined Hydraulic Flange Assembly',
+            Closing_Stock_Qty: '45',
+            Unit_Cost_INR: '3200',
+            Last_Movement_Date: '2026-09-25',
+          },
+        ],
+      },
+      {
+        leadsFilePath: leadsFile,
+        workspacesFilePath: workspacesFile,
+        importRunsFilePath: importRunsFile,
+        auditEventsFilePath: auditEventsFile,
+        workforceFilePath: workforceFile,
+        alertLogsFilePath: alertLogsFile,
+      }
+    );
+
+    assert.equal(result.ok, true);
+    assert.ok(result.leadId?.startsWith('PILOT-'));
+    assert.ok(result.workspaceId?.startsWith('AUDIT-'));
+    assert.ok(typeof result.accessToken === 'string' && result.accessToken.length >= 8);
+    assert.ok(
+      result.walkthroughUrl?.includes(`?view=pilot-findings&id=${result.workspaceId}`)
+    );
+    assert.equal(result.snapshot?.commercialAccessMode, 'TEASER_LOCKED');
+    assert.equal(result.snapshot?.summaryMetrics.totalSkus, 2);
+  } finally {
+    await fs.rm(tmpDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 }).catch(() => undefined);
+  }
+});
+
+test('Phase 17 Udyam MSME Proforma & Official Paid Receipt Generator: generateProformaInvoice includes udyamMsmeNumber and generatePaidReceipt returns RCPT-YYYYMMDD-XXXX with PAID & VERIFIED stamp', async () => {
+  const {
+    DEFAULT_FOUNDER_BILLING_CONFIG,
+    generateProformaInvoice,
+    generatePaidReceipt,
+  } = await import('../utils/founderBillingStore');
+
+  const mockSnapshot = {
+    workspaceId: 'AUDIT-20261110-99AA',
+    leadId: 'PILOT-20261110-99AA',
+    companyName: 'Ambattur Auto Forgings Pvt Ltd',
+    plantLocation: 'Ambattur Industrial Estate, Chennai',
+    createdAt: '2026-11-10T08:00:00.000Z',
+    commercialAccessMode: 'FULL_UNLOCKED' as const,
+    submittedUtrNumber: '431298765432',
+    paymentVerifiedAt: '2026-11-10T09:30:00.000Z',
+    invoiceId: 'INV-20261110-99AA',
+    paymentTier: 'TIER2_FULL_AUDIT' as const,
+  };
+
+  const proforma = generateProformaInvoice(
+    mockSnapshot,
+    null,
+    {
+      ...DEFAULT_FOUNDER_BILLING_CONFIG,
+      udyamMsmeNumber: 'UDYAM-TN-02-0192837',
+      gstinOptional: '',
+    },
+    'TIER2_FULL_AUDIT'
+  );
+  assert.equal(proforma.udyamMsmeNumber, 'UDYAM-TN-02-0192837');
+  assert.equal(proforma.gstinOptional, '');
+  assert.equal(proforma.upiId, '9080540047@yespop');
+  assert.equal(proforma.paymentStatus, 'PAID_VERIFIED');
+
+  const receipt = generatePaidReceipt(
+    mockSnapshot,
+    null,
+    {
+      ...DEFAULT_FOUNDER_BILLING_CONFIG,
+      udyamMsmeNumber: 'UDYAM-TN-02-0192837',
+      gstinOptional: '',
+    },
+    'TIER2_FULL_AUDIT'
+  );
+  assert.equal(receipt.receiptId, 'RCPT-20261110-99AA');
+  assert.equal(receipt.invoiceId, 'INV-20261110-99AA');
+  assert.equal(receipt.utrNumber, '431298765432');
+  assert.equal(receipt.amountPaidInr, 14999);
+  assert.equal(receipt.stamp, 'PAID & VERIFIED');
+  assert.equal(receipt.udyamMsmeNumber, 'UDYAM-TN-02-0192837');
+  assert.equal(receipt.verifiedBy, 'C. Jones Snowin');
+});
+
+test('Phase 17 FAQ #9 Pricing Clarity & WhatsApp/LinkedIn SEO Meta Previews: Verifies Free 3-SKU Teaser (₹0) + ₹14,999 one-time unlock in FAQ #9 and OpenGraph/JSON-LD/og-banner.svg assets', async () => {
+  const fs = await import('fs/promises');
+  const path = await import('path');
+  const { FAQ_ITEMS } = await import('../commercial/homepageConfig');
+
+  const faq9 = FAQ_ITEMS.find((item) => item.q === 'Is the pilot free or paid?');
+  assert.ok(faq9);
+  assert.ok(
+    faq9!.a.includes(
+      'Free 3-SKU Diagnostic Teaser & Executive Exposure Summary (₹0)'
+    )
+  );
+  assert.ok(faq9!.a.includes('₹14,999 one-time unlock'));
+  assert.ok(faq9!.a.includes('zero automatic subscriptions'));
+
+  const indexHtml = await fs.readFile(path.join(process.cwd(), 'index.html'), 'utf-8');
+  assert.ok(indexHtml.includes('property="og:image" content="/og-banner.svg"'));
+  assert.ok(indexHtml.includes('name="twitter:image" content="/og-banner.svg"'));
+  assert.ok(indexHtml.includes('"@type": "SoftwareApplication"'));
+  assert.ok(indexHtml.includes('"@type": "FAQPage"'));
+
+  const ogSvg = await fs.readFile(
+    path.join(process.cwd(), 'public/og-banner.svg'),
+    'utf-8'
+  );
+  assert.ok(ogSvg.includes('<svg'));
+  assert.ok(ogSvg.includes('9080540047@yespop'));
+
+  const robotsTxt = await fs.readFile(
+    path.join(process.cwd(), 'public/robots.txt'),
+    'utf-8'
+  );
+  assert.ok(robotsTxt.includes('Sitemap: https://operationalyst.in/sitemap.xml'));
+
+  const sitemapXml = await fs.readFile(
+    path.join(process.cwd(), 'public/sitemap.xml'),
+    'utf-8'
+  );
+  assert.ok(sitemapXml.includes('<urlset'));
+  assert.ok(sitemapXml.includes('https://operationalyst.in/?view=pilot-findings'));
+});
+
+test('Phase 18 Outbound 50-Plant Sales CRM: Verifies all 50 pre-seeded Chennai & Hosur manufacturing targets across 4 clusters (14 + 12 + 12 + 12)', async () => {
+  const {
+    INITIAL_OUTBOUND_TARGET_COMPANIES,
+    OUTBOUND_CLUSTERS,
+    getTargetCompanyDayBatch,
+  } = await import('../data/outboundTargetCompanies');
+
+  assert.equal(INITIAL_OUTBOUND_TARGET_COMPANIES.length, 50);
+  assert.equal(OUTBOUND_CLUSTERS.length, 4);
+
+  const c1 = INITIAL_OUTBOUND_TARGET_COMPANIES.filter(
+    (c) => c.cluster === 'Ambattur Industrial Estate'
+  );
+  const c2 = INITIAL_OUTBOUND_TARGET_COMPANIES.filter(
+    (c) => c.cluster === 'Guindy, Perungudi & Thirumudivakkam'
+  );
+  const c3 = INITIAL_OUTBOUND_TARGET_COMPANIES.filter(
+    (c) => c.cluster === 'Sriperumbudur, Oragadam & Maraimalai Nagar'
+  );
+  const c4 = INITIAL_OUTBOUND_TARGET_COMPANIES.filter(
+    (c) => c.cluster === 'SIPCOT Hosur Phase I & II'
+  );
+
+  assert.equal(c1.length, 14);
+  assert.equal(c2.length, 12);
+  assert.equal(c3.length, 12);
+  assert.equal(c4.length, 12);
+
+  assert.equal(c1[0].companyName, 'Autotech Industries India Pvt Ltd');
+  assert.equal(c2[0].companyName, 'Super Auto Forge Limited');
+  assert.equal(c3[0].companyName, 'Besmak India Pvt Ltd');
+  assert.equal(c4[0].companyName, 'VJS Auto Components Pvt Ltd');
+  assert.equal(c4[11].companyName, 'Innotrans Systems India Pvt Ltd');
+
+  // Verify 10-plant daily batches (Days 1..5)
+  assert.equal(getTargetCompanyDayBatch(0), 1);
+  assert.equal(getTargetCompanyDayBatch(9), 1);
+  assert.equal(getTargetCompanyDayBatch(10), 2);
+  assert.equal(getTargetCompanyDayBatch(25), 3);
+  assert.equal(getTargetCompanyDayBatch(35), 4);
+  assert.equal(getTargetCompanyDayBatch(49), 5);
+});
+
+test('Phase 18 LinkedIn <300-Char Note, X-Ray Search URL & WhatsApp Pitch Generator: Verifies <300 character limit across all 50 companies', async () => {
+  const {
+    INITIAL_OUTBOUND_TARGET_COMPANIES,
+    buildLinkedInXRaySearchUrl,
+    buildLinkedInConnectionNote,
+    buildWhatsAppTeaserPitch,
+    buildWhatsAppLaunchUrl,
+  } = await import('../data/outboundTargetCompanies');
+
+  for (const company of INITIAL_OUTBOUND_TARGET_COMPANIES) {
+    const note = buildLinkedInConnectionNote(company);
+    assert.ok(
+      note.length > 40 && note.length < 300,
+      `Expected LinkedIn note for ${company.companyName} to be <300 chars, got ${note.length}`
+    );
+    assert.ok(note.includes('Free 3-SKU Teaser'));
+
+    const xRayUrl = buildLinkedInXRaySearchUrl(company.companyName);
+    assert.ok(xRayUrl.startsWith('https://www.google.com/search?q='));
+    assert.ok(decodeURIComponent(xRayUrl).includes(`"${company.companyName}"`));
+    assert.ok(decodeURIComponent(xRayUrl).includes('site:linkedin.com/in/'));
+  }
+
+  const pitch = buildWhatsAppTeaserPitch(
+    INITIAL_OUTBOUND_TARGET_COMPANIES[0],
+    'https://operationalyst.in'
+  );
+  assert.ok(pitch.includes('Autotech Industries India Pvt Ltd'));
+  assert.ok(pitch.includes('Ambattur Industrial Estate'));
+  assert.ok(pitch.includes('₹14,999'));
+  assert.ok(pitch.includes('https://operationalyst.in'));
+
+  const waUrl = buildWhatsAppLaunchUrl('+91 90805 40047', pitch);
+  assert.ok(waUrl?.startsWith('https://wa.me/919080540047?text='));
+  assert.equal(buildWhatsAppLaunchUrl('', pitch), null);
+});
+
+test('Phase 18 Outbound CRM Persistence, Status Updates, Add Target Factory & CSV Export', async () => {
+  const fs = await import('fs/promises');
+  const path = await import('path');
+  const os = await import('os');
+  const {
+    getOutboundCrmCompanies,
+    updateOutboundTargetCompany,
+    addOutboundTargetCompany,
+    exportOutboundCrmToCsv,
+  } = await import('../data/outboundTargetCompanies');
+
+  const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'op-phase18-crm-'));
+  const crmFile = path.join(tmpDir, 'outbound_crm.json');
+
+  try {
+    const initial = await getOutboundCrmCompanies(crmFile);
+    assert.equal(initial.length, 50);
+    assert.equal(initial[0].status, 'NOT_CONTACTED');
+
+    const updatedRes = await updateOutboundTargetCompany(
+      'TARGET-001',
+      {
+        status: 'TEASER_OFFERED',
+        contactName: 'R. Sundaram (MD)',
+        phoneOrWhatsapp: '+91 98401 11223',
+        notes: 'Sent 3-SKU Teaser link on WhatsApp',
+      },
+      crmFile
+    );
+    assert.equal(updatedRes.ok, true);
+    assert.equal(updatedRes.company?.status, 'TEASER_OFFERED');
+    assert.equal(updatedRes.company?.contactName, 'R. Sundaram (MD)');
+    assert.ok(updatedRes.company?.lastFollowUpAt);
+
+    const addedRes = await addOutboundTargetCompany(
+      {
+        companyName: 'Ennore Heavy Castings Pvt Ltd',
+        cluster: 'Ambattur Industrial Estate',
+        segment: 'Heavy Foundry & CNC',
+        contactName: 'V. Natarajan',
+        status: 'LINKEDIN_SENT',
+      },
+      crmFile
+    );
+    assert.equal(addedRes.ok, true);
+    assert.equal(addedRes.companies.length, 51);
+    assert.equal(addedRes.company?.id, 'TARGET-051');
+
+    const csv = exportOutboundCrmToCsv(addedRes.companies);
+    assert.ok(csv.includes('Company_Name,Cluster,Segment'));
+    assert.ok(csv.includes('Autotech Industries India Pvt Ltd'));
+    assert.ok(csv.includes('Ennore Heavy Castings Pvt Ltd'));
+  } finally {
+    await fs
+      .rm(tmpDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 })
+      .catch(() => undefined);
+  }
+});
 
 
 

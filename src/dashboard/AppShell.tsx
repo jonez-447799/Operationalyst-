@@ -136,7 +136,9 @@ export const AppShell: React.FC<AppShellProps> = ({
     return initialTab;
   });
   const [roleView, setRoleView] = useState<RoleViewMode>('executive');
-  const [showOperatorTools, setShowOperatorTools] = useState<boolean>(false);
+  const [hideOperatorTools, setHideOperatorTools] = useState<boolean>(true);
+  const showOperatorTools = !hideOperatorTools;
+  const [isResetting, setIsResetting] = useState<boolean>(false);
   const [showPilotAuditModal, setShowPilotAuditModal] = useState<boolean>(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(false);
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState<boolean>(false);
@@ -207,11 +209,21 @@ export const AppShell: React.FC<AppShellProps> = ({
   }, [activePlant.id, syncRefreshKey]);
 
   const handleResetPlantWorkspace = async () => {
+    setIsResetting(true);
     setServerSyncState((prev) => ({ ...prev, resetting: true }));
+
+    // Immediately reset local browser state so UI updates right away
+    clearPlantDatasetInBrowser(activePlant.id);
+    setPlantSyncTick((t) => t + 1);
+    window.dispatchEvent(new Event('storage'));
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 1500);
+
     try {
-      clearPlantDatasetInBrowser(activePlant.id);
       const res = await fetch(`/api/plant-workspaces/${activePlant.id}/reset`, {
         method: 'POST',
+        signal: controller.signal,
       });
       if (res.ok) {
         const payload = await res.json();
@@ -237,10 +249,18 @@ export const AppShell: React.FC<AppShellProps> = ({
         }
       }
     } catch {
-      setServerSyncState((prev) => ({ ...prev, resetting: false }));
+      // Local browser state is already restored; ignore network or timeout errors
+    } finally {
+      clearTimeout(timeoutId);
+      setIsResetting(false);
+      setServerSyncState((prev) => ({
+        ...prev,
+        isCustomized: false,
+        resetting: false,
+      }));
+      setPlantSyncTick((t) => t + 1);
+      window.dispatchEvent(new Event('storage'));
     }
-    setPlantSyncTick((t) => t + 1);
-    window.dispatchEvent(new Event('storage'));
   };
 
   // Build live platform snapshot from P1-P5 engines
@@ -269,9 +289,9 @@ export const AppShell: React.FC<AppShellProps> = ({
   };
 
   const handleToggleOperatorTools = () => {
-    setShowOperatorTools((prev) => {
-      const next = !prev;
-      if (!next) {
+    setHideOperatorTools((prevHide) => {
+      const nextHide = !prevHide;
+      if (nextHide) {
         if (roleView !== 'executive') {
           setRoleView('executive');
         }
@@ -279,7 +299,7 @@ export const AppShell: React.FC<AppShellProps> = ({
           setActiveTab('overview');
         }
       }
-      return next;
+      return nextHide;
     });
   };
 
@@ -527,14 +547,15 @@ export const AppShell: React.FC<AppShellProps> = ({
                         </span>
                         <button
                           type="button"
+                          data-testid="reset-plant-baseline-btn"
                           onClick={handleResetPlantWorkspace}
-                          disabled={serverSyncState.resetting}
+                          disabled={isResetting}
                           className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-slate-950 hover:bg-slate-800 border border-slate-700 text-slate-300 hover:text-white font-mono text-[10px] cursor-pointer"
                           title={`Reset ${activePlant.name} back to its deterministic factory baseline`}
                         >
                           <RotateCcw className="w-2.5 h-2.5 text-sky-400" />
                           <span>
-                            {serverSyncState.resetting ? 'Resetting...' : 'Reset Plant to Baseline'}
+                            {isResetting ? 'Resetting...' : 'Reset Plant to Baseline'}
                           </span>
                         </button>
                       </>
@@ -634,7 +655,9 @@ export const AppShell: React.FC<AppShellProps> = ({
             {mobileDrawerOpen && (
               <div className="md:hidden mt-3 pt-3 border-t border-slate-800 space-y-2">
                 <div className="grid grid-cols-2 gap-1.5">
-                  {PLATFORM_NAVIGATION.map((item) => (
+                  {PLATFORM_NAVIGATION.filter(
+                    (item) => showOperatorTools || item.id !== 'administration'
+                  ).map((item) => (
                     <button
                       key={item.id}
                       onClick={() => {

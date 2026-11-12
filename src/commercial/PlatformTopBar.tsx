@@ -70,12 +70,12 @@ export const PLATFORM_DEMO_PLANTS: Record<PlantId, PlatformDemoPlantPreset> = {
     flaggedLRs: 12,
     freightSummary: '₹13,944 Freight Leak across 12 Flagged LRs',
     binMatchPercent: 60,
-    binVarianceValue: 24240,
-    binVarianceFormatted: '₹24,240',
+    binVarianceValue: 24800,
+    binVarianceFormatted: '₹24,800',
     auditedBins: 6,
-    binSummary: '60% Bin Match / ₹24,240 Variance across 6 Bins',
+    binSummary: '60% Bin Match / ₹24,800 Variance across 6 Bins',
     summaryLine:
-      '20 SKUs · ₹6,45,650 Total Stock · ₹2,23,110 Non-Moving (8 SKUs) · ₹63,600 Slow-Moving (2 SKUs) · 50% OTIF (9/18) · ₹13,944 Freight Leak across 12 Flagged LRs · 60% Bin Match / ₹24,240 Variance across 6 Bins',
+      '20 SKUs · ₹6,45,650 Total Stock · ₹2,23,110 Non-Moving (8 SKUs) · ₹63,600 Slow-Moving (2 SKUs) · 50% OTIF (9/18) · ₹13,944 Freight Leak across 12 Flagged LRs · 60% Bin Match / ₹24,800 Variance across 6 Bins',
   },
   sriperumbudur: {
     id: 'sriperumbudur',
@@ -312,7 +312,7 @@ export const PlatformTopBar: React.FC<PlatformTopBarProps> = ({
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700 transition-colors cursor-pointer"
           >
             <ArrowLeft className="w-3.5 h-3.5 text-blue-400" />
-            <span>← Website Overview</span>
+            <span>Website Overview</span>
           </button>
 
           <div
@@ -384,7 +384,7 @@ export const PlatformTopBar: React.FC<PlatformTopBarProps> = ({
             }}
             className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold bg-blue-600 hover:bg-blue-500 text-white shadow-sm transition-colors cursor-pointer"
           >
-            <span>Run on Your Plant Data (Free 48h Pilot) →</span>
+            <span>Run on Your Plant Data (Free 48h Pilot)</span>
             <ArrowRight className="w-3.5 h-3.5" />
           </button>
         </div>

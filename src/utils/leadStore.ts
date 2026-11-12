@@ -13,6 +13,7 @@ import type {
   LinkedPlantId,
   LeadDataQualityOverview,
 } from './leadValidation.ts';
+import { syncRecordToCloud } from './cloudPersistenceStore.ts';
 
 export const DEFAULT_LEADS_FILE_PATH = path.resolve(process.cwd(), 'data', 'pilot_requests.json');
 
@@ -109,7 +110,8 @@ async function readAllRecordsUnsafe(filePath: string): Promise<PilotRequestRecor
 }
 
 /**
- * Creates and persists a new PilotRequestRecord to disk using serialized write locking.
+ * Creates and persists a new PilotRequestRecord to disk using serialized write locking,
+ * and triggers a non-blocking Supabase PostgREST sync when configured.
  */
 export async function createLeadRecord(
   input: ValidatedPilotRequestInput,
@@ -141,6 +143,7 @@ export async function createLeadRecord(
 
     existing.push(record);
     await writeAllRecordsUnsafe(filePath, existing);
+    void syncRecordToCloud('pilot_leads', record.leadId, record).catch(() => {});
     return record;
   });
 }
@@ -225,6 +228,7 @@ export async function updateLeadRecord(
 
     records[idx] = updated;
     await writeAllRecordsUnsafe(filePath, records);
+    void syncRecordToCloud('pilot_leads', updated.leadId, updated).catch(() => {});
     return updated;
   });
 }

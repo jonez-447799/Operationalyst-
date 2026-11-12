@@ -1,5 +1,5 @@
-import { StockItem, RulesConfig } from '../types';
-import { AMBATTUR_FABRICATION_SAMPLE, DEFAULT_RULES } from './initialData';
+import type { StockItem, RulesConfig } from '../types.ts';
+import { AMBATTUR_FABRICATION_SAMPLE, DEFAULT_RULES } from './initialData.ts';
 
 export interface TrialDataset {
   id: string;

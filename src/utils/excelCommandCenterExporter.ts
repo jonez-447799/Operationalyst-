@@ -1,21 +1,21 @@
 import * as XLSX from 'xlsx';
-import { evaluateStockEngine } from '../project1/utils/calculations';
-import { calculateRowStatus } from '../project2/utils/otifCalculator';
-import { calculateAuditMetrics } from '../project3/utils/auditCalculations';
-import { calculateItemFields } from '../project4/utils/auditCalculations';
-import { sanitizeSpreadsheetCell } from './importValidation';
+import { evaluateStockEngine } from '../project1/utils/calculations.ts';
+import { calculateRowStatus } from '../project2/utils/otifCalculator.ts';
+import { calculateAuditMetrics } from '../project3/utils/auditCalculations.ts';
+import { calculateItemFields } from '../project4/utils/auditCalculations.ts';
+import { sanitizeSpreadsheetCell } from './importValidation.ts';
 import {
-  PlantId,
+  type PlantId,
   isValidPlantId,
   getActivePlantIdFromStorage,
   readPlantDatasetFromBrowser,
-} from '../data/multiPlantBaselines';
+} from '../data/multiPlantBaselines.ts';
 import {
   normalizeCapaItem,
   type CapaPillar,
   type CapaDispositionType,
   type CapaVerificationStage,
-} from './capaLedger';
+} from './capaLedger.ts';
 
 export type RagColor = 'GREEN' | 'AMBER' | 'RED';
 

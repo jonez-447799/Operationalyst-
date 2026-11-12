@@ -7,7 +7,7 @@ import * as XLSX from 'xlsx';
 import {
   sanitizeSpreadsheetCell,
   toSafeCsvCell,
-  QuarantinedRowRecord,
+  type QuarantinedRowRecord,
 } from './importValidation.ts';
 import { trackServerFunnelEvent } from './analytics.ts';
 

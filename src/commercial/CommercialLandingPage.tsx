@@ -93,9 +93,19 @@ export const CommercialLandingPage: React.FC<CommercialLandingPageProps> = ({
   const [isLegalModalOpen, setIsLegalModalOpen] = useState(false);
   const [legalModalTab, setLegalModalTab] = useState<LegalGovernanceTab>('privacy');
   const [sampleModeId, setSampleModeId] = useState<SampleAuditModeId>('illustrative_12400');
+  const [sampleTablePage, setSampleTablePage] = useState<number>(1);
+  const [isMobileNavOpen, setIsMobileNavOpen] = useState<boolean>(false);
 
   const sampleAuditModes = getReconciledSampleAuditModes();
   const activeSampleMode = sampleAuditModes[sampleModeId] || sampleAuditModes.sandbox_20;
+
+  const handleOpenDedicatedSamplePage = () => {
+    if (onOpenSampleAuditPage) {
+      onOpenSampleAuditPage();
+    } else {
+      window.location.href = '?view=sample-audit';
+    }
+  };
 
   const handleOpenLegalModal = (tab: LegalGovernanceTab) => {
     setLegalModalTab(tab);
@@ -218,14 +228,14 @@ export const CommercialLandingPage: React.FC<CommercialLandingPageProps> = ({
       {/* SECTION 1: NAVIGATION                                                 */}
       {/* ===================================================================== */}
       <header className="sticky top-0 z-40 bg-slate-950/90 backdrop-blur-md border-b border-slate-850">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 h-16 flex items-center justify-between gap-2 sm:gap-4">
           {/* Logo & Wordmark */}
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center shrink-0">
               <Layers className="w-4 h-4 text-emerald-400" />
             </div>
-            <div>
-              <span className="text-base sm:text-lg font-black tracking-tight text-white uppercase font-mono">
+            <div className="min-w-0">
+              <span className="text-sm sm:text-lg font-black tracking-tight text-white uppercase font-mono block truncate">
                 OPERATIONALYST
               </span>
               <p className="text-[10px] text-slate-400 hidden sm:block font-mono">
@@ -235,7 +245,7 @@ export const CommercialLandingPage: React.FC<CommercialLandingPageProps> = ({
           </div>
 
           {/* Clean Navigation Links */}
-          <nav className="hidden lg:flex items-center gap-5 text-xs font-semibold text-slate-300">
+          <nav className="hidden lg:flex items-center gap-4 text-xs font-semibold text-slate-300">
             <a href="#how-it-works" className="hover:text-emerald-400 transition">
               How It Works
             </a>
@@ -250,7 +260,16 @@ export const CommercialLandingPage: React.FC<CommercialLandingPageProps> = ({
               onClick={() => handleOpenSampleReport('nav')}
               className="hover:text-emerald-400 transition cursor-pointer text-left"
             >
-              Sample Report
+              View Sample Report
+            </button>
+            <button
+              type="button"
+              data-testid="nav-full-sample-report-btn"
+              onClick={handleOpenDedicatedSamplePage}
+              className="hover:text-emerald-400 transition cursor-pointer text-left inline-flex items-center gap-1"
+            >
+              <span>Full-Page Sample Report</span>
+              <ExternalLink className="w-3 h-3 text-emerald-400" />
             </button>
             <a href="#data-trust" className="hover:text-emerald-400 transition">
               Data &amp; Trust
@@ -284,12 +303,12 @@ export const CommercialLandingPage: React.FC<CommercialLandingPageProps> = ({
             </button>
           </nav>
 
-          {/* Right Action Button */}
-          <div className="flex items-center gap-2.5">
+          {/* Right Action Button & Responsive Menu Trigger */}
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             <button
               type="button"
               onClick={handleViewPlatform}
-              className="lg:hidden min-h-[38px] px-2.5 py-1.5 rounded-lg bg-slate-900 text-slate-300 hover:text-white border border-slate-800 text-xs font-mono font-semibold flex items-center gap-1 cursor-pointer"
+              className="hidden sm:flex lg:hidden min-h-[38px] px-2.5 py-1.5 rounded-lg bg-slate-900 text-slate-300 hover:text-white border border-slate-800 text-xs font-mono font-semibold items-center gap-1 cursor-pointer"
             >
               <Activity className="w-3.5 h-3.5 text-emerald-400" />
               <span>Platform</span>
@@ -297,13 +316,99 @@ export const CommercialLandingPage: React.FC<CommercialLandingPageProps> = ({
             <button
               type="button"
               onClick={() => handleOpenAuditModal('nav_button')}
-              className="min-h-[38px] px-4 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs flex items-center gap-1.5 cursor-pointer transition shadow-md touch-manipulation active:scale-95"
+              className="min-h-[36px] sm:min-h-[38px] px-2.5 sm:px-4 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-[11px] sm:text-xs flex items-center gap-1 cursor-pointer transition shadow-md touch-manipulation active:scale-95 whitespace-nowrap"
             >
               <span>Request Pilot Audit</span>
-              <ArrowRight className="w-3.5 h-3.5" />
+              <ArrowRight className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+            </button>
+            <button
+              type="button"
+              data-testid="mobile-nav-menu-toggle"
+              aria-expanded={isMobileNavOpen}
+              aria-label="Toggle navigation menu"
+              onClick={() => setIsMobileNavOpen((prev) => !prev)}
+              className="lg:hidden min-h-[36px] sm:min-h-[38px] px-2 sm:px-2.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-200 text-[11px] sm:text-xs font-mono font-bold flex items-center gap-1 cursor-pointer shrink-0"
+            >
+              <span>Menu</span>
+              {isMobileNavOpen ? (
+                <ChevronUp className="w-3.5 h-3.5 text-emerald-400" />
+              ) : (
+                <ChevronDown className="w-3.5 h-3.5 text-emerald-400" />
+              )}
             </button>
           </div>
         </div>
+
+        {/* Responsive Mobile Navigation Drawer */}
+        {isMobileNavOpen && (
+          <div
+            data-testid="mobile-nav-panel"
+            className="lg:hidden border-t border-slate-850 bg-slate-950 px-4 py-3 space-y-2 text-xs font-mono"
+          >
+            <div className="grid grid-cols-2 gap-2">
+              <a
+                href="#how-it-works"
+                onClick={() => setIsMobileNavOpen(false)}
+                className="px-3 py-2 rounded-lg bg-slate-900 border border-slate-800 text-slate-200 hover:text-emerald-400"
+              >
+                How It Works
+              </a>
+              <a
+                href="#audit"
+                onClick={() => setIsMobileNavOpen(false)}
+                className="px-3 py-2 rounded-lg bg-slate-900 border border-slate-800 text-slate-200 hover:text-emerald-400"
+              >
+                Factory Audit
+              </a>
+              <a
+                href="#stakeholders"
+                onClick={() => setIsMobileNavOpen(false)}
+                className="px-3 py-2 rounded-lg bg-slate-900 border border-slate-800 text-slate-200 hover:text-emerald-400"
+              >
+                By Role
+              </a>
+              <a
+                href="#data-trust"
+                onClick={() => setIsMobileNavOpen(false)}
+                className="px-3 py-2 rounded-lg bg-slate-900 border border-slate-800 text-slate-200 hover:text-emerald-400"
+              >
+                Data &amp; Trust
+              </a>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsMobileNavOpen(false);
+                  handleOpenSampleReport('mobile_nav');
+                }}
+                className="px-3 py-2 rounded-lg bg-slate-900 border border-slate-800 text-left text-emerald-300 font-bold cursor-pointer"
+              >
+                View Sample Report
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsMobileNavOpen(false);
+                  handleOpenDedicatedSamplePage();
+                }}
+                className="px-3 py-2 rounded-lg bg-slate-900 border border-emerald-500/30 text-left text-emerald-300 font-bold cursor-pointer flex items-center justify-between"
+              >
+                <span>Full-Page Sample Report</span>
+                <ExternalLink className="w-3 h-3" />
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsMobileNavOpen(false);
+                  handleViewPlatform();
+                }}
+                className="col-span-2 px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-left text-white font-bold cursor-pointer flex items-center justify-center gap-1.5"
+              >
+                <Activity className="w-3.5 h-3.5 text-emerald-400" />
+                <span>Launch Executive Platform View</span>
+              </button>
+            </div>
+          </div>
+        )}
       </header>
 
       {/* ===================================================================== */}
@@ -603,7 +708,10 @@ export const CommercialLandingPage: React.FC<CommercialLandingPageProps> = ({
                   role="tab"
                   aria-selected={sampleModeId === 'illustrative_12400'}
                   data-testid="sample-mode-illustrative"
-                  onClick={() => setSampleModeId('illustrative_12400')}
+                  onClick={() => {
+                    setSampleModeId('illustrative_12400');
+                    setSampleTablePage(1);
+                  }}
                   className={`px-3 py-1.5 rounded-lg border font-bold cursor-pointer transition ${
                     sampleModeId === 'illustrative_12400'
                       ? 'bg-emerald-500/20 border-emerald-500 text-emerald-300'
@@ -617,7 +725,10 @@ export const CommercialLandingPage: React.FC<CommercialLandingPageProps> = ({
                   role="tab"
                   aria-selected={sampleModeId === 'sandbox_20'}
                   data-testid="sample-mode-sandbox"
-                  onClick={() => setSampleModeId('sandbox_20')}
+                  onClick={() => {
+                    setSampleModeId('sandbox_20');
+                    setSampleTablePage(1);
+                  }}
                   className={`px-3 py-1.5 rounded-lg border font-bold cursor-pointer transition ${
                     sampleModeId === 'sandbox_20'
                       ? 'bg-amber-500/20 border-amber-500 text-amber-300'
@@ -706,19 +817,172 @@ export const CommercialLandingPage: React.FC<CommercialLandingPageProps> = ({
               </div>
             </div>
 
+            {/* Dynamic Velocity Distribution Chart & Paginated Priority SKU Table */}
+            <div
+              data-testid="sample-mode-dynamic-chart"
+              className="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-3 font-mono text-xs"
+            >
+              <div className="flex flex-wrap items-center justify-between gap-2 text-[11px]">
+                <span className="font-bold text-slate-200 uppercase">
+                  {sampleModeId === 'illustrative_12400'
+                    ? 'Mode A Velocity Distribution (12,400 Line Items · ₹4,82,50,000)'
+                    : 'Mode B Velocity Distribution (20-SKU Sandbox · ₹6,45,650)'}
+                </span>
+                <span className="text-emerald-300">
+                  {sampleModeId === 'illustrative_12400'
+                    ? 'Active (<90d): 89.4% · Slow (90–180d): 6.8% · Non-Moving (>180d): 3.8%'
+                    : 'Active (<90d): 55.5% · Slow (90–179d): 9.9% · Non-Moving (>180d): 34.6%'}
+                </span>
+              </div>
+              <div className="w-full h-3 rounded-full bg-slate-950 overflow-hidden flex border border-slate-800">
+                <div
+                  className="h-full bg-emerald-500 transition-all duration-300"
+                  style={{ width: sampleModeId === 'illustrative_12400' ? '89.4%' : '55.5%' }}
+                />
+                <div
+                  className="h-full bg-amber-500 transition-all duration-300"
+                  style={{ width: sampleModeId === 'illustrative_12400' ? '6.8%' : '9.9%' }}
+                />
+                <div
+                  className="h-full bg-rose-500 transition-all duration-300"
+                  style={{ width: sampleModeId === 'illustrative_12400' ? '3.8%' : '34.6%' }}
+                />
+              </div>
+
+              {/* Paginated Top Priority SKUs Preview */}
+              <div className="pt-2 border-t border-slate-800 space-y-2">
+                <div className="flex flex-wrap items-center justify-between gap-2 text-[11px]">
+                  <span className="text-slate-400">
+                    Flagged Priority SKUs (Page {sampleTablePage} of 2)
+                  </span>
+                  <div className="inline-flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      data-testid="sample-table-page-1-btn"
+                      onClick={() => setSampleTablePage(1)}
+                      className={`px-2 py-0.5 rounded border cursor-pointer ${
+                        sampleTablePage === 1
+                          ? 'bg-emerald-500/20 border-emerald-500 text-emerald-300 font-bold'
+                          : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      Page 1
+                    </button>
+                    <button
+                      type="button"
+                      data-testid="sample-table-page-2-btn"
+                      onClick={() => setSampleTablePage(2)}
+                      className={`px-2 py-0.5 rounded border cursor-pointer ${
+                        sampleTablePage === 2
+                          ? 'bg-emerald-500/20 border-emerald-500 text-emerald-300 font-bold'
+                          : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      Page 2
+                    </button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
+                  {(sampleModeId === 'illustrative_12400'
+                    ? sampleTablePage === 1
+                      ? [
+                          {
+                            code: 'PRG-4402-SS',
+                            name: 'CNC Machined Flange Housing',
+                            val: '₹7,77,000',
+                            idle: '312d inactive · ₹1,70,940/yr burn',
+                          },
+                          {
+                            code: 'HSG-910-ALU',
+                            name: 'Die-Cast Gearbox Cover Housing',
+                            val: '₹4,18,000',
+                            idle: '196d inactive · ₹91,960/yr burn',
+                          },
+                        ]
+                      : [
+                          {
+                            code: 'SHF-304-EN24',
+                            name: 'Induction Hardened Drive Shaft',
+                            val: '₹3,43,000',
+                            idle: '248d inactive · ₹75,460/yr burn',
+                          },
+                          {
+                            code: 'BRG-6205-ZZ',
+                            name: 'Sealed Spindle Bearing (Item 07 Reserve)',
+                            val: '₹54,400',
+                            idle: '214d inactive · Retain 15 pcs reserve',
+                          },
+                        ]
+                    : sampleTablePage === 1
+                    ? [
+                        {
+                          code: 'FG-VALVE-90',
+                          name: 'High-Pressure Control Valve Assembly',
+                          val: '₹62,000',
+                          idle: '320d inactive · Non-Moving (>180d)',
+                        },
+                        {
+                          code: 'RM-CR-COIL',
+                          name: 'Cold Rolled Steel Slit Coil 1.6mm',
+                          val: '₹45,000',
+                          idle: '295d inactive · Non-Moving (>180d)',
+                        },
+                      ]
+                    : [
+                        {
+                          code: 'FG-GEAR-210',
+                          name: 'Helical Gearbox Sub-Assembly',
+                          val: '₹42,000',
+                          idle: '260d inactive · Non-Moving (>180d)',
+                        },
+                        {
+                          code: 'SP-HYD-SEAL',
+                          name: 'Hydraulic Press Cylinder Seal Kit',
+                          val: '₹38,500',
+                          idle: '132d inactive · Slow-Moving (90–179d)',
+                        },
+                      ]
+                  ).map((item) => (
+                    <div
+                      key={item.code}
+                      className="p-2.5 rounded-lg bg-slate-950 border border-slate-800 flex items-center justify-between gap-2"
+                    >
+                      <div>
+                        <span className="font-bold text-white">{item.code}</span>{' '}
+                        <span className="text-slate-400 font-sans">· {item.name}</span>
+                        <div className="text-[10px] text-rose-300 mt-0.5">{item.idle}</div>
+                      </div>
+                      <div className="text-right font-bold text-emerald-300 shrink-0">{item.val}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
             {/* CTA to open full modal */}
             <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2 border-t border-slate-850">
               <span className="text-[11px] text-slate-400 font-mono">
                 Click below to review the multi-page illustrative report with SKU breakdowns and 2-page PDF briefing.
               </span>
-              <button
-                type="button"
-                onClick={() => handleOpenSampleReport('sample_section')}
-                className="w-full sm:w-auto px-5 py-2.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer transition shadow"
-              >
-                <FileSpreadsheet className="w-3.5 h-3.5" />
-                <span>View Sample Report</span>
-              </button>
+              <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                <button
+                  type="button"
+                  onClick={handleOpenDedicatedSamplePage}
+                  className="w-full sm:w-auto px-4 py-2.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-emerald-500/40 text-emerald-300 font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer transition"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  <span>Full-Page Sample Report (/audit)</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleOpenSampleReport('sample_section')}
+                  className="w-full sm:w-auto px-5 py-2.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer transition shadow"
+                >
+                  <FileSpreadsheet className="w-3.5 h-3.5" />
+                  <span>View Sample Report</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>

@@ -263,7 +263,7 @@ function buildInitialSeedState(): AgentWorkforceState {
       agentName: 'Agent 05 — Commercial Closer & Bank Billing Agent',
       title: 'Issued Proforma Invoice INV-20261012-P1P4 (₹14,999) with 0%-Fee UPI Deep-Link',
       description:
-        'Generated official B2B Proforma Invoice for Tier 2 Full 4-Pillar Audit (₹14,999) payable via UPI (cjonessnowin@okaxis) or NEFT/IMPS with 12-digit UTR verification.',
+        'Generated official B2B Proforma Invoice for Tier 2 Full 4-Pillar Audit (₹14,999) payable via UPI (9080540047@yespop) or NEFT/IMPS with 12-digit UTR verification.',
       taskType: 'PROFORMA_INVOICE_GENERATION',
       status: 'COMPLETED',
       requiresFounderApproval: false,
@@ -442,6 +442,14 @@ function normalizeWorkforceState(raw?: Partial<AgentWorkforceState> | null): Age
   const tasks: AgentWorkforceTask[] = Array.isArray(raw.tasks)
     ? raw.tasks.map((t) => ({
         ...t,
+        description:
+          typeof t.description === 'string'
+            ? t.description.replace(/cjonessnowin@okaxis/gi, '9080540047@yespop')
+            : t.description,
+        draftPayload:
+          typeof t.draftPayload === 'string'
+            ? t.draftPayload.replace(/cjonessnowin@okaxis/gi, '9080540047@yespop')
+            : t.draftPayload,
         computeCostInr: 0,
       }))
     : fallback.tasks;

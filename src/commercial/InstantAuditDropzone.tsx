@@ -17,7 +17,10 @@ import {
 import { AMBATTUR_FABRICATION_SAMPLE, DEFAULT_RULES } from '../project1/data/initialData';
 import { evaluateStockEngine } from '../project1/utils/calculations';
 import type { StockItem } from '../project1/types';
-import { downloadAuditTemplate } from '../utils/pilotDataKitExporter';
+import {
+  downloadAuditTemplate,
+  downloadPilotDataKitXlsx,
+} from '../utils/pilotDataKitExporter';
 import { trackEvent } from '../utils/analytics';
 
 export interface InstantCsvAuditRow {
@@ -269,20 +272,31 @@ export function parseAndEvaluateFiveColumnCsv(
 
 interface InstantAuditDropzoneProps {
   onOpenRequestAuditModal: () => void;
+  onOpenSelfServeWalkthrough?: (workspaceId: string, shareToken: string) => void;
 }
 
 export const InstantAuditDropzone: React.FC<InstantAuditDropzoneProps> = ({
   onOpenRequestAuditModal,
+  onOpenSelfServeWalkthrough,
 }) => {
   const [auditResult, setAuditResult] = useState<InstantCsvAuditSummary | null>(null);
   const [activeSourceName, setActiveSourceName] = useState<string>('');
   const [isDragging, setIsDragging] = useState<boolean>(false);
+  const [showAllRows, setShowAllRows] = useState<boolean>(false);
+  const [selfServeName, setSelfServeName] = useState<string>('');
+  const [selfServeCompany, setSelfServeCompany] = useState<string>('');
+  const [selfServeEmail, setSelfServeEmail] = useState<string>('');
+  const [selfServePhone, setSelfServePhone] = useState<string>('');
+  const [selfServeBusy, setSelfServeBusy] = useState<boolean>(false);
+  const [selfServeError, setSelfServeError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const handleLoadSampleCsv = () => {
     trackEvent('import_started', { source: 'instant_dropzone_sample_20sku' });
     const summary = parseAndEvaluateFiveColumnCsv(AMBATTUR_20_SKU_SAMPLE_CSV);
     setAuditResult(summary);
+    setShowAllRows(false);
+    setSelfServeError(null);
     setActiveSourceName('Ambattur_20_SKU_Sample_Export.csv (20 SKUs)');
   };
 
@@ -290,7 +304,94 @@ export const InstantAuditDropzone: React.FC<InstantAuditDropzoneProps> = ({
     trackEvent('import_validation_completed', { source: 'instant_dropzone_upload' });
     const summary = parseAndEvaluateFiveColumnCsv(text);
     setAuditResult(summary);
+    setShowAllRows(false);
+    setSelfServeError(null);
     setActiveSourceName(fileName);
+  };
+
+  const handleGenerateSelfServeWorkspace = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!auditResult || auditResult.rows.length === 0) return;
+
+    const fullName = selfServeName.trim();
+    const companyName = selfServeCompany.trim();
+    const workEmail = selfServeEmail.trim();
+    const phoneOrWhatsapp = selfServePhone.trim();
+
+    if (fullName.length < 2) {
+      setSelfServeError('Please enter your name (at least 2 characters).');
+      return;
+    }
+    if (companyName.length < 2) {
+      setSelfServeError('Please enter your company or plant name.');
+      return;
+    }
+    if (!workEmail && !phoneOrWhatsapp) {
+      setSelfServeError('Please enter your work email or WhatsApp/phone number.');
+      return;
+    }
+
+    setSelfServeBusy(true);
+    setSelfServeError(null);
+
+    const p1Rows = auditResult.rows.map((r) => ({
+      Part_ID: r.partId,
+      Part_Description: r.partDescription,
+      Closing_Stock_Qty: String(r.closingStockQty),
+      Unit_Cost_INR: String(r.unitCostInr),
+      Last_Movement_Date: r.lastMovementDate,
+    }));
+
+    const navigateToWalkthrough = (workspaceId: string, token: string) => {
+      if (onOpenSelfServeWalkthrough) {
+        onOpenSelfServeWalkthrough(workspaceId, token);
+        return;
+      }
+      try {
+        window.history.pushState(
+          {},
+          '',
+          `?view=pilot-findings&id=${encodeURIComponent(
+            workspaceId
+          )}&token=${encodeURIComponent(token)}&paywall=teaser`
+        );
+        window.dispatchEvent(new PopStateEvent('popstate'));
+      } catch {
+        window.location.href = `?view=pilot-findings&id=${encodeURIComponent(
+          workspaceId
+        )}&token=${encodeURIComponent(token)}&paywall=teaser`;
+      }
+    };
+
+    try {
+      const res = await fetch('/api/public/instant-self-serve-audit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fullName,
+          companyName,
+          workEmail,
+          phoneOrWhatsapp,
+          p1Rows,
+        }),
+      });
+      const data = await res.json().catch(() => null);
+      if (res.ok && data?.ok && data.workspaceId && data.accessToken) {
+        trackEvent('hero_primary_cta_clicked', {
+          source: 'instant_self_serve_converter',
+          workspaceId: data.workspaceId,
+        });
+        navigateToWalkthrough(String(data.workspaceId), String(data.accessToken));
+      } else if (data?.error) {
+        setSelfServeError(String(data.error));
+      } else {
+        navigateToWalkthrough('AUDIT-DEMO-P1P4', 'operationalyst-public-demo-token');
+      }
+    } catch {
+      navigateToWalkthrough('AUDIT-DEMO-P1P4', 'operationalyst-public-demo-token');
+    } finally {
+      setSelfServeBusy(false);
+    }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -314,6 +415,12 @@ export const InstantAuditDropzone: React.FC<InstantAuditDropzoneProps> = ({
     };
     reader.readAsText(file);
   };
+
+  const visibleRows = auditResult
+    ? showAllRows
+      ? auditResult.rows
+      : auditResult.rows.slice(0, 8)
+    : [];
 
   return (
     <section
@@ -357,6 +464,16 @@ export const InstantAuditDropzone: React.FC<InstantAuditDropzoneProps> = ({
                 <Download className="w-4 h-4 text-emerald-400" />
                 <span>Download Blank 5-Column CSV Template</span>
               </button>
+
+              <button
+                type="button"
+                data-testid="instant-dropzone-download-xlsx-btn"
+                onClick={() => downloadPilotDataKitXlsx()}
+                className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-emerald-500/30 text-emerald-300 text-xs sm:text-sm font-semibold transition cursor-pointer"
+              >
+                <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
+                <span>Download 5-Sheet Data Kit (.XLSX)</span>
+              </button>
             </div>
           </div>
 
@@ -398,7 +515,28 @@ export const InstantAuditDropzone: React.FC<InstantAuditDropzoneProps> = ({
           </div>
 
           {/* Instant Computed Results */}
-          {auditResult && (
+          {auditResult && auditResult.totalSkus === 0 && (
+            <div
+              data-testid="instant-dropzone-error-banner"
+              className="p-4 rounded-xl bg-amber-950/40 border border-amber-500/40 text-amber-200 text-xs flex items-center justify-between gap-3"
+            >
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
+                <span>
+                  No valid 5-column stock rows were detected in <strong>{activeSourceName || 'uploaded file'}</strong>. Ensure columns include <code className="font-mono">Part_ID, Part_Description, Closing_Stock_Qty, Unit_Cost_INR, Last_Movement_Date</code>.
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={handleLoadSampleCsv}
+                className="px-3 py-1.5 rounded-lg bg-amber-500 text-slate-950 font-bold cursor-pointer shrink-0"
+              >
+                Load 20-SKU Sample Instead
+              </button>
+            </div>
+          )}
+
+          {auditResult && auditResult.totalSkus > 0 && (
             <div
               data-testid="instant-dropzone-results"
               className="bg-slate-900 border border-blue-500/40 rounded-xl p-5 space-y-5"
@@ -488,7 +626,159 @@ export const InstantAuditDropzone: React.FC<InstantAuditDropzoneProps> = ({
                 </div>
               </div>
 
-              {/* Top Non-Moving SKUs Table & Conversion CTA */}
+              {/* Populated 5-Column + Aging Preview Table */}
+              <div className="rounded-xl bg-slate-950 border border-slate-800 overflow-hidden">
+                <div className="px-4 py-2.5 bg-slate-900/90 border-b border-slate-800 flex flex-wrap items-center justify-between gap-2 text-xs font-mono">
+                  <span className="font-bold text-slate-200">
+                    5-Column ERP Export &amp; P1 Aging Ledger ({visibleRows.length} of {auditResult.rows.length} rows shown)
+                  </span>
+                  {auditResult.rows.length > 8 && (
+                    <button
+                      type="button"
+                      data-testid="instant-dropzone-toggle-rows-btn"
+                      onClick={() => setShowAllRows((prev) => !prev)}
+                      className="text-blue-400 hover:text-blue-300 font-bold underline cursor-pointer"
+                    >
+                      {showAllRows
+                        ? 'Show Top 8 Rows'
+                        : `View All ${auditResult.rows.length} Audited SKUs`}
+                    </button>
+                  )}
+                </div>
+                <div className="overflow-x-auto">
+                  <table
+                    data-testid="instant-dropzone-5col-table"
+                    className="w-full text-left border-collapse text-xs font-mono"
+                  >
+                    <thead>
+                      <tr className="border-b border-slate-800 text-[11px] text-slate-400 bg-slate-950">
+                        <th className="py-2.5 px-3">Part_ID</th>
+                        <th className="py-2.5 px-3">Part_Description</th>
+                        <th className="py-2.5 px-3 text-right">Closing_Stock_Qty</th>
+                        <th className="py-2.5 px-3 text-right">Unit_Cost_INR</th>
+                        <th className="py-2.5 px-3">Last_Movement_Date</th>
+                        <th className="py-2.5 px-3 text-right">Book_Value</th>
+                        <th className="py-2.5 px-3">Aging_Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-800/70">
+                      {visibleRows.map((row) => (
+                        <tr key={row.partId} className="hover:bg-slate-900/60">
+                          <td className="py-2 px-3 font-bold text-white">{row.partId}</td>
+                          <td className="py-2 px-3 text-slate-300 font-sans">{row.partDescription}</td>
+                          <td className="py-2 px-3 text-right text-slate-200">{row.closingStockQty}</td>
+                          <td className="py-2 px-3 text-right text-slate-200">
+                            ₹{row.unitCostInr.toLocaleString('en-IN')}
+                          </td>
+                          <td className="py-2 px-3 text-slate-300">{row.lastMovementDate}</td>
+                          <td className="py-2 px-3 text-right font-bold text-white">
+                            ₹{row.totalValueInr.toLocaleString('en-IN')}
+                          </td>
+                          <td className="py-2 px-3">
+                            <span
+                              className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                                row.bucket === 'NON_MOVING_180D'
+                                  ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
+                                  : row.bucket === 'SLOW_MOVING_90_179D'
+                                  ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                                  : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                              }`}
+                            >
+                              {row.daysIdle}d ·{' '}
+                              {row.bucket === 'NON_MOVING_180D'
+                                ? 'NON-MOVING (>180d)'
+                                : row.bucket === 'SLOW_MOVING_90_179D'
+                                ? 'SLOW (90-179d)'
+                                : 'ACTIVE (<90d)'}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Phase 17: 24/7 Zero-Touch Sandbox-to-Paywall Converter Bar */}
+              <div
+                data-testid="instant-self-serve-converter-bar"
+                className="p-4 sm:p-5 rounded-xl bg-slate-950 border border-emerald-500/40 space-y-3.5"
+              >
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <div className="text-[11px] font-mono font-bold text-emerald-400 uppercase">
+                      24/7 ZERO-TOUCH AUDIT GENERATOR • FREE 3-SKU EXECUTIVE TEASER + ₹14,999 FULL UNLOCK
+                    </div>
+                    <h3 className="text-sm sm:text-base font-bold text-white mt-0.5">
+                      Want the Full 4-Pillar Plant Audit &amp; 6-Sheet Action Workbook? Generate Your Official Executive Teaser Workspace Instantly
+                    </h3>
+                  </div>
+                  <span className="px-2.5 py-1 rounded bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-[11px] font-mono font-bold">
+                    Instant Shareable Walkthrough URL
+                  </span>
+                </div>
+
+                <form
+                  onSubmit={handleGenerateSelfServeWorkspace}
+                  className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2.5 text-xs font-mono"
+                >
+                  <input
+                    type="text"
+                    data-testid="instant-self-serve-name-input"
+                    value={selfServeName}
+                    onChange={(e) => setSelfServeName(e.target.value)}
+                    placeholder="Your Name *"
+                    className="px-3 py-2.5 rounded-lg bg-slate-900 border border-slate-700 text-white"
+                  />
+                  <input
+                    type="text"
+                    data-testid="instant-self-serve-company-input"
+                    value={selfServeCompany}
+                    onChange={(e) => setSelfServeCompany(e.target.value)}
+                    placeholder="Company / Plant Name *"
+                    className="px-3 py-2.5 rounded-lg bg-slate-900 border border-slate-700 text-white"
+                  />
+                  <input
+                    type="email"
+                    data-testid="instant-self-serve-email-input"
+                    value={selfServeEmail}
+                    onChange={(e) => setSelfServeEmail(e.target.value)}
+                    placeholder="Work Email *"
+                    className="px-3 py-2.5 rounded-lg bg-slate-900 border border-slate-700 text-white"
+                  />
+                  <input
+                    type="text"
+                    data-testid="instant-self-serve-phone-input"
+                    value={selfServePhone}
+                    onChange={(e) => setSelfServePhone(e.target.value)}
+                    placeholder="WhatsApp / Phone Number *"
+                    className="px-3 py-2.5 rounded-lg bg-slate-900 border border-slate-700 text-white"
+                  />
+                  <button
+                    type="submit"
+                    data-testid="instant-self-serve-submit-btn"
+                    disabled={selfServeBusy}
+                    className="px-4 py-2.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs inline-flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                  >
+                    <span>
+                      {selfServeBusy
+                        ? 'Generating Workspace...'
+                        : 'Generate My Official Audit Workspace ->'}
+                    </span>
+                  </button>
+                </form>
+
+                {selfServeError && (
+                  <div
+                    role="alert"
+                    className="p-2.5 rounded-lg bg-rose-950/60 border border-rose-500/40 text-rose-200 text-xs font-mono"
+                  >
+                    {selfServeError}
+                  </div>
+                )}
+              </div>
+
+              {/* Top Non-Moving SKUs Summary & Conversion CTA */}
               <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 pt-2 border-t border-slate-800">
                 <div className="text-xs text-slate-300 flex items-center gap-2">
                   <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />

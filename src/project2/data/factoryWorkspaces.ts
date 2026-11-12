@@ -1,6 +1,6 @@
-import { FactoryWorkspace, AuditLogEntry, SecurityConfig } from '../types/database';
-import { INITIAL_DISPATCHES, INITIAL_RULES, DEFAULT_FACTORY_PROFILE } from './initialData';
-import { DispatchRow, RulesConfig } from '../types/otif';
+import type { FactoryWorkspace, AuditLogEntry, SecurityConfig } from '../types/database.ts';
+import { INITIAL_DISPATCHES, INITIAL_RULES, DEFAULT_FACTORY_PROFILE } from './initialData.ts';
+import type { DispatchRow, RulesConfig } from '../types/otif.ts';
 
 // Sample Dispatches for Client 2: Bharat Heavy Forgings & Castings (Pune)
 const BHARAT_FORGINGS_DISPATCHES: DispatchRow[] = [

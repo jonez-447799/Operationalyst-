@@ -1,4 +1,4 @@
-import { DispatchRow, RulesConfig, FactoryProfile } from './otif';
+import type { DispatchRow, RulesConfig, FactoryProfile } from './otif.ts';
 
 export interface AuditLogEntry {
   id: string;

@@ -1,5 +1,4 @@
 import express from "express";
-import { createServer as createViteServer } from "vite";
 import path from "path";
 import {
   validatePilotRequestPayload,
@@ -36,6 +35,7 @@ import {
 } from "./src/utils/serverAuditLog.ts";
 import {
   executeStep2PilotIngestion,
+  executeInstantSelfServeAudit,
   listImportRunRecords,
 } from "./src/utils/importRunStore.ts";
 import {
@@ -69,7 +69,17 @@ import {
 import {
   getFounderBillingConfig,
   updateFounderBillingConfig,
+  sanitizePublicFounderBillingConfig,
+  LIVE_FOUNDER_UPI_ID,
 } from "./src/utils/founderBillingStore.ts";
+import {
+  syncRecordToCloud,
+  SUPABASE_TABLE_SQL_SNIPPET,
+} from "./src/utils/cloudPersistenceStore.ts";
+import {
+  dispatchFounderAlert,
+  listFounderAlertLogs,
+} from "./src/utils/founderAlertNotifier.ts";
 import {
   getAgentWorkforceState,
   decomposeFounderRevenueGoal,
@@ -79,6 +89,13 @@ import {
   decideAgentWorkforceTask,
 } from "./src/utils/agentWorkforceEngine.ts";
 import { isValidPlantId } from "./src/data/multiPlantBaselines.ts";
+import {
+  getOutboundCrmCompanies,
+  updateOutboundTargetCompany,
+  addOutboundTargetCompany,
+  type OutboundClusterName,
+  type OutboundTargetStatus,
+} from "./src/data/outboundTargetCompanies.ts";
 const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000; // 15 minutes
 const RATE_LIMIT_MAX_REQUESTS = 5;
 
@@ -161,6 +178,7 @@ async function startServer() {
   app.use("/api/admin/system-restore", express.json({ limit: "5mb" }));
   app.use("/api/admin/pilot-workspaces", express.json({ limit: "2mb" }));
   app.use("/api/pilot-upload", express.json({ limit: "2mb" }));
+  app.use("/api/public/instant-self-serve-audit", express.json({ limit: "2mb" }));
   app.use("/api/plant-workspaces", express.json({ limit: "2mb" }));
   app.use(express.json({ limit: "32kb" }));
 
@@ -220,6 +238,21 @@ async function startServer() {
       }).catch(() => {});
 
       void triggerLeadArrivalAgentPipeline(record).catch(() => {});
+      void syncRecordToCloud("pilot_leads", record.leadId, record).catch(() => {});
+      void dispatchFounderAlert({
+        eventType: "NEW_PILOT_LEAD",
+        companyName: record.companyName,
+        plantLocation: record.plantLocation,
+        contactName: record.fullName,
+        contactEmailOrPhone: record.workEmail || record.phoneOrWhatsapp,
+        workEmail: record.workEmail,
+        phoneOrWhatsapp: record.phoneOrWhatsapp,
+        erpSystem: record.erpSystem,
+        approxSkuCount: record.approxSkuCount,
+        leadId: record.leadId,
+        actionUrl: "?view=lead-inbox",
+        notes: `${record.erpSystem || "Tally/SAP/Excel"} · ${record.approxSkuCount || "5-Column Intake"}`,
+      }).catch(() => {});
 
       console.log(
         `[PILOT_LEAD_CAPTURED] leadId=${record.leadId} company="${record.companyName}" location="${record.plantLocation}"`
@@ -803,6 +836,27 @@ async function startServer() {
         ingestionResult.importRun,
         ingestionResult.snapshot
       ).catch(() => {});
+      void syncRecordToCloud(
+        "pilot_workspaces",
+        ingestionResult.snapshot.workspaceId,
+        ingestionResult.snapshot
+      ).catch(() => {});
+      void dispatchFounderAlert({
+        eventType: "CLIENT_FILE_UPLOADED",
+        companyName: ingestionResult.snapshot.companyName,
+        plantLocation: ingestionResult.snapshot.plantLocation,
+        leadId: isDemoLead ? "PILOT-DEMO-SANDBOX" : leadId,
+        workspaceId: ingestionResult.snapshot.workspaceId,
+        shareToken: ingestionResult.snapshot.shareToken,
+        actionUrl: ingestionResult.importRun.generatedWalkthroughUrl,
+        skuCount: ingestionResult.snapshot.summaryMetrics.totalSkus,
+        deadStockValueInr: ingestionResult.snapshot.summaryMetrics.deadStockValue,
+        quarantinedRowsCount:
+          (ingestionResult.importRun.p1Quality?.quarantinedRejected || 0) +
+          (ingestionResult.importRun.p2Quality?.quarantinedRejected || 0) +
+          (ingestionResult.importRun.p3Quality?.quarantinedRejected || 0) +
+          (ingestionResult.importRun.p4Quality?.quarantinedRejected || 0),
+      }).catch(() => {});
 
       return res.status(201).json({
         ok: true,
@@ -1405,10 +1459,11 @@ async function startServer() {
     }
   });
 
-  // 33. Phase 15 Public Founder Billing Config: GET /api/founder-billing/public
+  // 33. Phase 15/16 Public Founder Billing Config (Secrets Masked): GET /api/founder-billing/public
   app.get("/api/founder-billing/public", async (_req, res) => {
     try {
-      const config = await getFounderBillingConfig();
+      const rawConfig = await getFounderBillingConfig();
+      const config = sanitizePublicFounderBillingConfig(rawConfig);
       return res.json({
         ok: true,
         config,
@@ -1422,25 +1477,64 @@ async function startServer() {
     }
   });
 
-  // 34. Phase 15 Protected Update Founder Billing Config: PUT /api/admin/founder-billing
+  // 33b. Phase 16 Protected Founder Billing + Cloud & Alert Settings: GET /api/admin/founder-billing
+  app.get("/api/admin/founder-billing", async (req, res) => {
+    const auth = requireAdminAuth(req, res);
+    if (!auth) return;
+
+    try {
+      const rawConfig = await getFounderBillingConfig();
+      const publicConfig = sanitizePublicFounderBillingConfig(rawConfig);
+      const alertLogs = await listFounderAlertLogs();
+      return res.json({
+        ok: true,
+        config: {
+          ...publicConfig,
+          founderWebhookUrl: rawConfig.founderWebhookUrl || "",
+          supabaseUrl: rawConfig.supabaseUrl || "",
+          resendApiKey: publicConfig.maskedResendApiKey,
+          supabaseServiceKey: publicConfig.maskedSupabaseServiceKey,
+        },
+        alertLogs,
+        supabaseSqlSnippet: SUPABASE_TABLE_SQL_SNIPPET,
+      });
+    } catch (err) {
+      console.error("[GET_ADMIN_FOUNDER_BILLING_ERROR]", err);
+      return res.status(500).json({
+        ok: false,
+        error: "Failed to load Admin Founder Billing & Alert configuration.",
+      });
+    }
+  });
+
+  // 34. Phase 15/16 Protected Update Founder Billing Config: PUT /api/admin/founder-billing
   app.put("/api/admin/founder-billing", async (req, res) => {
     const auth = requireAdminAuth(req, res);
     if (!auth) return;
 
     try {
-      const config = await updateFounderBillingConfig(
+      const updatedRaw = await updateFounderBillingConfig(
         req.body && typeof req.body === "object" ? req.body : {}
       );
+      const publicConfig = sanitizePublicFounderBillingConfig(updatedRaw);
+      void syncRecordToCloud("founder_billing", "default", publicConfig).catch(() => {});
+
       await recordServerAuditEvent({
         actor: "C. Jones Snowin (Founder Admin)",
         category: "GOVERNANCE",
         action: "FOUNDER_BILLING_CONFIG_UPDATED",
-        details: `Updated Founder Payout Config: UPI=${config.upiId}, Tier2=₹${config.tier2FullAuditPriceInr}, Tier3=₹${config.tier3MonthlyRetainerInr}`,
+        details: `Updated Founder Payout Config: UPI=${updatedRaw.upiId}, Tier2=₹${updatedRaw.tier2FullAuditPriceInr}, Tier3=₹${updatedRaw.tier3MonthlyRetainerInr}, CloudSync=${publicConfig.hasSupabaseConfig}`,
       }).catch(() => {});
 
       return res.json({
         ok: true,
-        config,
+        config: {
+          ...publicConfig,
+          founderWebhookUrl: updatedRaw.founderWebhookUrl || "",
+          supabaseUrl: updatedRaw.supabaseUrl || "",
+          resendApiKey: publicConfig.maskedResendApiKey,
+          supabaseServiceKey: publicConfig.maskedSupabaseServiceKey,
+        },
       });
     } catch (err) {
       console.error("[UPDATE_FOUNDER_BILLING_ERROR]", err);
@@ -1451,7 +1545,54 @@ async function startServer() {
     }
   });
 
-  // 35. Phase 15 Public UTR Payment Submission: POST /api/pilot-workspaces/:workspaceId/submit-payment
+  // 34b. Phase 16 Protected Test Founder Payment Alert: POST /api/admin/test-founder-alert
+  app.post("/api/admin/test-founder-alert", async (req, res) => {
+    const auth = requireAdminAuth(req, res);
+    if (!auth) return;
+
+    try {
+      const config = await getFounderBillingConfig();
+      const body = (req.body && typeof req.body === "object" ? req.body : {}) as Record<
+        string,
+        unknown
+      >;
+      const testUtr =
+        typeof body.utrNumber === "string" && body.utrNumber.trim()
+          ? body.utrNumber.trim()
+          : "TESTUTR9080540047";
+
+      const alertLog = await dispatchFounderAlert({
+        eventType: "TEST_PAYMENT_ALERT",
+        companyName:
+          typeof body.companyName === "string" && body.companyName.trim()
+            ? body.companyName.trim()
+            : "Ambattur Precision Forge (Founder Test Payment Alert)",
+        plantLocation: "Ambattur Industrial Estate, Chennai",
+        workspaceId: "AUDIT-DEMO-P1P4",
+        invoiceId: "INV-20261012-P1P4",
+        utrNumber: testUtr,
+        amountInr: config.tier2FullAuditPriceInr || 14999,
+        upiId: config.upiId || LIVE_FOUNDER_UPI_ID,
+        tier: "TIER2_FULL_AUDIT",
+        contactEmailOrPhone: config.founderAlertEmail || "joneszz2004@gmail.com",
+      });
+
+      const alertLogs = await listFounderAlertLogs();
+      return res.status(201).json({
+        ok: true,
+        alertLog,
+        alertLogs,
+      });
+    } catch (err) {
+      console.error("[TEST_FOUNDER_ALERT_ERROR]", err);
+      return res.status(500).json({
+        ok: false,
+        error: "Failed to dispatch test founder payment alert.",
+      });
+    }
+  });
+
+  // 35. Phase 15/16 Public UTR Payment Submission: POST /api/pilot-workspaces/:workspaceId/submit-payment
   app.post("/api/pilot-workspaces/:workspaceId/submit-payment", async (req, res) => {
     const workspaceId = req.params.workspaceId?.trim();
     if (!workspaceId) {
@@ -1505,6 +1646,25 @@ async function startServer() {
         tier
       ).catch(() => null);
 
+      void syncRecordToCloud(
+        "pilot_workspaces",
+        result.snapshot.workspaceId,
+        result.snapshot
+      ).catch(() => {});
+
+      const alertLog = await dispatchFounderAlert({
+        eventType: "UTR_PAYMENT_SUBMITTED",
+        companyName: result.snapshot.companyName,
+        plantLocation: result.snapshot.plantLocation,
+        workspaceId: result.snapshot.workspaceId,
+        invoiceId: result.snapshot.invoiceId,
+        utrNumber: result.snapshot.submittedUtrNumber || utrNumber,
+        amountInr: result.snapshot.invoiceAmountInr || 14999,
+        tier,
+        contactEmailOrPhone: paidByEmail,
+        actionUrl: "?view=agent-workforce",
+      }).catch(() => null);
+
       await recordServerAuditEvent({
         actor: paidByEmail || `${result.snapshot.companyName} (Walkthrough Client)`,
         category: "PILOT_WALKTHROUGH",
@@ -1516,6 +1676,7 @@ async function startServer() {
         ok: true,
         snapshot: result.snapshot,
         queuedTask,
+        alertLog,
       });
     } catch (err) {
       console.error("[SUBMIT_PAYMENT_UTR_ERROR]", err);
@@ -1526,7 +1687,7 @@ async function startServer() {
     }
   });
 
-  // 36. Phase 15 Protected Founder Payment Verification & Unlock: POST /api/admin/pilot-workspaces/:workspaceId/verify-payment
+  // 36. Phase 15/16 Protected Founder Payment Verification & Unlock: POST /api/admin/pilot-workspaces/:workspaceId/verify-payment
   app.post("/api/admin/pilot-workspaces/:workspaceId/verify-payment", async (req, res) => {
     const auth = requireAdminAuth(req, res);
     if (!auth) return;
@@ -1558,6 +1719,12 @@ async function startServer() {
         });
       }
 
+      void syncRecordToCloud(
+        "pilot_workspaces",
+        result.snapshot.workspaceId,
+        result.snapshot
+      ).catch(() => {});
+
       await recordServerAuditEvent({
         actor: "C. Jones Snowin (Founder Admin)",
         category: "PILOT_WALKTHROUGH",
@@ -1582,27 +1749,277 @@ async function startServer() {
     }
   });
 
+  // 37. Phase 17 24/7 Zero-Touch Self-Serve CSV-to-Paywall Converter: POST /api/public/instant-self-serve-audit
+  app.post("/api/public/instant-self-serve-audit", async (req, res) => {
+    try {
+      const body = (req.body && typeof req.body === "object" ? req.body : {}) as Record<
+        string,
+        unknown
+      >;
+      const result = await executeInstantSelfServeAudit({
+        fullName: typeof body.fullName === "string" ? body.fullName : "",
+        companyName: typeof body.companyName === "string" ? body.companyName : "",
+        workEmail: typeof body.workEmail === "string" ? body.workEmail : undefined,
+        phoneOrWhatsapp:
+          typeof body.phoneOrWhatsapp === "string" ? body.phoneOrWhatsapp : undefined,
+        plantLocation: typeof body.plantLocation === "string" ? body.plantLocation : undefined,
+        p1Rows: Array.isArray(body.p1Rows)
+          ? (body.p1Rows as Array<Record<string, unknown>>)
+          : [],
+      });
+
+      if (!result.ok || !result.snapshot) {
+        return res.status(400).json({
+          ok: false,
+          error: result.error || "Unable to generate instant self-serve audit workspace.",
+        });
+      }
+
+      void syncRecordToCloud("pilot_leads", result.leadId!, result.lead!).catch(() => {});
+      void syncRecordToCloud(
+        "pilot_workspaces",
+        result.snapshot.workspaceId,
+        result.snapshot
+      ).catch(() => {});
+
+      return res.status(201).json({
+        ok: true,
+        leadId: result.leadId,
+        workspaceId: result.workspaceId,
+        accessToken: result.accessToken,
+        shareToken: result.shareToken,
+        walkthroughUrl: result.walkthroughUrl,
+        snapshot: result.snapshot,
+        importRun: result.importRun,
+      });
+    } catch (err) {
+      console.error("[INSTANT_SELF_SERVE_AUDIT_ERROR]", err);
+      return res.status(500).json({
+        ok: false,
+        error: "Failed to process 24/7 self-serve audit request.",
+      });
+    }
+  });
+
+  // 38. Phase 17 WhatsApp / LinkedIn Social Preview Banner & SEO Routes
+  app.get("/og-banner.svg", (_req, res) => {
+    res.setHeader("Content-Type", "image/svg+xml; charset=utf-8");
+    res.setHeader("Cache-Control", "public, max-age=3600");
+    res.send(`<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <rect width="1200" height="630" fill="#020617" />
+  <rect x="36" y="36" width="1128" height="558" rx="24" fill="#0f172a" stroke="#1e293b" stroke-width="2" />
+  <rect x="76" y="76" width="380" height="36" rx="8" fill="#064e3b" stroke="#10b981" stroke-width="1" />
+  <text x="96" y="100" fill="#6ee7b7" font-family="monospace" font-size="15" font-weight="bold">OPERATIONALYST • FACTORY INVENTORY INTELLIGENCE</text>
+  <text x="76" y="176" fill="#ffffff" font-family="sans-serif" font-size="48" font-weight="800">How Much of Your Factory Inventory</text>
+  <text x="76" y="236" fill="#34d399" font-family="sans-serif" font-size="48" font-weight="800">Has Stopped Moving (&gt;180 Days)?</text>
+  <text x="76" y="294" fill="#cbd5e1" font-family="sans-serif" font-size="22">Drop a 5-column Tally Prime, SAP, or Excel CSV export. Get a Free 3-SKU Diagnostic</text>
+  <text x="76" y="328" fill="#cbd5e1" font-family="sans-serif" font-size="22">Teaser (₹0) or unlock the 4-Pillar Plant Audit &amp; 6-Sheet Action Workbook (₹14,999).</text>
+  <g transform="translate(76, 376)">
+    <rect x="0" y="0" width="248" height="118" rx="14" fill="#020617" stroke="#334155" />
+    <text x="20" y="34" fill="#94a3b8" font-family="monospace" font-size="13" font-weight="bold">P1 DEAD STOCK (&gt;180D)</text>
+    <text x="20" y="74" fill="#fb7185" font-family="monospace" font-size="30" font-weight="bold">₹2,23,110</text>
+    <text x="20" y="100" fill="#64748b" font-family="monospace" font-size="12">22% Annual Carrying Burn</text>
+    <rect x="268" y="0" width="248" height="118" rx="14" fill="#020617" stroke="#334155" />
+    <text x="288" y="34" fill="#94a3b8" font-family="monospace" font-size="13" font-weight="bold">P2 GATE OTIF</text>
+    <text x="288" y="74" fill="#38bdf8" font-family="monospace" font-size="30" font-weight="bold">50.0% Pass</text>
+    <text x="288" y="100" fill="#64748b" font-family="monospace" font-size="12">9 of 18 Dispatches On-Time</text>
+    <rect x="536" y="0" width="248" height="118" rx="14" fill="#020617" stroke="#334155" />
+    <text x="556" y="34" fill="#94a3b8" font-family="monospace" font-size="13" font-weight="bold">P3 FREIGHT LEAKAGE</text>
+    <text x="556" y="74" fill="#fbbf24" font-family="monospace" font-size="30" font-weight="bold">₹13,944</text>
+    <text x="556" y="100" fill="#64748b" font-family="monospace" font-size="12">Rate + Detention Audit</text>
+    <rect x="804" y="0" width="244" height="118" rx="14" fill="#020617" stroke="#334155" />
+    <text x="824" y="34" fill="#94a3b8" font-family="monospace" font-size="13" font-weight="bold">P4 BIN VARIANCE</text>
+    <text x="824" y="74" fill="#c084fc" font-family="monospace" font-size="30" font-weight="bold">₹24,800</text>
+    <text x="824" y="100" fill="#64748b" font-family="monospace" font-size="12">60.0% Bin Match Accuracy</text>
+  </g>
+  <text x="76" y="548" fill="#94a3b8" font-family="monospace" font-size="16">Prepared by C. Jones Snowin · Snowin Ventures, Chennai · Direct UPI: 9080540047@yespop</text>
+</svg>`);
+  });
+
+  app.get("/robots.txt", (_req, res) => {
+    res.setHeader("Content-Type", "text/plain; charset=utf-8");
+    res.send(`User-agent: *\nAllow: /\nSitemap: https://operationalyst.in/sitemap.xml\n`);
+  });
+
+  app.get("/sitemap.xml", (_req, res) => {
+    res.setHeader("Content-Type", "application/xml; charset=utf-8");
+    res.send(`<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://operationalyst.in/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>
+  <url><loc>https://operationalyst.in/?view=sample-audit</loc><changefreq>weekly</changefreq><priority>0.9</priority></url>
+  <url><loc>https://operationalyst.in/?view=pilot-findings</loc><changefreq>weekly</changefreq><priority>0.9</priority></url>
+  <url><loc>https://operationalyst.in/app</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
+</urlset>`);
+  });
+
+  // 39. Phase 18 Outbound 50-Company Chennai & Hosur Sales CRM Endpoints
+  app.get("/api/admin/outbound-crm", async (req, res) => {
+    const auth = requireAdminAuth(req, res);
+    if (!auth) return;
+
+    try {
+      const companies = await getOutboundCrmCompanies();
+      return res.json({
+        ok: true,
+        isDefaultDevKey: auth.isDefaultDevKey,
+        total: companies.length,
+        companies,
+      });
+    } catch (err) {
+      console.error("[GET_OUTBOUND_CRM_ERROR]", err);
+      return res.status(500).json({
+        ok: false,
+        error: "Failed to load Outbound 50-Plant Sales CRM.",
+      });
+    }
+  });
+
+  app.patch("/api/admin/outbound-crm/:id", async (req, res) => {
+    const auth = requireAdminAuth(req, res);
+    if (!auth) return;
+
+    const id = req.params.id?.trim();
+    if (!id) {
+      return res.status(400).json({
+        ok: false,
+        error: "Target company ID is required.",
+      });
+    }
+
+    const body = (req.body && typeof req.body === "object" ? req.body : {}) as Record<
+      string,
+      unknown
+    >;
+
+    try {
+      const result = await updateOutboundTargetCompany(id, {
+        companyName:
+          typeof body.companyName === "string" ? body.companyName : undefined,
+        cluster:
+          typeof body.cluster === "string"
+            ? (body.cluster as OutboundClusterName)
+            : undefined,
+        segment: typeof body.segment === "string" ? body.segment : undefined,
+        targetBuyerRole:
+          typeof body.targetBuyerRole === "string" ? body.targetBuyerRole : undefined,
+        contactName:
+          typeof body.contactName === "string" ? body.contactName : undefined,
+        phoneOrWhatsapp:
+          typeof body.phoneOrWhatsapp === "string" ? body.phoneOrWhatsapp : undefined,
+        email: typeof body.email === "string" ? body.email : undefined,
+        status:
+          typeof body.status === "string"
+            ? (body.status as OutboundTargetStatus)
+            : undefined,
+        notes: typeof body.notes === "string" ? body.notes : undefined,
+        lastFollowUpAt:
+          typeof body.lastFollowUpAt === "string" ? body.lastFollowUpAt : undefined,
+      });
+
+      if (!result.ok || !result.company) {
+        return res.status(404).json({
+          ok: false,
+          error: result.error || `Target company ${id} not found.`,
+        });
+      }
+
+      return res.json({
+        ok: true,
+        company: result.company,
+        companies: result.companies,
+      });
+    } catch (err) {
+      console.error("[UPDATE_OUTBOUND_CRM_ERROR]", err);
+      return res.status(500).json({
+        ok: false,
+        error: "Failed to update target company in Outbound CRM.",
+      });
+    }
+  });
+
+  app.post("/api/admin/outbound-crm", async (req, res) => {
+    const auth = requireAdminAuth(req, res);
+    if (!auth) return;
+
+    const body = (req.body && typeof req.body === "object" ? req.body : {}) as Record<
+      string,
+      unknown
+    >;
+
+    try {
+      const result = await addOutboundTargetCompany({
+        companyName: typeof body.companyName === "string" ? body.companyName : "",
+        cluster:
+          typeof body.cluster === "string"
+            ? (body.cluster as OutboundClusterName)
+            : "Ambattur Industrial Estate",
+        segment: typeof body.segment === "string" ? body.segment : undefined,
+        targetBuyerRole:
+          typeof body.targetBuyerRole === "string" ? body.targetBuyerRole : undefined,
+        contactName:
+          typeof body.contactName === "string" ? body.contactName : undefined,
+        phoneOrWhatsapp:
+          typeof body.phoneOrWhatsapp === "string" ? body.phoneOrWhatsapp : undefined,
+        email: typeof body.email === "string" ? body.email : undefined,
+        status:
+          typeof body.status === "string"
+            ? (body.status as OutboundTargetStatus)
+            : "NOT_CONTACTED",
+        notes: typeof body.notes === "string" ? body.notes : undefined,
+      });
+
+      if (!result.ok || !result.company) {
+        return res.status(400).json({
+          ok: false,
+          error: result.error || "Invalid target company payload.",
+        });
+      }
+
+      return res.status(201).json({
+        ok: true,
+        company: result.company,
+        companies: result.companies,
+      });
+    } catch (err) {
+      console.error("[ADD_OUTBOUND_CRM_ERROR]", err);
+      return res.status(500).json({
+        ok: false,
+        error: "Failed to add new target company to Outbound CRM.",
+      });
+    }
+  });
+
   if (process.env.NODE_ENV !== "production") {
-    const vite = await createViteServer({
-      server: { middlewareMode: true, hmr: false },
-      appType: "spa",
-      plugins: [
-        {
-          name: "operationalyst-silence-hmr-ws",
-          enforce: "post",
-          transform(code, id) {
-            if (id.includes("vite/dist/client/client.mjs")) {
-              return code.replace(
-                "transport.connect(createHMRHandler(handleMessage));",
-                "/* HMR WebSocket disabled in Cloud Run preview */"
-              );
-            }
-            return null;
+    const viteReadyPromise = import("vite").then(({ createServer: createViteServer }) =>
+      createViteServer({
+        server: { middlewareMode: true, hmr: false, watch: null },
+        appType: "spa",
+        plugins: [
+          {
+            name: "operationalyst-silence-hmr-ws",
+            enforce: "post",
+            transform(code, id) {
+              if (id.includes("vite/dist/client/client.mjs")) {
+                return code.replace(
+                  "transport.connect(createHMRHandler(handleMessage));",
+                  "/* HMR WebSocket disabled in Cloud Run preview */"
+                );
+              }
+              return null;
+            },
           },
-        },
-      ],
+        ],
+      })
+    );
+
+    app.use(async (req, res, next) => {
+      try {
+        const vite = await viteReadyPromise;
+        vite.middlewares(req, res, next);
+      } catch (err) {
+        next(err);
+      }
     });
-    app.use(vite.middlewares);
   } else {
     const distPath = path.join(process.cwd(), "dist");
     app.use(express.static(distPath));

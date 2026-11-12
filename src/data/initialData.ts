@@ -1,4 +1,4 @@
-import { StockItem, RulesConfig } from '../types';
+import type { StockItem, RulesConfig } from '../types.ts';
 
 export const DEFAULT_RULES: RulesConfig = {
   asOfDate: '2026-10-01',

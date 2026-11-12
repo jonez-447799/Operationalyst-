@@ -1,7 +1,7 @@
-import { DispatchRow, RulesConfig } from '../types/otif';
-import { calculateRowStatus, calculateOTIFMetrics } from './otifCalculator';
-import { INITIAL_DISPATCHES, INITIAL_RULES } from '../data/initialData';
-import { INITIAL_WORKSPACES } from '../data/factoryWorkspaces';
+import type { DispatchRow, RulesConfig } from '../types/otif.ts';
+import { calculateRowStatus, calculateOTIFMetrics } from './otifCalculator.ts';
+import { INITIAL_DISPATCHES, INITIAL_RULES } from '../data/initialData.ts';
+import { INITIAL_WORKSPACES } from '../data/factoryWorkspaces.ts';
 
 export interface TestCase {
   id: string;

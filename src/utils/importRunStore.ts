@@ -23,12 +23,18 @@ import {
   type SnapshotAssumptionsAndExclusions,
 } from './pilotWorkspaceStore.ts';
 import {
+  createLeadRecord,
   getLeadRecordById,
   updateLeadRecord,
   DEFAULT_LEADS_FILE_PATH,
 } from './leadStore.ts';
 import type { PilotRequestRecord } from './leadValidation.ts';
 import { recordServerAuditEvent, DEFAULT_AUDIT_EVENTS_FILE_PATH } from './serverAuditLog.ts';
+import {
+  triggerLeadArrivalAgentPipeline,
+  triggerIngestionAgentPipeline,
+} from './agentWorkforceEngine.ts';
+import { dispatchFounderAlert } from './founderAlertNotifier.ts';
 import type { RulesConfig as StockRuleConfig } from '../project1/types.ts';
 import type { DispatchRow as P2DispatchItem } from '../project2/types/otif.ts';
 import { DEFAULT_RULES } from '../project1/data/initialData.ts';
@@ -107,6 +113,7 @@ export interface Step2PilotIngestionInput {
   rules?: Partial<StockRuleConfig>;
   executiveNotes?: string;
   preparedBy?: string;
+  commercialAccessMode?: 'TEASER_LOCKED' | 'UTR_PENDING_VERIFICATION' | 'FULL_UNLOCKED';
 }
 
 export interface Step2PilotIngestionResult {
@@ -555,6 +562,7 @@ export async function executeStep2PilotIngestion(
       anonymizationApplied,
       dataQualityOverview,
       assumptionsAndExclusions,
+      commercialAccessMode: input.commercialAccessMode,
     },
     workspacesFilePath
   );
@@ -668,6 +676,171 @@ export async function executeStep2PilotIngestion(
       P3: p3Result?.quarantinedRows || [],
       P4: p4Result?.quarantinedRows || [],
     },
+  };
+}
+
+export interface InstantSelfServeAuditInput {
+  fullName: string;
+  companyName: string;
+  workEmail?: string;
+  phoneOrWhatsapp?: string;
+  plantLocation?: string;
+  p1Rows: Array<Record<string, unknown>>;
+}
+
+export interface InstantSelfServeAuditResult {
+  ok: boolean;
+  error?: string;
+  leadId?: string;
+  workspaceId?: string;
+  accessToken?: string;
+  shareToken?: string;
+  walkthroughUrl?: string;
+  snapshot?: PilotWorkspaceSnapshot;
+  importRun?: ImportRunRecord;
+  lead?: PilotRequestRecord;
+}
+
+/**
+ * 24/7 Zero-Touch Self-Serve CSV-to-Paywall Converter:
+ * 1. Creates a PilotRequestRecord in `leadStore.ts`.
+ * 2. Runs `executeStep2PilotIngestion` on the visitor's 5-column CSV rows to generate a
+ *    4-pillar `PilotWorkspaceSnapshot` in `TEASER_LOCKED` mode.
+ * 3. Triggers the 5-Agent Workforce pipeline (`triggerLeadArrivalAgentPipeline` + `triggerIngestionAgentPipeline`)
+ *    and dispatches a `CLIENT_FILE_UPLOADED` founder alert.
+ * 4. Returns `{ ok: true, leadId, workspaceId, accessToken, walkthroughUrl, snapshot }`.
+ */
+export async function executeInstantSelfServeAudit(
+  input: InstantSelfServeAuditInput,
+  options?: {
+    importRunsFilePath?: string;
+    workspacesFilePath?: string;
+    leadsFilePath?: string;
+    auditEventsFilePath?: string;
+    workforceFilePath?: string;
+    alertLogsFilePath?: string;
+  }
+): Promise<InstantSelfServeAuditResult> {
+  const fullName = typeof input.fullName === 'string' ? input.fullName.trim() : '';
+  const companyName = typeof input.companyName === 'string' ? input.companyName.trim() : '';
+  const workEmail = typeof input.workEmail === 'string' ? input.workEmail.trim() : '';
+  const phoneOrWhatsapp =
+    typeof input.phoneOrWhatsapp === 'string' ? input.phoneOrWhatsapp.trim() : '';
+  const plantLocation =
+    typeof input.plantLocation === 'string' && input.plantLocation.trim()
+      ? input.plantLocation.trim()
+      : 'Chennai Industrial Corridor, Tamil Nadu';
+
+  if (fullName.length < 2) {
+    return { ok: false, error: 'Please enter your name (at least 2 characters).' };
+  }
+  if (companyName.length < 2) {
+    return { ok: false, error: 'Please enter your company or factory name.' };
+  }
+  if (!workEmail && !phoneOrWhatsapp) {
+    return {
+      ok: false,
+      error: 'Please enter either your work email or WhatsApp/phone number.',
+    };
+  }
+  if (!Array.isArray(input.p1Rows) || input.p1Rows.length === 0) {
+    return {
+      ok: false,
+      error: 'Please load or upload a valid 5-column CSV before generating your audit workspace.',
+    };
+  }
+
+  const createdLead = await createLeadRecord(
+    {
+      fullName,
+      companyName,
+      plantLocation,
+      workEmail,
+      phoneOrWhatsapp,
+      roleTitle: 'Plant / Operations Leadership (24/7 Self-Serve Sandbox)',
+      erpSystem: '5-Column CSV Self-Serve Upload',
+      approxSkuCount: `${input.p1Rows.length} SKUs (Instant Sandbox)`,
+      primaryChallenge: '24/7 Self-Serve 5-Column CSV Upload -> Teaser Workspace',
+      sourceView: 'instant_dropzone',
+      consentConfirmed: true,
+    },
+    options?.leadsFilePath || DEFAULT_LEADS_FILE_PATH
+  );
+
+  const ingestion = await executeStep2PilotIngestion(
+    {
+      leadId: createdLead.leadId,
+      companyName,
+      plantLocation,
+      plantId: 'ambattur',
+      p1Rows: input.p1Rows,
+      excludeReserveSpares: true,
+      preparedBy: 'C. Jones Snowin',
+      commercialAccessMode: 'TEASER_LOCKED',
+    },
+    {
+      importRunsFilePath: options?.importRunsFilePath,
+      workspacesFilePath: options?.workspacesFilePath,
+      leadsFilePath: options?.leadsFilePath,
+      auditEventsFilePath: options?.auditEventsFilePath,
+    }
+  );
+
+  if (!ingestion.ok || !ingestion.snapshot || !ingestion.importRun) {
+    return {
+      ok: false,
+      error:
+        ingestion.error ||
+        'Unable to generate your Teaser Audit Workspace from the uploaded CSV rows.',
+    };
+  }
+
+  const snap = ingestion.snapshot;
+  const walkthroughUrl = `?view=pilot-findings&id=${encodeURIComponent(
+    snap.workspaceId
+  )}&token=${encodeURIComponent(snap.shareToken)}`;
+
+  await triggerLeadArrivalAgentPipeline(createdLead, options?.workforceFilePath).catch(
+    () => {}
+  );
+  await triggerIngestionAgentPipeline(
+    createdLead.leadId,
+    ingestion.importRun,
+    snap,
+    options?.workforceFilePath
+  ).catch(() => {});
+
+  void dispatchFounderAlert(
+    {
+      eventType: 'CLIENT_FILE_UPLOADED',
+      companyName: snap.companyName,
+      plantLocation: snap.plantLocation,
+      contactName: fullName,
+      contactEmailOrPhone: workEmail || phoneOrWhatsapp,
+      workEmail,
+      phoneOrWhatsapp,
+      leadId: createdLead.leadId,
+      workspaceId: snap.workspaceId,
+      shareToken: snap.shareToken,
+      actionUrl: walkthroughUrl,
+      skuCount: snap.summaryMetrics.totalSkus,
+      deadStockValueInr: snap.summaryMetrics.deadStockValue,
+      quarantinedRowsCount: ingestion.importRun.p1Quality?.quarantinedRejected || 0,
+      notes: '24/7 Self-Serve Homepage CSV Sandbox -> Teaser Paywall Workspace',
+    },
+    options?.alertLogsFilePath ? { logFilePath: options.alertLogsFilePath } : undefined
+  ).catch(() => {});
+
+  return {
+    ok: true,
+    leadId: createdLead.leadId,
+    workspaceId: snap.workspaceId,
+    accessToken: snap.shareToken,
+    shareToken: snap.shareToken,
+    walkthroughUrl,
+    snapshot: snap,
+    importRun: ingestion.importRun,
+    lead: ingestion.updatedLead || createdLead,
   };
 }
 
