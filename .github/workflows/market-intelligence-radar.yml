@@ -44,22 +44,4 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh issue create \
-            --title "[Radar PRD] Indian MSME Working Capital & Dead Stock Optimization Engine" \
-            --label "agent-ready-spec" \
-            --body "## Build-Ready Feature Specification (PRD)
-
-### 1. Problem Statement
-Auto-component & engineering MSMEs across Ambattur, Sriperumbudur, Oragadam, Pune, and Coimbatore face working-capital locks due to high non-moving inventory holding costs (22% annual rate).
-
-### 2. Deterministic Formula / Metric Addition
-- Dormancy Bracket calculation: \`ΔDays = AsOfDate - LastMovementDate\`
-- Annual Carrying Cost: \`AnnualBurn = BookValue * 0.22\`
-- Pareto 80/20 Cumulative Value Concentration
-
-### 3. Target UI Component Target
-\`src/components/DeadStockAnalysis.tsx\`
-
-### 4. Verification Criteria
-- 100% In-Browser parsing & zero server upload.
-- Verified against \`scripts/supervision-gate.mjs\`." || true
+          gh issue create --title "[Radar PRD] Indian MSME Working Capital & Dead Stock Optimization Engine" --label "agent-ready-spec" --body "Indian MSME Working Capital & Dead Stock Optimization Engine PRD for DeadStockAnalysis.tsx." || true
