@@ -1,0 +1,80 @@
+name: Autonomous Feature Implementer
+
+on:
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: 'Target GitHub Issue Number'
+        required: false
+        default: '3'
+  issues:
+    types: [labeled]
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+  models: read
+
+jobs:
+  implement-feature:
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.label.name == 'approved-for-build' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Determine Target Issue Number
+        id: set-issue
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "ISSUE_NUM=${{ inputs.issue_number }}" >> $GITHUB_ENV
+          else
+            echo "ISSUE_NUM=${{ github.event.issue.number }}" >> $GITHUB_ENV
+          fi
+
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          ref: master
+          fetch-depth: 0
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Create Feature Branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b feat/agent-impl-issue-${{ env.ISSUE_NUM }}
+
+      - name: Execute Autonomous Implementer Script
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_NUMBER: ${{ env.ISSUE_NUM }}
+        run: node scripts/autonomous-implementer.mjs
+
+      - name: Build Project & Run Supervision Gate
+        run: |
+          npm run build
+          node scripts/supervision-gate.mjs
+
+      - name: Commit and Push Feature Branch
+        run: |
+          git add .
+          git commit -m "feat: autonomous implementer feature for issue #${{ env.ISSUE_NUM }}" || echo "No changes to commit"
+          git push origin feat/agent-impl-issue-${{ env.ISSUE_NUM }} --force-with-lease
+
+      - name: Create or Update Pull Request & Comment on Issue
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PR_TITLE="feat(agent): Autonomous implementation for Issue #${{ env.ISSUE_NUM }}"
+          PR_BODY="### Autonomous Feature Implementer Telemetry\n\n- **Target Issue**: Refs #${{ env.ISSUE_NUM }}\n- **Build Verification**: PASSED (\`npm run build\`)\n- **Supervision Invariants**: PASSED 100% Green (Gates 1-4)\n- **Local Privacy**: Maintained client-side calculation purity."
+          
+          pr_url=$(gh pr create --base master --head feat/agent-impl-issue-${{ env.ISSUE_NUM }} --title "$PR_TITLE" --body "$PR_BODY" || gh pr view feat/agent-impl-issue-${{ env.ISSUE_NUM }} --json url -q .url)
+          echo "PR created/updated: $pr_url"
+          
+          gh issue comment ${{ env.ISSUE_NUM }} --body "Autonomous Feature Implementer completed build & supervision verification. Pull Request created: $pr_url (Refs #${{ env.ISSUE_NUM }})" || true
