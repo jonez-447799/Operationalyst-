@@ -1,4 +1,4 @@
-Ximport { NavLink, HeroContent, ValueProposition, StakeholderPerspective, CommercialTier, TenTeamOperatingSystem, FAQItem } from './types';
+import { NavLink, HeroContent, ValueProposition, StakeholderPerspective, CommercialTier, TenTeamOperatingSystem, FAQItem } from './types';
 
 export const NAV_LINKS: NavLink[] = [
   { label: 'Overview', href: '#overview' },
