@@ -272,7 +272,8 @@ export const FAQ_ITEMS = [
   },
   {
     q: 'How long does an audit take?',
-    a: 'Once approved data is confirmed, an initial findings summary is typically completed within 48 to 72 hours for scheduling a 30-minute review call.',
+    a: 'Once approved data is confirmed, an initial f    q: 'Is the pilot free or paid?',
+    a: 'The instant in-browser 5-column CSV sandbox is 100% free with zero sign-up. The founder-led 48-hour Factory Diagnostic Audit is ₹18,000 (+ 18% GST), backed by a 100% refund guarantee if <₹2,50,000 in recoverable stagnant, freight, or bin leaks is identified, with an optional ₹15,000/month (+ 18% GST) Monthly Watchdog retainer and zero automatic subscription lock-in.',indings summary is typically completed within 48 to 72 hours for scheduling a 30-minute review call.',
   },
   {
     q: 'What happens after the findings review?',
@@ -311,7 +312,7 @@ export const STAKEHOLDER_PERSPECTIVES: StakeholderPerspective[] = [
     coreQuestion: 'How much working capital is needlessly trapped in our warehouse, and what does it cost to do nothing?',
     priorityOutcome: 'Release locked working capital, reduce annual 18–24% inventory carrying cost burn, and establish financial visibility across manufacturing plants.',
     unspokenAnxiety: 'Will this require capital expenditure, create consultant dependency, or yield numbers my plant heads will dispute?',
-    riskMitigation: 'Collaborative pilot audit at zero upfront software cost. Calculations are 100% explainable and traceable directly to your own accounting ledger.',
+    riB
     keyMetrics: ['₹ Trapped Capital (>180d)', 'Annual Carrying Cost Burn', 'Net Working Capital Days'],
   },
   {
