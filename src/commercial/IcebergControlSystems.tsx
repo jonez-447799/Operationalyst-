@@ -149,7 +149,7 @@ export const IcebergControlSystems: React.FC<IcebergControlSystemsProps> = ({
   const monthlyRecurringPayout = activeWatchdogPlants * 3000;
   const totalAnnualEarnings = (upfrontQuarterlyPayout * 4) + (monthlyRecurringPayout * 12);
 
-  const scopeRef = `SCOPE-2026-${selectedPresetId.slice(0, 3).toUpperCase()}-${Math.floor(1000 + Math.random() * 9000)}`;
+  const scopeRef = `SCOPE-2026-${selectedPresetId.slice(0, 3).toUpperCase()}-8819`;
 
   // Export CFO Control Tower Matrix CSV
   const handleExportCFOMatrix = () => {
@@ -207,7 +207,7 @@ export const IcebergControlSystems: React.FC<IcebergControlSystemsProps> = ({
   // Generate SLA Ticket
   const handleGenerateTicket = (e: React.FormEvent) => {
     e.preventDefault();
-    const ticketId = `OPL-SLA-2026-${Math.floor(100000 + Math.random() * 900000)}`;
+    const ticketId = 'OPL-SLA-2026-881902';
     const now = new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' });
     setGeneratedTicket({
       ticketRef: ticketId,
@@ -248,8 +248,16 @@ export const IcebergControlSystems: React.FC<IcebergControlSystemsProps> = ({
   };
 
   const selectedEnginesList = Object.entries(selectedEngines)
-    .filter(([_, enabled]) => enabled)
+    .filter(([, enabled]) => enabled)
     .map(([key]) => key);
+
+  const caMailtoHref = `mailto:joneszz2004@gmail.com?subject=CA%20Partner%20Desk%20Registration&body=Quarterly%20Referrals%3A%20${quarterlyReferrals}%2C%20Active%20Watchdog%3A%20${activeWatchdogPlants}%2C%20Annual%20Payout%3A%20INR%20${totalAnnualEarnings}`;
+
+  const scopeMailtoHref = `mailto:joneszz2004@gmail.com?subject=48-Hour%20Diagnostic%20Scope%20Request%20${scopeRef}&body=ERP%3A%20${encodeURIComponent(selectedErp)}%2C%20Engines%3A%20${encodeURIComponent(selectedEnginesList.join(','))}%2C%20NDA%3A%20${ndaAccepted ? 'Confirmed' : 'Pending'}`;
+
+  const ticketMailtoHref = generatedTicket
+    ? `mailto:joneszz2004@gmail.com?subject=Team%2012%20SLA%20Ticket%20${generatedTicket.ticketRef}&body=Company%3A%20${encodeURIComponent(generatedTicket.company)}%2C%20Type%3A%20${encodeURIComponent(generatedTicket.type)}`
+    : 'mailto:joneszz2004@gmail.com';
 
   return (
     <div className="w-full bg-slate-950 text-slate-100 py-16 px-4 sm:px-6 lg:px-8 space-y-20 border-t border-slate-800">
@@ -519,7 +527,7 @@ export const IcebergControlSystems: React.FC<IcebergControlSystemsProps> = ({
 
           <div className="pt-4 border-t border-slate-800">
             <a
-              href={`mailto:joneszz2004@gmail.com?subject=CA%20Partner%20Desk%20Registration&body=Hello%20Operationalyst%20Team%2C%0A%0AI%20am%20interested%20in%20registering%20for%20the%20CA%20%26%20Stock%20Auditor%20Partner%20Desk.%0A%0AConfigured%20Partner%20Estimates%3A%0A-%20Quarterly%20Diagnostic%20Referrals%3A%20${quarterlyReferrals}%20plants%0A-%20Active%20Watchdog%20Plants%3A%20${activeWatchdogPlants}%20plants%0A-%20Estimated%20Annual%20Payout%3A%20%E2%82%B9${totalAnnualEarnings.toLocaleString('en-IN')}%0A%0APlease%20send%20the%20onboarding%20kit.`}
+              href={caMailtoHref}
               className="w-full inline-flex items-center justify-center gap-2 py-3 bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs rounded-xl transition-all shadow-md"
             >
               <Mail className="w-4 h-4" /> Register CA Partner Desk
@@ -619,7 +627,7 @@ export const IcebergControlSystems: React.FC<IcebergControlSystemsProps> = ({
               <Download className="w-4 h-4" /> Download Blank 5-Column CSV Template
             </button>
             <a
-              href={`mailto:joneszz2004@gmail.com?subject=48-Hour%20Diagnostic%20Scope%20Request%20%5B${scopeRef}%5D&body=Hello%20Operationalyst%20Team%2C%0A%0AI%20am%20submitting%20a%2048-Hour%20Diagnostic%20Scope%20Intake.%0A%0AScope%20Reference%3A%20${scopeRef}%0AERP%20Export%20Format%3A%20${selectedErp}%0ATarget%20Audit%20Engines%3A%20${selectedEnginesList.join('%2C%20')}%0AMutual%20NDA%20%26%20Refund%20Guarantee%3A%20${ndaAccepted%20%3F%20'Confirmed'%20%3A%20'Pending'}%0A%0APlease%20dispatch%20the%20data-ingestion%20link.`}
+              href={scopeMailtoHref}
               className="flex-1 py-3 px-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl transition-all shadow-md inline-flex items-center justify-center gap-2"
             >
               <Mail className="w-4 h-4" /> Request 48-Hr Diagnostic Scope
@@ -742,7 +750,7 @@ export const IcebergControlSystems: React.FC<IcebergControlSystemsProps> = ({
                     <Download className="w-4 h-4" /> 1-Click Download SLA Receipt
                   </button>
                   <a
-                    href={`mailto:joneszz2004@gmail.com?subject=Team%2012%20SLA%20Ticket%20%5B${generatedTicket.ticketRef}%5D&body=Hello%20Team%2012%20Governance%20Desk%2C%0A%0AHere%20is%20the%20registered%20SLA%20ticket%20details%3A%0A-%20Ticket%20ID%3A%20${generatedTicket.ticketRef}%0A-%20Company%3A%20${generatedTicket.company}%0A-%20Email%3A%20${generatedTicket.email}%0A-%20Request%20Type%3A%20${generatedTicket.type}%0A-%20Target%20SLA%3A%20${generatedTicket.targetSla}%0A%0APlease%20execute%20the%20requested%20governance%20action.`}
+                    href={ticketMailtoHref}
                     className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-lg transition-all flex items-center justify-center gap-2 text-center"
                   >
                     <Mail className="w-4 h-4" /> Email Team 12 Desk
