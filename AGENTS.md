@@ -1,9 +1,32 @@
 # Operationalyst Autonomous Multi-Agent Matrix Constitution
 
+## Commercial Tiers Architecture
+1. **Free Diagnostic Teaser / Sandbox**: ₹0, instant in-browser 5-column CSV diagnostic teaser with zero sign-up required.
+2. **Factory Diagnostic Audit**: ₹18,000 + 18% GST (One-time), 48-hour delivery, 100% refund guarantee if <₹2,50,000 in recoverable leaks is found.
+3. **Monthly Watchdog Retainer**: ₹15,000 + 18% GST/month, monthly inventory & freight drift alerts, cancel anytime.
+4. **CA & Stock Auditor Partner Desk**: 20% Recurring Share on referred ₹18,000 audits and ₹15,000/month retainers, co-branded working papers, dedicated partner support.
+
+## 14-Team Institutional Operating System Architecture
+- **Team 1: Diagnostic Ingestion & Schema Normalization Lab** (Data Hygiene & Validation) — Cleaned 5-column schema matrix
+- **Team 2: Working Capital & Dead Stock Intelligence Desk** (Inventory Aging Analysis) — RTV & Salvage Liquidation Plan
+- **Team 3: OTIF & Dispatch Reliability Engine Desk** (Service Level Audit) — SLA Breach & Penalty Audit
+- **Team 4: Freight Rate-Card & Detention Forensic Cell** (Logistics Cost Control) — Transporter Debit Note Claims
+- **Team 5: Bin Variance & Ghost Stock Reconciliation Lab** (Warehouse Audit) — Physical vs ERP Variance Ledger
+- **Team 6: Financial Leak Quantification & Guarantee Gate** (Audit Quality Assurance) — Verified Leak Exposure Certification
+- **Team 7: Executive Working Paper & Action Plan Desk** (C-Suite Reporting) — Board-Ready PDF & Excel Audit Pack
+- **Team 8: Turnaround SLA & Delivery Operations Desk** (Execution Control) — 48-Hour SLA Delivery Track
+- **Team 9: Client Data Governance & Security Operations Desk** (Data Privacy & NDA) — Data Purge Certificate & NDA
+- **Team 10: Post-Audit Implementation Support Cell** (Recovery Execution) — Vendor & Inventory Action Guide
+- **Team 11: CA & Channel Partner Alliance Desk** (Partner Alliances) — CA stock auditor alliances, 20% recurring partner ledger, co-branded working papers
+- **Team 12: 24-Hour SLA Grievance & Data Purge Desk** (Data Purge & SLA Enforcement) — NDA enforcement, 14-day/on-demand data purge via `joneszz2004@gmail.com`, <24-hour escalation SLA
+- **Team 13: ERP Data Sanitization & Ingestion Lab** (ERP Normalization) — Tally/SAP/Busy/Excel normalization into deterministic 5-column schemas with zero ERP hooks
+- **Team 14: Market Radar & Watchdog Retention Cell** (Corridor Benchmarking) — Monthly SKU drift tracking, Chennai/Hosur/Coimbatore/Pune corridor benchmarks, ongoing ROI retention
+
 ## System Architecture & Directory Map
 Operationalyst is an Expert-League Autonomous Operating System for manufacturing inventory intelligence (Phase 1: GitHub).
 
-```
+---
+
 Operationalyst-/
 ├── .github/
 │   ├── agents/
@@ -25,7 +48,6 @@ Operationalyst-/
 │   └── market-radar.mjs
 ├── package.json
 └── SECURITY.md
-```
 
 ## Build & Supervision Commands
 - **Build**: `npm run build` (vite build)
