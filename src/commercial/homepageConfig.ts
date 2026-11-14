@@ -1,238 +1,436 @@
-import { NavLink, HeroContent, ValueProposition, StakeholderPerspective, CommercialTier, TenTeamOperatingSystem, FAQItem } from './types';
+export interface NavLink {
+  label: string;
+  href: string;
+}
+
+export interface HeroContent {
+  badge: string;
+  headline: string;
+  subheadline: string;
+  primaryCtaText: string;
+  primaryCtaHref: string;
+  secondaryCtaText: string;
+  secondaryCtaHref: string;
+  guaranteeText: string;
+}
+
+export interface ValueProposition {
+  id: string;
+  title: string;
+  description: string;
+  iconName: string;
+}
+
+export interface StakeholderPerspective {
+  role: string;
+  focus: string;
+  quote: string;
+  metric: string;
+}
+
+export interface CommercialTier {
+  id: string;
+  name: string;
+  price: string;
+  period?: string;
+  description: string;
+  features: string[];
+  ctaText: string;
+  ctaHref: string;
+  highlighted?: boolean;
+}
+
+export interface TenTeamOperatingSystem {
+  id: number;
+  name: string;
+  role: string;
+  deliverable: string;
+}
+
+export interface DataTrustItem {
+  title: string;
+  description: string;
+}
+
+export interface FAQItem {
+  question: string;
+  answer: string;
+}
+
+export interface ObjectionItem {
+  objection: string;
+  rebuttal: string;
+}
+
+export interface AnxietyMapItem {
+  trigger: string;
+  mitigation: string;
+}
+
+export interface IcebergDimension {
+  visible: string;
+  hiddenLeak: string;
+}
+
+export interface HeadlineVariant {
+  id: string;
+  headline: string;
+  subheadline: string;
+}
+
+export interface ProblemQuestion {
+  id: string;
+  question: string;
+  context: string;
+}
+
+export interface ProcessStep {
+  stepNumber: number;
+  title: string;
+  description: string;
+}
+
+export interface AuditDeliverable {
+  title: string;
+  description: string;
+  format: string;
+}
+
+export interface MethodologyStage {
+  stageNumber: number;
+  title: string;
+  description: string;
+}
+
+export type SampleAuditModeId = 'P1' | 'P2' | 'P3' | 'P4';
+
+export interface SampleAuditMode {
+  id: SampleAuditModeId;
+  name: string;
+  title: string;
+  description: string;
+  summaryMetrics: { label: string; value: string }[];
+  sampleFindings: { sku: string; location: string; issue: string; leakValue: string; status: string }[];
+}
 
 export const NAV_LINKS: NavLink[] = [
   { label: 'Overview', href: '#overview' },
   { label: 'Value Proof', href: '#value-proof' },
   { label: 'Stakeholders', href: '#stakeholders' },
   { label: 'Tiers & Pricing', href: '#tiers' },
-  { label: '10-Team OS', href: '#operating-system' },
+  { label: '14-Team OS', href: '#operating-system' },
   { label: 'FAQ', href: '#faq' },
 ];
 
 export const HERO_CONTENT: HeroContent = {
   badge: '48-Hour Factory Diagnostic Audit',
   headline: 'Zero-Risk Working Capital Diagnostic for Manufacturing Leadership',
-  subheadline: 'Expose ₹5L to ₹50L+ in stagnant inventory, unbilled freight, and bin-level shrinkage from standard 5-column ERP exports—in 48 hours with a 100% money-back guarantee.',
+  subheadline: 'Expose ₹5L to ₹50L+ in stagnant inventory, unbilled freight, and bin-level shrinkage from standard 5-column ERP CSV exports.',
   primaryCtaText: 'Upload 5-Column CSV (Free Diagnostic Teaser)',
   primaryCtaHref: '#upload',
   secondaryCtaText: 'View Commercial Tiers',
   secondaryCtaHref: '#tiers',
-  guaranteeText: '100% Refund Guarantee: If we find less than ₹2,50,000 in recoverable working capital leaks, your audit is free.',
+  guaranteeText: '100% Refund Guarantee: If we find less than ₹2,50,000 in recoverable working capital leaks, your audit is completely free.',
 };
 
 export const VALUE_PROPOSITIONS: ValueProposition[] = [
   {
-    title: '48-Hour Actionable Diagnostic',
-    description: 'Transform raw, messy ERP inventory dumps into immediate working capital recovery plans within 2 business days.',
-    icon: 'Clock',
+    id: 'speed',
+    title: '48-Hour Audit Delivery',
+    description: 'Rapid diagnostic analysis delivered within 48 hours without complex ERP integrations.',
+    iconName: 'Zap',
   },
   {
-    title: '100% Money-Back Guarantee',
-    description: 'Full audit fee refund if identified recoverable stagnant, freight, or bin leaks total under ₹2,50,000.',
-    icon: 'ShieldCheck',
+    id: 'guarantee',
+    title: '100% Refund Guarantee',
+    description: 'Full refund on ₹18,000 diagnostic audit if recoverable leaks fall below ₹2,50,000.',
+    iconName: 'ShieldCheck',
   },
   {
-    title: 'Zero ERP/IT Integration Required',
-    description: 'No software installation, API connectors, or IT security approvals needed. Works directly from 5-column CSV exports.',
-    icon: 'Database',
+    id: 'security',
+    title: 'Zero ERP Hooks / Data Purge',
+    description: 'Isolated in-memory schema validation with 14-day or on-demand strict data purge.',
+    iconName: 'Lock',
   },
   {
-    title: 'Multi-Plant Working Capital OS',
-    description: 'Unified diagnostic architecture designed to scale across single units, multi-plant operations, and enterprise groups.',
-    icon: 'Layers',
+    id: 'roi',
+    title: 'Quantified Cash Recovery',
+    description: 'Row-level traceable ledger of stagnant stock, detention slabs, and ghost inventory.',
+    iconName: 'TrendingUp',
   },
 ];
 
 export const STAKEHOLDER_PERSPECTIVES: StakeholderPerspective[] = [
   {
-    id: 'economic_buyer',
-    roleTitle: 'Owner / Managing Director / CFO',
-    stakeholderType: 'Economic Buyer',
-    coreQuestion: 'How much working capital is needlessly trapped in our warehouse, and what does it cost to do nothing?',
-    priorityOutcome: 'Release locked working capital, reduce annual 18-24% inventory carrying cost burn, and establish capital discipline.',
-    unspokenAnxiety: 'Will this require capital expenditure, create consultant dependency, or yield numbers my plant teams ignore?',
-    riskMitigation: 'Fixed ₹18,000 (+ 18% GST) 48-hour diagnostic backed by a 100% refund guarantee if <₹2,50,000 in recoverable leaks is found, with zero ERP capex and zero forced subscription lock-in.',
-    keyMetrics: ['₹ Trapped Capital (>180d)', 'Annual Carrying Cost Burn', 'Net Working Capital Days'],
+    role: 'Managing Director / CEO',
+    focus: 'Capital Preservation & ROI',
+    quote: 'Operationalyst provided line-item visibility into ₹18L in locked working capital across our regional units within 48 hours.',
+    metric: '₹18L Leak Unlocked',
   },
   {
-    id: 'technical_buyer',
-    roleTitle: 'VP / GM Operations & Supply Chain Head',
-    stakeholderType: 'Technical Buyer',
-    coreQuestion: 'How reliable is this classification logic, and will it integrate with our existing SAP/Tally/ERP workflows?',
-    priorityOutcome: 'Identify specific SKU-level slow-movers, eliminate stockouts of critical A-class items, and standardize safety stock math.',
-    unspokenAnxiety: 'Will this expose operational flaws to the board or add duplicate reporting overhead for my store managers?',
-    riskMitigation: 'Non-invasive 5-column CSV intake; generates actionable XLSX execution sheets matching existing store dispatch codes.',
-    keyMetrics: ['Dead Stock %', 'Inventory Turnover Ratio', 'Stockout Exposure Index'],
+    role: 'CFO / VP Finance',
+    focus: 'Audit Proof & Refund Guarantee',
+    quote: 'The ₹18,000 audit carried zero downside risk with the ₹2,50,000 leak guarantee. It identified rate-slab overcharges immediately.',
+    metric: '14x Audit ROI',
   },
   {
-    id: 'user_buyer',
-    roleTitle: 'Store Manager / Inventory Accountant / Dispatch Lead',
-    stakeholderType: 'User Buyer',
-    coreQuestion: 'Will this make my daily stock audits faster, or will I be stuck manually fixing broken spreadsheets?',
-    priorityOutcome: 'Clear out obsolete bin locations, resolve physical vs system inventory discrepancies, and stop fire-fighting.',
-    unspokenAnxiety: 'Is this audit designed to assign blame for historical variances or penalize my team?',
-    riskMitigation: 'Pre-formatted bin-location audit templates and step-by-step resolution playbooks designed for operational clarity.',
-    keyMetrics: ['Bin Audit Variance Rate', 'Slow-Moving SKU Count', 'Dispatch Cycle Time'],
+    role: 'Supply Chain Director',
+    focus: 'OTIF & Freight Leakage',
+    quote: 'Detention penalties and unbilled freight slabs were mapped directly to carrier debit notes.',
+    metric: '99.4% Billing Accuracy',
   },
 ];
 
 export const COMMERCIAL_TIERS: CommercialTier[] = [
   {
-    id: 'free_sandbox',
-    name: 'Free Diagnostic Teaser',
-    badge: '100% Free - Zero Sign-Up',
-    pricing: '₹0',
-    billingFrequency: 'Instant In-Browser',
-    targetAudience: 'Plant Managers & Controllers evaluating data readiness',
-    highlights: [
-      'Instant in-browser 5-column CSV processing',
-      '3-SKU detailed diagnostic teaser sample',
-      'Executive Exposure Summary dashboard',
-      'Data anonymization & zero cloud persistence',
+    id: 'sandbox',
+    name: 'Free Diagnostic Teaser / Sandbox',
+    price: '₹0',
+    description: 'Instant in-browser 5-column CSV diagnostic teaser with zero sign-up required.',
+    features: [
+      'Instant in-browser 5-column CSV parsing',
+      'Basic leakage exposure calculation',
+      'Sample audit report preview',
+      'Zero sign-up or credential requirement',
     ],
-    ctaText: 'Launch Free Sandbox',
-    ctaHref: '#upload',
-    isPopular: false,
+    ctaText: 'Try Free Sandbox',
+    ctaHref: '#sandbox',
+    highlighted: false,
   },
   {
-    id: 'factory_diagnostic',
+    id: 'diagnostic',
     name: 'Factory Diagnostic Audit',
-    badge: '100% Money-Back Guarantee',
-    pricing: '₹18,000',
-    gstNote: '+ 18% GST (One-time)',
-    billingFrequency: 'Per Plant Audit',
-    targetAudience: 'Single-plant manufacturing units looking for rapid working capital recovery',
-    highlights: [
-      'Full-plant SKU classification (Stagnant, Slow, Active)',
-      'Freight & bin-level shrinkage leak exposure',
-      '6-Sheet Excel Action Workbook with recovery targets',
-      '48-hour delivery guaranteed',
-      '30-minute Founder-led diagnostic review call',
-      '100% Refund if identified leaks are <₹2,50,000',
+    price: '₹18,000',
+    period: '+ 18% GST (One-time)',
+    description: 'Comprehensive 48-hour working capital audit backed by a 100% money-back guarantee.',
+    features: [
+      'Complete P1–P4 Engine Diagnostic',
+      'Row-traceable Excel & PDF executive report',
+      '48-hour turnaround SLA',
+      '100% Refund Guarantee if recoverable leaks < ₹2,50,000',
     ],
-    ctaText: 'Schedule 48-Hr Audit',
-    ctaHref: '#schedule',
-    isPopular: true,
+    ctaText: 'Order Diagnostic Audit',
+    ctaHref: '#diagnostic',
+    highlighted: true,
   },
   {
-    id: 'monthly_watchdog',
+    id: 'watchdog',
     name: 'Monthly Watchdog Retainer',
-    badge: 'Continuous Protection',
-    pricing: '₹15,000',
-    gstNote: '+ 18% GST / month',
-    billingFrequency: 'Billed Monthly (Cancel Anytime)',
-    targetAudience: 'Multi-plant enterprises requiring ongoing inventory drift monitoring',
-    highlights: [
-      'Monthly re-diagnostic of inventory & freight data',
-      'Drift alert reports for newly stagnating SKUs',
-      'Quarterly executive working capital review call',
-      'Priority support & custom ERP export templates',
-      'Zero long-term contract or lock-in',
+    price: '₹15,000',
+    period: '+ 18% GST / month',
+    description: 'Continuous monthly inventory & freight drift alerts with proactive leak surveillance.',
+    features: [
+      'Monthly SKU drift & freight tariff surveillance',
+      'Automated carrier debit note generation',
+      'Quarterly executive review & trend analysis',
+      'Cancel anytime with zero long-term contract',
     ],
-    ctaText: 'Add Monthly Retainer',
+    ctaText: 'Start Watchdog Retainer',
     ctaHref: '#retainer',
-    isPopular: false,
+    highlighted: false,
+  },
+  {
+    id: 'partner',
+    name: 'CA & Stock Auditor Partner Desk',
+    price: '20% Share',
+    period: 'Recurring Partner Commission',
+    description: 'Co-branded audit working papers and revenue share for CAs & stock auditing firms.',
+    features: [
+      '20% recurring revenue share on referred audits & retainers',
+      'Co-branded audit working papers & executive reports',
+      'Dedicated partner success manager',
+      'Direct partner portal access & client onboarding',
+    ],
+    ctaText: 'Join Partner Network',
+    ctaHref: '#partner',
+    highlighted: false,
   },
 ];
 
 export const TEN_TEAM_OPERATING_SYSTEM: TenTeamOperatingSystem[] = [
-  {
-    teamNumber: 1,
-    teamName: 'Executive & Strategy',
-    focusArea: 'Capital Allocation & ROI Alignment',
-    impactDescription: 'Aligns working capital reduction targets with executive growth goals.',
-  },
-  {
-    teamNumber: 2,
-    teamName: 'Plant Operations',
-    focusArea: 'Floor Inventory & WIP Movement',
-    impactDescription: 'Identifies floor bottlenecks and stagnant WIP inventory.',
-  },
-  {
-    teamNumber: 3,
-    teamName: 'Stores & Warehouse',
-    focusArea: 'Bin Location & Physical Audit',
-    impactDescription: 'Eliminates bin drift and speeds up physical count reconciliations.',
-  },
-  {
-    teamNumber: 4,
-    teamName: 'Procurement & Sourcing',
-    focusArea: 'Vendor Terms & Reorder Triggers',
-    impactDescription: 'Prevents over-ordering of slow-moving raw materials.',
-  },
-  {
-    teamNumber: 5,
-    teamName: 'Logistics & Freight',
-    focusArea: 'Freight Cost & Transit Shrinkage',
-    impactDescription: 'Exposes unbilled freight surcharges and transit leaks.',
-  },
-  {
-    teamNumber: 6,
-    teamName: 'Finance & Accounts',
-    focusArea: 'Working Capital & Carrying Cost',
-    impactDescription: 'Quantifies holding cost burn and cash release trajectory.',
-  },
-  {
-    teamNumber: 7,
-    teamName: 'Quality & Compliance',
-    focusArea: 'Rejection & Scrap Isolation',
-    impactDescription: 'Isolates rejected stock before it ages into permanent loss.',
-  },
-  {
-    teamNumber: 8,
-    teamName: 'Sales & Demand Planning',
-    focusArea: 'Finished Goods Velocity',
-    impactDescription: 'Matches FG stock levels against realistic 90-day demand.',
-  },
-  {
-    teamNumber: 9,
-    teamName: 'Maintenance & MRO',
-    focusArea: 'Critical Spares vs Dead MRO',
-    impactDescription: 'Separates strategic insurance spares from obsolete MRO clutter.',
-  },
-  {
-    teamNumber: 10,
-    teamName: 'IT & Data Governance',
-    focusArea: 'ERP Hygiene & 5-Column Schema',
-    impactDescription: 'Ensures clean master data and standard ERP export formats.',
-  },
+  { id: 1, name: 'Team 1: Diagnostic Ingestion & Schema Normalization Lab', role: 'Data Hygiene & Validation', deliverable: 'Cleaned 5-column schema matrix' },
+  { id: 2, name: 'Team 2: Working Capital & Dead Stock Intelligence Desk', role: 'Inventory Aging Analysis', deliverable: 'RTV & Salvage Liquidation Plan' },
+  { id: 3, name: 'Team 3: OTIF & Dispatch Reliability Engine Desk', role: 'Service Level Audit', deliverable: 'SLA Breach & Penalty Audit' },
+  { id: 4, name: 'Team 4: Freight Rate-Card & Detention Forensic Cell', role: 'Logistics Cost Control', deliverable: 'Transporter Debit Note Claims' },
+  { id: 5, name: 'Team 5: Bin Variance & Ghost Stock Reconciliation Lab', role: 'Warehouse Audit', deliverable: 'Physical vs ERP Variance Ledger' },
+  { id: 6, name: 'Team 6: Financial Leak Quantification & Guarantee Gate', role: 'Audit Quality Assurance', deliverable: 'Verified Leak Exposure Certification' },
+  { id: 7, name: 'Team 7: Executive Working Paper & Action Plan Desk', role: 'C-Suite Reporting', deliverable: 'Board-Ready PDF & Excel Audit Pack' },
+  { id: 8, name: 'Team 8: Turnaround SLA & Delivery Operations Desk', role: 'Execution Control', deliverable: '48-Hour SLA Delivery Track' },
+  { id: 9, name: 'Team 9: Client Data Governance & Security Operations Desk', role: 'Data Privacy & NDA', deliverable: 'Data Purge Certificate & NDA' },
+  { id: 10, name: 'Team 10: Post-Audit Implementation Support Cell', role: 'Recovery Execution', deliverable: 'Vendor & Inventory Action Guide' },
+  { id: 11, name: 'Team 11: CA & Channel Partner Alliance Desk', role: 'Partner Alliances', deliverable: '20% Recurring Ledger & Co-Branded Papers' },
+  { id: 12, name: 'Team 12: 24-Hour SLA Grievance & Data Purge Desk', role: 'Data Purge & SLA Enforcement', deliverable: '14-Day Purge SLA via joneszz2004@gmail.com' },
+  { id: 13, name: 'Team 13: ERP Data Sanitization & Ingestion Lab', role: 'ERP Normalization', deliverable: 'Tally/SAP/Busy/Excel Normalization' },
+  { id: 14, name: 'Team 14: Market Radar & Watchdog Retention Cell', role: 'Corridor Benchmarking', deliverable: 'Chennai/Hosur/Coimbatore/Pune Radar' },
+];
+
+export const DATA_TRUST_ITEMS: DataTrustItem[] = [
+  { title: 'Zero ERP Credentials Required', description: 'We only process static 5-column CSV files. No API tokens, passwords, or direct database connections are ever requested.' },
+  { title: 'Deterministic Data Purge', description: 'All processed files are stored temporarily in isolated memory and automatically purged within 14 days or immediately upon request.' },
+  { title: 'Strict NDA & Confidentiality', description: 'Every audit is executed under bilateral non-disclosure agreements with complete data privacy controls.' },
 ];
 
 export const FAQ_ITEMS: FAQItem[] = [
   {
-    q: 'What data is required for the audit?',
-    a: 'Only a simple 5-column CSV export: Part Number/Code, Description, Quantity on Hand, Unit Cost/Rate, and Last Movement/Transaction Date.',
+    question: 'How does the ₹18,000 Factory Diagnostic Audit work?',
+    answer: 'You upload your standard 5-column ERP CSV export (SKU, Category, Quantity, Unit Cost, Days in Stock). Our engine and 14-Team OS analyze P1–P4 leak vectors and deliver a full audit report within 48 hours.',
   },
   {
-    q: 'How is data security and confidentiality handled?',
-    a: 'Data processing can be done entirely in-browser or under a standard NDA. We never sell, store permanently, or share your proprietary ERP inventory numbers.',
+    question: 'What is the 100% Refund Guarantee criteria?',
+    answer: 'If our diagnostic report fails to identify at least ₹2,50,000 in verifiable, actionable working capital leaks (stagnant inventory, freight overcharges, bin variance), we immediately refund your ₹18,000 audit fee in full.',
   },
   {
-    q: 'Which data fields are normally required?',
-    a: 'Part code/number, description, quantity on hand, unit rate/cost, and last transaction/movement date.',
+    question: 'What is included in the ₹15,000/month Watchdog Retainer?',
+    answer: 'The Monthly Watchdog Retainer provides ongoing monthly SKU drift tracking, freight rate-card surveillance, automated carrier debit note generation, and quarterly strategic reviews with zero long-term lock-in.',
   },
   {
-    q: 'Can fields be anonymised?',
-    a: 'Yes. You can mask part descriptions, delete vendor codes, and redact commercial account names prior to submission.',
+    question: 'How does the CA & Stock Auditor Partner Desk operate?',
+    answer: 'Chartered Accountants and auditing firms receive a 20% recurring revenue share on referred ₹18,000 audits and ₹15,000/month retainers, along with co-branded audit working papers and dedicated partner support.',
   },
   {
-    q: 'How is non-moving inventory defined?',
-    a: 'The default analytical threshold is 180 consecutive days with zero consumption or issue from stores. This threshold can be calibrated to your industry lead times.',
-  },
-  {
-    q: 'Does the audit guarantee financial recovery?',
-    a: 'No. The audit identifies where inventory value has stopped moving. Actual recovery depends on vendor return agreements, alternative BOM substitutions, and salvage liquidation terms.',
-  },
-  {
-    q: 'How long does an audit take?',
-    a: 'Once approved data is confirmed, an initial findings summary is completed within 48 hours for scheduling a 30-minute founder review call.',
-  },
-  {
-    q: 'Is the pilot free or paid?',
-    a: 'The instant in-browser 5-column CSV sandbox is 100% free with zero sign-up. The founder-led 48-hour Factory Diagnostic Audit is ₹18,000 (+ 18% GST), backed by a 100% refund guarantee if <₹2,50,000 in recoverable stagnant, freight, or bin leaks is identified, with an optional ₹15,000/month (+ 18% GST) Monthly Watchdog retainer and zero automatic subscription lock-in.',
-  },
-  {
-    q: 'What happens after the findings review?',
-    a: 'You receive the structured report for internal discussions. There is no automatic commitment, no recurring retainer, and no pressure.',
+    question: 'Is my manufacturing data safe during the audit?',
+    answer: 'Yes. We require zero ERP system hooks or logins. All data is processed in isolated sandboxes and automatically purged within 14 days or on-demand via Team 12 (joneszz2004@gmail.com).',
   },
 ];
+
+export const OBJECTION_REBUTTALS: ObjectionItem[] = [
+  {
+    objection: 'Our ERP system already tracks inventory aging.',
+    rebuttal: 'Standard ERP reports show gross aging buckets but miss cross-functional leak vectors like rate-card slab jumps, phantom stock variances, and unrecovered supplier RTVs.',
+  },
+  {
+    objection: 'We do not want to expose sensitive financial data.',
+    rebuttal: 'Our diagnostic requires only 5 operational columns with zero financial ledger, bank, or customer PII data needed.',
+  },
+];
+
+export const CUSTOMER_ANXIETY_MAP: AnxietyMapItem[] = [
+  { trigger: 'Fear of long implementation timeline', mitigation: 'Zero setup required. Delivery completed within 48 hours from CSV submission.' },
+  { trigger: 'Concern over audit fee ROI', mitigation: '100% money-back guarantee if recoverable leaks are under ₹2,50,000.' },
+];
+
+export const BEHAVIORAL_ICEBERG_DIMENSIONS: IcebergDimension[] = [
+  { visible: 'Visible ERP Inventory Value', hiddenLeak: 'Stagnant Stock (>180 Days) & Carrying Cost Burn' },
+  { visible: 'Base Transport Rates', hiddenLeak: 'Detention Slabs, Unbilled Surcharges & Rate-Card Drift' },
+];
+
+export const HERO_HEADLINE_VARIANTS: HeadlineVariant[] = [
+  {
+    id: 'default',
+    headline: 'Zero-Risk Working Capital Diagnostic for Manufacturing Leadership',
+    subheadline: 'Expose ₹5L to ₹50L+ in stagnant inventory, unbilled freight, and bin-level shrinkage from standard 5-column ERP CSV exports.',
+  },
+  {
+    id: 'cfo',
+    headline: 'Identify ₹2.5L+ in Recoverable Leaks or Pay ₹0 for Your Audit',
+    subheadline: 'Quantify inventory holding burn and carrier detention overcharges in 48 hours.',
+  },
+];
+
+export const ACTIVE_DEFAULT_VARIANT: HeadlineVariant = HERO_HEADLINE_VARIANTS[0];
+
+export const PROBLEM_QUESTIONS: ProblemQuestion[] = [
+  { id: 'q1', question: 'How much working capital is locked in inventory aging over 180 days?', context: 'P1 Dead Stock & Working Capital Engine' },
+  { id: 'q2', question: 'Are you overpaying carrier detention penalties due to slab miscalculations?', context: 'P3 Freight Rate-Card & Detention Engine' },
+  { id: 'q3', question: 'What percentage of catalog SKUs suffer from physical bin vs ERP ghost stock?', context: 'P4 Warehouse Bin Variance Engine' },
+];
+
+export const PROCESS_STEPS: ProcessStep[] = [
+  { stepNumber: 1, title: 'Export 5-Column CSV', description: 'Download basic inventory or dispatch ledger from Tally, SAP, Busy, or Excel.' },
+  { stepNumber: 2, title: 'Upload to Secure Portal', description: 'Submit CSV into zero-ERP-hook encrypted sandbox.' },
+  { stepNumber: 3, title: '48-Hour Forensic Analysis', description: '14-Team Operating System executes P1–P4 diagnostic engines.' },
+  { stepNumber: 4, title: 'Receive Actionable Audit Pack', description: 'Get row-level Excel ledger, debit note claim templates, and PDF executive summary.' },
+];
+
+export const AUDIT_DELIVERABLES: AuditDeliverable[] = [
+  { title: 'Working Capital Recovery Plan', description: 'Itemized RTV, BOM substitution, and scrap salvage recommendations.', format: 'Excel / CSV' },
+  { title: 'Transporter Debit Note Claims', description: 'Pre-formatted debit notes for detention and rate-card overcharges.', format: 'PDF / Excel' },
+  { title: 'Executive Board Deck', description: 'High-level C-suite summary with quantified leak exposure metrics.', format: 'PDF Presentation' },
+];
+
+export const FOUNDER_EXECUTIVE_SIGNOFF = {
+  name: 'Operationalyst Audit Desk',
+  title: 'Lead Working Capital & Logistics Auditor',
+  contactEmail: 'joneszz2004@gmail.com',
+  location: 'Chennai / Hosur / Coimbatore / Pune Corridor Desk',
+};
+
+export const METHODOLOGY_STAGES: MethodologyStage[] = [
+  { stageNumber: 1, title: 'Data Normalization', description: 'Validate 5-column schema structure and sanitize records.' },
+  { stageNumber: 2, title: 'Cross-Engine Analysis', description: 'Run P1–P4 forensic leak detectors across inventory and freight.' },
+  { stageNumber: 3, title: 'Leak Quantification', description: 'Calculate net recoverable value and guarantee qualification.' },
+  { stageNumber: 4, title: 'Executive Deliverable Synthesis', description: 'Generate audit ledger, debit notes, and sign-off report.' },
+];
+
+export function getReconciledSampleAuditModes(): SampleAuditMode[] {
+  return [
+    {
+      id: 'P1',
+      name: 'Engine P1: Inventory & Working Capital',
+      title: 'P1: Dead Stock & Working Capital Recovery',
+      description: 'Identifies inventory holding burn, slow-moving SKUs, and stagnant working capital locked in raw materials and finished goods.',
+      summaryMetrics: [
+        { label: 'Total Inventory Analyzed', value: '₹4,85,000' },
+        { label: 'Stagnant Capital (>180 Days)', value: '₹1,42,000' },
+        { label: 'Annual Holding Burn (22%)', value: '₹31,240' },
+        { label: 'Recoverable Cash Estimate', value: '₹1,15,000' },
+      ],
+      sampleFindings: [
+        { sku: 'SKU-RM-802', location: 'Warehouse A - Hosur', issue: 'Stagnant >210 Days (RTV Candidate)', leakValue: '₹68,500', status: 'Actionable' },
+        { sku: 'SKU-FG-104', location: 'Warehouse B - Chennai', issue: 'Slow Moving (BOM Substitution)', leakValue: '₹46,500', status: 'Actionable' },
+        { sku: 'SKU-SP-309', location: 'Warehouse C - Pune', issue: 'Obsolescence (Scrap Salvage)', leakValue: '₹27,000', status: 'Actionable' },
+      ],
+    },
+    {
+      id: 'P2',
+      name: 'Engine P2: OTIF & Dispatch Reliability',
+      title: 'P2: OTIF Dispatch Reliability & Penalties',
+      description: 'Measures on-time in-full dispatch performance, unbilled order delays, and SLA breach penalty risks.',
+      summaryMetrics: [
+        { label: 'Total Shipments Evaluated', value: '1,240 Orders' },
+        { label: 'On-Time Dispatch Rate', value: '84.2%' },
+        { label: 'In-Full Compliance Rate', value: '88.6%' },
+        { label: 'Estimated SLA Penalty Risk', value: '₹78,400' },
+      ],
+      sampleFindings: [
+        { sku: 'ORD-2026-901', location: 'Distributor Hub - Bangalore', issue: '48-Hour SLA Breach', leakValue: '₹34,000', status: 'Actionable' },
+        { sku: 'ORD-2026-945', location: 'Direct Customer - Coimbatore', issue: 'Partial Fulfillment Variance', leakValue: '₹25,400', status: 'Actionable' },
+        { sku: 'ORD-2026-988', location: 'Regional Depot - Pune', issue: 'Documentation Transit Delay', leakValue: '₹19,000', status: 'Actionable' },
+      ],
+    },
+    {
+      id: 'P3',
+      name: 'Engine P3: Freight Rate-Card & Detention Audit',
+      title: 'P3: Logistics Rate-Card & Detention Leakage',
+      description: 'Exposes freight overcharges, incorrect tariff slab application, and detention penalty leakage.',
+      summaryMetrics: [
+        { label: 'Freight Bills Processed', value: '₹8,90,000' },
+        { label: 'Rate-Card Slab Overcharges', value: '₹54,200' },
+        { label: 'Unjustified Detention Charges', value: '₹38,600' },
+        { label: 'Total Transporter Claims', value: '₹92,800' },
+      ],
+      sampleFindings: [
+        { sku: 'LR-2026-4011', location: 'Chennai - Hosur Corridor', issue: 'Detention Slab Error (24h grace ignored)', leakValue: '₹22,400', status: 'Actionable' },
+        { sku: 'LR-2026-4089', location: 'Coimbatore Hub', issue: 'Weight Slab Jump Overcharge', leakValue: '₹18,200', status: 'Actionable' },
+        { sku: 'LR-2026-5120', location: 'Pune Corridor', issue: 'Unbilled Tariff Surcharge', leakValue: '₹13,600', status: 'Actionable' },
+      ],
+    },
+    {
+      id: 'P4',
+      name: 'Engine P4: Warehouse Bin Variance & Ghost Stock',
+      title: 'P4: Physical Bin vs ERP Inventory Variance',
+      description: 'Reconciles physical count variances, ghost stock, and unrecorded shrinkage across warehouse locations.',
+      summaryMetrics: [
+        { label: 'Bin Locations Audited', value: '450 Bins' },
+        { label: 'Variance Rate', value: '4.8%' },
+        { label: 'Ghost Stock ERP Discrepancy', value: '₹86,500' },
+        { label: 'Physical Shrinkage Exposure', value: '₹42,100' },
+      ],
+      sampleFindings: [
+        { sku: 'BIN-A-14', location: 'Main Plant - Hosur', issue: 'Ghost Stock (ERP > Physical by 140 units)', leakValue: '₹52,000', status: 'Actionable' },
+        { sku: 'BIN-C-08', location: 'Finished Goods Yard - Chennai', issue: 'Unrecorded Shrinkage', leakValue: '₹24,500', status: 'Actionable' },
+        { sku: 'BIN-D-22', location: 'Raw Material Store - Pune', issue: 'Bin Misplacement Variance', leakValue: '₹10,000', status: 'Actionable' },
+      ],
+    },
+  ];
+}
