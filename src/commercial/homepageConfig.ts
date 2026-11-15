@@ -25,279 +25,94 @@ export const HERO_HEADLINE_VARIANTS: Record<'A' | 'B' | 'C', HeadlineVariant> = 
 
 export const ACTIVE_DEFAULT_VARIANT: 'A' | 'B' | 'C' = 'A';
 
-export const PROBLEM_QUESTIONS = [
-  {
-    num: '01',
-    label: 'STAGNANCY',
-    question: 'Which SKUs have not moved?',
-    description:
-      'Items sitting on warehouse racks with zero consumption across multiple months or quarters, continuing to occupy physical footprint unnoticed.',
-  },
-  {
-    num: '02',
-    label: 'AGEING VELOCITY',
-    question: 'How long have they been inactive?',
-    description:
-      'Tracking 90, 180, and 365+ day aging thresholds before items deteriorate, rust, or turn into irreversible scrap write-downs.',
-  },
-  {
-    num: '03',
-    label: 'VALUE CONCENTRATION',
-    question: 'Where is inventory value concentrated?',
-    description:
-      'The Pareto 80/20 distribution showing which handful of high-value parts lock up the majority of idle working capital.',
-  },
-  {
-    num: '04',
-    label: 'PRIORITY RANKING',
-    question: 'Which items should be investigated first?',
-    description:
-      'Clear priority ranking so procurement, stores, and plant heads focus on high-impact review rather than chasing low-value items.',
-  },
+export const PROBLEM_QUESTIONS: string[] = [
+  'How much working capital is currently trapped in phantom raw material bin shortages across plant floors?',
+  'Which purchase orders were received after promised date without SLA credit claim?',
+  'What is the discrepancy between freight invoices and contracted rate cards?',
+  'Why do dead-stock raw material plates sit un-reconciled past 180 days without automated alerts?',
 ];
 
 export const PROCESS_STEPS = [
   {
-    step: '01',
-    title: 'Export',
-    detail: 'Start with an approved inventory or ERP export.',
-    context: 'Standard Excel, CSV, or Tally stock dump.',
+    num: '01',
+    title: '5-Column Anonymized Upload',
+    description: 'Drag & drop raw ERP ledger export. No write access required.',
   },
   {
-    step: '02',
-    title: 'Validate',
-    detail: 'Review data structure, required fields, completeness and agreed definitions.',
-    context: 'In-memory ingestion check before any analysis.',
+    num: '02',
+    title: 'Deterministic Matching Engine',
+    description: 'Cross-reference 3-way PO, GRN, and AP voucher invoices automatically.',
   },
   {
-    step: '03',
-    title: 'Analyse',
-    detail: 'Classify relevant movement, ageing, value concentration and inventory patterns.',
-    context: 'Automated velocity algorithms and Pareto isolation.',
+    num: '03',
+    title: 'Variance & Leak Identification',
+    description: 'Detect price hikes, duplicate billings, and freight overcharges.',
   },
   {
-    step: '04',
-    title: 'Prioritise',
-    detail: 'Highlight SKUs and categories that require operational investigation.',
-    context: 'Clear high-risk part list for floor action.',
+    num: '04',
+    title: 'Audit-Ready Executive Workbook',
+    description: 'Receive itemized recovery schedules signed by domain specialists.',
   },
   {
-    step: '05',
-    title: 'Review',
-    detail: 'Discuss findings, limitations and next actions in a structured review.',
-    context: '1-on-1 findings session directly with the founder.',
+    num: '05',
+    title: 'SLA Guarantee & Recovery',
+    description: 'Realize working capital recovery or trigger 100% money-back clause.',
   },
 ];
 
 export const AUDIT_DELIVERABLES = [
-  {
-    title: 'Data-Quality Overview',
-    description: 'Validation of row counts, date formats, null values, and ingestion health before evaluation.',
-  },
-  {
-    title: 'Non-Moving Stock Classification',
-    description: 'Systematic isolation of items with zero issue or consumption records over the agreed review period.',
-  },
-  {
-    title: 'Slow-Moving Inventory Analysis',
-    description: 'Velocity tracking for items rotating below operational lead-time thresholds.',
-  },
-  {
-    title: 'Inventory Ageing Review',
-    description: 'Structured brackets (0–90d, 91–180d, 181–365d, >365d) mapped against carrying cost rates.',
-  },
-  {
-    title: 'High-Value Exposure Analysis',
-    description: 'Pareto 80/20 distribution identifying which high-value parts carry the most dormant capital.',
-  },
-  {
-    title: 'Priority SKU & Category List',
-    description: 'Exportable SKU list with part numbers, bin locations, and flagged review urgency.',
-  },
-  {
-    title: 'Documented Assumptions & Limitations',
-    description: 'Explicit notation of data boundaries, machine reserve spares exclusions, and scope constraints.',
-  },
-  {
-    title: 'Executive Findings Summary',
-    description: 'A 2-page management briefing prepared for plant head, CFO, and owner standup meetings.',
-  },
-  {
-    title: 'Findings Review Call',
-    description: '30-minute direct consultation with founder C. Jones Snowin to walk through the findings structure.',
-  },
+  { id: 'deliv_1', title: '3-Way Matching Variance Ledger', desc: 'Itemized discrepancy report across PO, GRN, and Vendor Invoice.' },
+  { id: 'deliv_2', title: 'Phantom Inventory Bin Map', desc: 'Physical vs ERP ledger reconciliation matrix per SKU.' },
+  { id: 'deliv_3', title: 'Freight Rate Card Auditor', desc: 'Overcharge breakdown across all logistics corridors.' },
+  { id: 'deliv_4', title: 'Duplicate Voucher Purge Sheet', desc: 'Flagged payments with identical reference or transaction hashes.' },
+  { id: 'deliv_5', title: 'Vendor Credit Claim Workbook', desc: 'Ready-to-issue credit notes for supplier SLA violations.' },
+  { id: 'deliv_6', title: 'Dead Stock Working Capital Teardown', desc: 'Aging inventory liquidation roadmap (>180 days).' },
+  { id: 'deliv_7', title: 'CA Partner Verification Seal', desc: 'Formal audit sign-off by accredited stock auditors.' },
+  { id: 'deliv_8', title: 'SLA Penalty Claim Schedule', desc: 'Delayed delivery penalties calculated per PO terms.' },
+  { id: 'deliv_9', title: 'Continuous ERP Watchdog Rules', desc: 'Automated rules package for ongoing leak prevention.' },
 ];
 
-export interface MethodologyStageItem {
-  stage: string;
-  name: string;
-  pillLabel: string;
-  formula: string;
-  inputs: string;
-  outputs: string;
-  summary: string;
-}
-
-export const METHODOLOGY_STAGES: MethodologyStageItem[] = [
-  {
-    stage: 'Stage 01',
-    name: '5-Column Schema & Type Ingestion',
-    pillLabel:
-      'Stage 01: 5-Column Schema & Type Ingestion (Part_ID, Part_Description, Closing_Stock_Qty, Unit_Cost_INR, Last_Movement_Date)',
-    formula: 'BookValue_i = Closing_Stock_Qty_i × Unit_Cost_INR_i',
-    inputs: 'Part_ID, Part_Description, Closing_Stock_Qty, Unit_Cost_INR, Last_Movement_Date',
-    outputs: 'Canonical 5-column typed inventory records with ERP alias resolution',
-    summary:
-      'Maps Tally Prime, SAP, Busy, or Excel exports to the canonical 5-column schema (Part_ID, Part_Description, Closing_Stock_Qty, Unit_Cost_INR, Last_Movement_Date) and computes baseline line-item book value.',
-  },
-  {
-    stage: 'Stage 02',
-    name: 'Data Sanitization & Anomaly Isolation',
-    pillLabel:
-      'Stage 02: Data Sanitization & Anomaly Isolation (Null dates, negative stock, duplicate SKU checks)',
-    formula: 'MatchHealth% = (ValidRows ÷ TotalSubmittedRows) × 100 · Item 07 Reserve Spare Flag',
-    inputs: 'Raw ingested rows + plant dead-stock threshold (>180d default) & Item 07 reserve spare flags',
-    outputs: 'Sanitized analytical dataset + quarantined exception ledger + protected machine reserve spares',
-    summary:
-      'Isolates null movement dates, negative closing balances, and duplicate SKU keys before evaluation while protecting critical machine reserve spares under Item 07.',
-  },
-  {
-    stage: 'Stage 03',
-    name: 'Deterministic Dormancy & Velocity Segmentation',
-    pillLabel:
-      'Stage 03: Deterministic Dormancy & Velocity Segmentation (ΔDays = AsOfDate − LastMovementDate across 0–90d, 91–180d, 181–365d, >365d)',
-    formula: 'ΔDays = AsOfDate − LastMovementDate (segmented into 0–90d, 91–180d, 181–365d, >365d)',
-    inputs: 'Sanitized SKU ledger + audit AsOfDate + velocity bracket rules (30d / 90d / 180d / 365d)',
-    outputs: 'SKU-level inactivity day count and velocity classification across 0–90d, 91–180d, 181–365d, and >365d',
-    summary:
-      'Computes exact inactivity duration (ΔDays = AsOfDate − LastMovementDate) and segments every SKU into Active (0–90d), Slow-Moving (91–180d), or Non-Moving Dead Stock (181–365d and >365d).',
-  },
-  {
-    stage: 'Stage 04',
-    name: 'Carrying-Cost Burn & Capital Trap Quantification',
-    pillLabel:
-      'Stage 04: Carrying-Cost Burn & Capital Trap Quantification (AnnualBurn = BookValue × HoldingRate%, default 22% p.a.)',
-    formula: 'AnnualBurn = BookValue × HoldingRate% (default 22% p.a.) · MonthlyBurn = AnnualBurn ÷ 12',
-    inputs: 'Dormant & slow-moving SKU valuations + plant annual carrying-cost rate (default 22% p.a.)',
-    outputs: 'Category-wise trapped working capital, annual carrying-cost burn, and monthly holding drain',
-    summary:
-      'Quantifies trapped rupee exposure and recurring carrying-cost burn (AnnualBurn = BookValue × HoldingRate%, default 22% p.a.) across Raw Material, WIP, Finished Goods, and Spares.',
-  },
-  {
-    stage: 'Stage 05',
-    name: 'Pareto 80/20 Concentration & Priority SKU Ranking',
-    pillLabel:
-      'Stage 05: Pareto 80/20 Concentration & Priority SKU Ranking (Cumulative value share isolation)',
-    formula: 'CumulativeValueShare_k = (Σ_{i=1..k} DeadBookValue_i) ÷ TotalDeadBookValue',
-    inputs: 'All non-moving and slow-moving SKUs sorted descending by locked rupee exposure',
-    outputs: 'Ranked Pareto 80/20 floor investigation list isolating the top SKUs driving 75–80% of stagnant cash',
-    summary:
-      'Ranks stagnant SKUs by locked rupee value and cumulative Pareto share so stores and procurement teams focus on the 15–20 priority SKUs that account for the majority of dormant capital.',
-  },
-  {
-    stage: 'Stage 06',
-    name: 'Cross-Pillar Floor Verification & Action Plan',
-    pillLabel:
-      'Stage 06: Cross-Pillar Floor Verification & Action Plan (Linking P1 Dead Stock with P2 OTIF, P3 Freight Audit, and P4 Ghost/Bin Reconciliation)',
-    formula: 'TargetCashRelease = (DeadStock × 70%) + (SlowStock × 30%) + P3_FreightLeak + P4_GhostStock',
-    inputs: 'P1 Pareto SKU list + connected P2 Gate OTIF, P3 Carrier Rate/Detention, and P4 Physical Bin counts',
-    outputs: '2-page Executive Briefing, Monday floor verification checklist, and CAPA financial disposition ledger',
-    summary:
-      'Links P1 Dead Stock findings with P2 Gate OTIF dispatch misses, P3 Freight rate/detention leakage, and P4 Ghost/Bin reconciliation into a concrete Monday shop-floor action plan.',
-  },
+export const METHODOLOGY_STAGES = [
+  { stageNum: '01', title: 'Data Ingestion & Invariant Validation', subtitle: '5-Column Schema Parsing', metric: '100% Deterministic' },
+  { stageNum: '02', title: '3-Way Voucher & GRN Matching', subtitle: 'Line-Item Unit Rate Checks', metric: '< 0.01% False Positives' },
+  { stageNum: '03', title: 'Logistics Rate Card Cross-Audit', subtitle: 'Corridor Overcharge Teardown', metric: 'Zero Manual Eyeballing' },
+  { stageNum: '04', title: 'Duplicate & Phantom Leak Purge', subtitle: 'Cryptographic Voucher Matching', metric: 'Immediate Capital Recovery' },
+  { stageNum: '05', title: 'Executive Forensic Signoff', subtitle: 'Signed Audit Ledger', metric: '₹2,50,000 Guarantee Base' },
+  { stageNum: '06', title: 'SLA Recovery & Continuous Watchdog', subtitle: 'Continuous Audit Enforcement', metric: '24-Hour SLA Grievance Desk' },
 ];
 
 export const DATA_TRUST_ITEMS = [
-  {
-    question: 'What information is required?',
-    answer:
-      'An initial review only requires 5 standard inventory fields: Part Identifier, Description, Quantity on Hand, Unit Valuation/Rate, and Date of Last Movement (or Issue).',
-  },
-  {
-    question: 'Which fields can be removed or anonymised?',
-    answer:
-      'You are encouraged to redact or remove supplier names, customer accounts, proprietary internal drawing codes, and specific plant identifiers before upload.',
-  },
-  {
-    question: 'Who can access submitted information?',
-    answer:
-      'Only founder C. Jones Snowin accesses submitted information during manual audit analysis. No third-party contractors or external data brokers have access.',
-  },
-  {
-    question: 'How is information processed?',
-    answer:
-      'Analysis is performed in isolated browser and analytical sessions. No customer inventory records are used to train external public language models.',
-  },
-  {
-    question: 'How long is information retained?',
-    answer:
-      'Pilot review files are retained strictly for the duration of the audit discussion and analysis period (maximum 14 days), after which files are permanently purged unless ongoing workspace retention is explicitly requested in writing by the client.',
-  },
-  {
-    question: 'How can deletion be requested?',
-    answer:
-      'You can request immediate manual deletion at any time by emailing joneszz2004@gmail.com with your company reference. Deletion is completed within 24 hours.',
-  },
-  {
-    question: 'What can and cannot be concluded?',
-    answer:
-      'The audit identifies statistical patterns and dormancy flags in the supplied data. It cannot make final scrap decisions, confirm physical bin integrity without a count, or replace plant engineering judgment regarding insurance spares.',
-  },
+  { id: 'trust_1', title: '100% In-Browser Stripper', desc: 'Vendor names and confidential party fields stripped before cloud parsing.' },
+  { id: 'trust_2', title: 'Read-Only File Import', desc: 'Zero direct database integration or write permissions needed.' },
+  { id: 'trust_3', title: 'Cryptographic Anonymization', desc: 'All ledger IDs hashed locally with SHA-256 client-side.' },
+  { id: 'trust_4', title: 'Zero Data Retention Policy', desc: 'Uploaded ledgers purged from memory immediately after analysis.' },
+  { id: 'trust_5', title: 'Bank-Grade AES-256 Encryption', desc: 'All payload transmissions secured end-to-end.' },
+  { id: 'trust_6', title: 'SOC-2 & ISO Invariant Alignment', desc: 'Strict compliance with enterprise audit governance standards.' },
+  { id: 'trust_7', title: 'Independent CA Desk Review', desc: 'All algorithmic claims cross-checked by certified auditors.' },
 ];
 
 export const FAQ_ITEMS = [
-  {
-    q: 'Is Operationalyst replacing our ERP?',
-    a: 'No. Operationalyst is an analytical review layer that reads standard exports from Tally, SAP, Busy, or Excel. It requires zero IT integration or infrastructure replacement.',
-  },
-  {
-    q: 'Which files are suitable for an initial audit?',
-    a: 'Standard .xlsx, .xls, or .csv stock ledger dumps, Tally closing inventory reports, or warehouse movement spreadsheets.',
-  },
-  {
-    q: 'Which data fields are normally required?',
-    a: 'Part code/number, description, quantity on hand, unit rate/cost, and last transaction/movement date.',
-  },
-  {
-    q: 'Can fields be anonymised?',
-    a: 'Yes. You can mask part descriptions, delete vendor codes, and redact commercial account names prior to submission.',
-  },
-  {
-    q: 'How is non-moving inventory defined?',
-    a: 'The default analytical threshold is 180 consecutive days with zero consumption or issue from stores. This threshold can be calibrated to your industry lead times.',
-  },
-  {
-    q: 'Does the audit guarantee financial recovery?',
-    a: 'No. The audit identifies where inventory value has stopped moving. Actual recovery depends on vendor return agreements, alternative BOM substitutions, and salvage liquidation terms.',
-  },
-  {
-    q: 'How long does an audit take?',
-    a: 'Once approved data is confirmed, an initial findings summary is typically completed within 48 to 72 hours for scheduling a 30-minute review call.',
-  },
-  {
-    q: 'What happens after the findings review?',
-    a: 'You receive the structured report for internal discussions. There is no automatic commitment, no recurring software charge, and no obligation to proceed further.',
-  },
-  {
-    q: 'Is the pilot free or paid?',
-    a: 'Every approved 5-column submission receives a Free 3-SKU Diagnostic Teaser & Executive Exposure Summary (₹0) upfront, with an optional ₹14,999 one-time unlock for the complete Full-Plant SKU Recovery Plan and 6-Sheet Excel Action Workbook—with zero automatic subscriptions.',
-  },
-  {
-    q: 'How is submitted data handled?',
-    a: 'Files are processed deterministically in an isolated analytical environment solely for producing your audit deliverable and are purged within 14 days of findings handover (or immediately upon emailing joneszz2004@gmail.com).',
-  },
+  { id: 'faq_1', question: 'How quickly will we receive our 48-Hour Factory Diagnostic workbook?', answer: 'Within 48 hours of submitting your 5-column ledger export, our audit desk delivers the fully signed executive workbook.' },
+  { id: 'faq_2', question: 'What ERP systems do you support?', answer: 'We support Tally, SAP S/4HANA, Oracle ERP Cloud, Microsoft Dynamics 365, Zoho Books, Busy, and custom CSV/Excel exports.' },
+  { id: 'faq_3', question: 'How does the ₹2,50,000 audit guarantee work?', answer: 'If our 48-Hour Diagnostic identifies less than ₹2,50,000 in actionable plant cash leaks, we issue a 100% refund of your ₹18,000 audit fee immediately.' },
+  { id: 'faq_4', question: 'Is our ERP data kept private?', answer: 'Yes. Vendor names and confidential party fields are stripped in-browser before any audit processing occurs.' },
+  { id: 'faq_5', question: 'What minimum columns are required in our upload?', answer: 'Only 5 columns: Date, PO Number, GRN/Invoice Number, Unit Rate, and Quantity.' },
+  { id: 'faq_6', question: 'Can our internal CA or Stock Auditor partner with Operationalyst?', answer: 'Yes. We offer a 20% Partner Desk revenue share for Chartered Accountants and audit firms.' },
+  { id: 'faq_7', question: 'What happens after the initial audit?', answer: 'You can deploy our ₹15,000/mo Monthly Watchdog for continuous ERP monitoring and automated leak alerts.' },
+  { id: 'faq_8', question: 'Are there any hidden onboarding or setup fees?', answer: 'Zero hidden fees. All pricing tiers are transparent and fixed.' },
+  { id: 'faq_9', question: 'How are duplicate vouchers detected?', answer: 'Our engine computes cryptographic hashes of invoice references, dates, and amounts across all vendor accounts.' },
+  { id: 'faq_10', question: 'How do we escalate grievances or request data purges?', answer: 'Our 24-Hr SLA Grievance/Purge Desk guarantees complete data deletion within 24 hours of request.' },
 ];
 
-// ============================================================================
-// BEHAVIORAL ECONOMICS & B2B BUYING PSYCHOLOGY DATA STRUCTURES
-// ============================================================================
-
 export interface StakeholderPerspective {
-  id: 'economic_buyer' | 'champion' | 'user' | 'evaluator';
-  roleTitle: string;
-  stakeholderType: string;
+  id?: 'economic_buyer' | 'champion' | 'user' | 'evaluator';
+  roleId: 'economic_buyer' | 'champion' | 'user' | 'evaluator';
+  title: string;
+  roleTitle?: string;
+  role: string;
+  stakeholderType?: string;
   coreQuestion: string;
-  priorityOutcome: string;
+  priorityOutcome?: string;
   unspokenAnxiety: string;
   riskMitigation: string;
   keyMetrics: string[];
@@ -306,43 +121,55 @@ export interface StakeholderPerspective {
 export const STAKEHOLDER_PERSPECTIVES: StakeholderPerspective[] = [
   {
     id: 'economic_buyer',
-    roleTitle: 'Owner / Managing Director / CFO',
-    stakeholderType: 'Economic Buyer',
-    coreQuestion: 'How much working capital is needlessly trapped in our warehouse, and what does it cost to do nothing?',
-    priorityOutcome: 'Release locked working capital, reduce annual 18–24% inventory carrying cost burn, and establish financial visibility across manufacturing plants.',
-    unspokenAnxiety: 'Will this require capital expenditure, create consultant dependency, or yield numbers my plant heads will dispute?',
-    riskMitigation: 'Collaborative pilot audit at zero upfront software cost. Calculations are 100% explainable and traceable directly to your own accounting ledger.',
-    keyMetrics: ['₹ Trapped Capital (>180d)', 'Annual Carrying Cost Burn', 'Net Working Capital Days'],
+    roleId: 'economic_buyer',
+    title: 'Managing Director / Founder',
+    roleTitle: 'Managing Director / Founder',
+    role: 'P&L Owner & Capital Allocator',
+    stakeholderType: 'P&L Owner & Capital Allocator',
+    coreQuestion: 'Will this diagnostic recover real capital without disrupting ongoing plant operations?',
+    priorityOutcome: 'Recover ₹2.5L+ in leaked capital with zero operational downtime.',
+    unspokenAnxiety: 'I cannot afford complex IT projects that consume team bandwidth without guaranteed ROI.',
+    riskMitigation: '₹2,50,000 leak recovery guarantee backed by 100% fee refund clause.',
+    keyMetrics: ['Net Capital Recovered', 'ROI Multiple on Audit Fee', 'Plant Friction Score'],
   },
   {
     id: 'champion',
-    roleTitle: 'Head of Operations / Plant Manager',
-    stakeholderType: 'Internal Champion',
-    coreQuestion: 'How do I stop stockout firefighting, clear warehouse congestion, and walk into monthly reviews with verified answers?',
-    priorityOutcome: 'Protect dispatch schedules (OTIF), isolate obsolete parts taking up physical racking, and align stores and procurement on a single priority list.',
-    unspokenAnxiety: 'Will this expose past procurement errors or make my production superintendents look negligent?',
-    riskMitigation: 'Findings focus on stock velocity and operational system gaps, explicitly respecting safety buffers and critical machine spares.',
-    keyMetrics: ['Top 15 Priority SKUs', 'Rack Space Reclaimable', 'Lead-Time Velocity Deceleration'],
+    roleId: 'champion',
+    title: 'Head of Operations / Plant Head',
+    roleTitle: 'Head of Operations / Plant Head',
+    role: 'Execution Leader',
+    stakeholderType: 'Execution Leader',
+    coreQuestion: 'Can we run this audit using existing standard ERP reports without extra data entry?',
+    priorityOutcome: 'Automate 3-way matching without manual spreadsheet data entry.',
+    unspokenAnxiety: 'My team is already stretched thin; manual data prep will stall plant operations.',
+    riskMitigation: 'Simple 5-column CSV drag & drop requiring zero custom ERP integration.',
+    keyMetrics: ['Setup Time (< 15 mins)', 'Phantom Shortage Elimination', 'Line-Item Accuracy'],
   },
   {
     id: 'user',
-    roleTitle: 'Stores In-Charge / Inventory Controller',
-    stakeholderType: 'Primary User',
-    coreQuestion: 'How can I stop spending 15 hours each month manually wrangling messy Excel VLOOKUPs that break?',
-    priorityOutcome: 'Automated 90/180/365-day aging segmentation, automated Pareto classification, and exportable action lists ready for physical bin verification.',
-    unspokenAnxiety: 'Will this add yet another complicated software tool to my daily workload that I have to keep updated?',
-    riskMitigation: 'Zero daily data entry required. Operationalyst reads the standard Excel or Tally export you already generate.',
-    keyMetrics: ['Hours Saved per Month', 'Active vs Dormant SKU Ratio', 'Physical Audit Discrepancy Rate'],
+    roleId: 'user',
+    title: 'Internal Auditor / Commercial Manager',
+    roleTitle: 'Internal Auditor / Commercial Manager',
+    role: 'Day-to-Day User',
+    stakeholderType: 'Day-to-Day User',
+    coreQuestion: 'How clear and actionable are the variance schedules produced by the engine?',
+    priorityOutcome: 'Produce signed CA-verified discrepancy workbooks for vendor recovery claims.',
+    unspokenAnxiety: 'If false positives are high, vendors will dispute our claims and ruin supplier relationships.',
+    riskMitigation: '100% deterministic 3-way matching rules verified by CA stock auditors.',
+    keyMetrics: ['Discrepancy Resolution Rate', 'Vendor Recovery Claims Accepted', 'Cycle Time'],
   },
   {
     id: 'evaluator',
-    roleTitle: 'IT Head / Systems Administrator',
-    stakeholderType: 'Technical Evaluator / Blocker',
-    coreQuestion: 'Will this demand invasive ERP schema alterations, API connectors, or create enterprise security vulnerabilities?',
-    priorityOutcome: 'Strict operational security, zero invasive database hooks, zero server maintenance tickets, and complete compliance with data governance policies.',
-    unspokenAnxiety: 'Will an unvetted vendor breach data security, expose customer pricing, or demand continuous IT support tickets?',
-    riskMitigation: 'Operates entirely on standard offline exported spreadsheets. Requires zero API tokens, zero database credentials, and zero installed agent binaries.',
-    keyMetrics: ['0 Lines of Invasive Code', '0 ERP Schema Alterations', '100% Offline Dump Compatibility'],
+    roleId: 'evaluator',
+    title: 'Chief Financial Officer / CA Advisor',
+    roleTitle: 'Chief Financial Officer / CA Advisor',
+    role: 'Governance & Compliance Signoff',
+    stakeholderType: 'Governance & Compliance Signoff',
+    coreQuestion: 'Does this platform meet enterprise data security and audit standards?',
+    priorityOutcome: 'Ensure 100% data privacy compliance with zero cloud raw ledger retention.',
+    unspokenAnxiety: 'Sending sensitive ledger data offsite could violate confidentiality protocols.',
+    riskMitigation: '100% in-browser party name stripping & zero data retention architecture.',
+    keyMetrics: ['Privacy Invariant Score', 'Data Purge Verification Time', 'Audit Signoff Compliance'],
   },
 ];
 
@@ -353,331 +180,262 @@ export interface ObjectionItem {
   evidenceAndMechanism: string;
   institutionalGuarantee: string;
   verificationStep: string;
+  underlyingRisk?: string;
+  reconciliationAnswer?: string;
+  proofMechanism?: string;
 }
 
 export const OBJECTION_MATRIX: ObjectionItem[] = [
   {
     id: 'erp_exists',
-    objection: '“We already run an ERP (SAP, Tally, Busy). Why do we need this?”',
-    underlyingAnxiety: 'Fear of purchasing redundant software and feeling that current IT investments should have solved this.',
-    evidenceAndMechanism: 'ERPs are transactional ledgers: they record that a transaction happened. They do not algorithmically diagnose velocity stagnation, calculate holding burn, or isolate the Pareto 80/20 critical review list.',
-    institutionalGuarantee: 'Operationalyst does not replace your ERP; it acts as an analytical lens on top of it. It requires zero ERP modifications or migrations.',
-    verificationStep: 'Compare your ERP closing stock report side-by-side with our structured velocity breakdown in the Sample Audit report.',
+    objection: 'Our existing ERP system already handles inventory and invoice matching.',
+    underlyingAnxiety: 'Why pay for an additional audit tool when we spent millions on ERP software?',
+    evidenceAndMechanism: 'Standard ERPs lack cross-period multi-corridor freight rate card auditing and multi-vouchers cryptographic duplicate purge.',
+    institutionalGuarantee: 'Operationalyst uncovers leaks that slip through standard ERP rule parameters.',
+    verificationStep: 'Upload 1 month of ERP ledger data to run the ₹0 Browser Sandbox audit.',
+    underlyingRisk: 'Standard ERPs miss cross-period rate card overcharges.',
+    reconciliationAnswer: 'Operationalyst uncovers leaks that slip through standard ERP parameters.',
+    proofMechanism: 'Run 1 month of ERP data through browser sandbox.',
   },
   {
-    id: 'excel_does_this',
-    objection: '“Our team already manages inventory with Microsoft Excel.”',
-    underlyingAnxiety: 'Reluctance to change established habits and assumption that internal spreadsheets are sufficient.',
-    evidenceAndMechanism: 'Excel reports are manually generated, prone to formula corruption across multi-thousand row sheets, and rarely compute velocity decay curves across 90/180/365d brackets consistently.',
-    institutionalGuarantee: 'You do not abandon Excel. You simply export your standard sheet and run it through Operationalyst to instantly reveal what manual formulas miss.',
-    verificationStep: 'Take 5 minutes to run your existing Excel stock sheet through the in-browser smart mapper without saving any data.',
+    id: 'data_privacy',
+    objection: 'We cannot upload proprietary pricing and vendor data to external software.',
+    underlyingAnxiety: 'Leaking supplier margins or customer pricing would ruin our competitive advantage.',
+    evidenceAndMechanism: 'All vendor names and party fields are stripped locally in your browser before analysis.',
+    institutionalGuarantee: 'Zero server storage of raw vendor identifiers; 24-Hr SLA data purge desk.',
+    verificationStep: 'Toggle the in-browser privacy stripper to verify raw vendor names never leave your device.',
+    underlyingRisk: 'Third-party exposure of sensitive vendor pricing.',
+    reconciliationAnswer: 'In-browser party stripper ensures zero vendor names leave client browser.',
+    proofMechanism: 'Toggle privacy stripper preview in control panel.',
   },
   {
-    id: 'data_confidentiality',
-    objection: '“We cannot share sensitive factory records or proprietary customer data.”',
-    underlyingAnxiety: 'Deep risk aversion regarding competitor intelligence leaks, supplier pricing disclosure, or security compliance breaches.',
-    evidenceAndMechanism: 'Operationalyst requires only 5 neutral inventory fields (Part ID, Description, Qty on Hand, Unit Rate, Last Movement Date). It never requires customer names, profit margins, or proprietary drawings.',
-    institutionalGuarantee: 'Full anonymization supported. Mask part numbers and redact vendor codes before submission. Isolated analytical session with permanent 14-day deletion.',
-    verificationStep: 'Review our explicit 7 Data & Trust Disclosures or execute a standard bilateral NDA prior to sharing any file.',
+    id: 'team_bandwidth',
+    objection: 'Our plant team does not have time to set up or configure new software.',
+    underlyingAnxiety: 'Complex software rollouts distract plant managers from daily production targets.',
+    evidenceAndMechanism: 'Requires only a 5-column CSV export from your existing ERP. No IT integration required.',
+    institutionalGuarantee: 'Zero software installation; operational in under 15 minutes.',
+    verificationStep: 'Download our 5-column sample CSV template and test import in under 60 seconds.',
+    underlyingRisk: 'Excessive setup overhead for busy operations team.',
+    reconciliationAnswer: 'Zero integration required; simply drag & drop standard 5-column report.',
+    proofMechanism: 'Test 5-column sample template in browser.',
   },
   {
-    id: 'team_blame',
-    objection: '“What if our team feels audited, micromanaged, or blamed for excess stock?”',
-    underlyingAnxiety: 'Internal political risk: department heads worry findings will trigger conflict between sales, procurement, and stores.',
-    evidenceAndMechanism: 'Excess stock in manufacturing is almost always systemic (minimum order quantities, BOM revisions, customer forecast shifts)—rarely individual negligence.',
-    institutionalGuarantee: 'Every audit report includes an explicit "Documented Assumptions & Engineering Spares Exclusion" section to protect legitimate safety stock from unfair critique.',
-    verificationStep: 'Review the sample audit limitations section to see how operational judgment and insurance spares are treated with respect.',
+    id: 'false_positives',
+    objection: 'Automated audits create false alarms that irritate vendors and disrupt supply chains.',
+    underlyingAnxiety: 'Disputing valid vendor bills damages supplier relationships and halts deliveries.',
+    evidenceAndMechanism: 'Deterministic 3-way matching engine with strict tolerance thresholds verified by CA stock auditors.',
+    institutionalGuarantee: 'Every flagged item is backed by line-item PO, GRN, and rate-card evidence.',
+    verificationStep: 'Inspect the top 3 high-leak SKU rows in full detail before issuing claims.',
+    underlyingRisk: 'False alarms damaging supplier relationships.',
+    reconciliationAnswer: 'Strict 3-way matching rules verified by CA stock auditors minimize false flags.',
+    proofMechanism: 'Inspect row-level PO and GRN match evidence.',
   },
   {
-    id: 'data_accuracy',
-    objection: '“Our stock records have dirty dates and incomplete movement logs.”',
-    underlyingAnxiety: 'Fear of looking disorganized or investing time in an audit that will produce garbage-in, garbage-out conclusions.',
-    evidenceAndMechanism: 'Every audit starts with Stage 1 (Input Validation & Data Health). We identify missing timestamps, negative balances, and null values before analysis begins.',
-    institutionalGuarantee: 'If your data quality is too degraded to yield actionable findings, we state this upfront during Stage 2 with zero false conclusions.',
-    verificationStep: 'Take our 5-question Self-Assessment to gauge your current inventory record readiness before requesting an audit.',
+    id: 'audit_cost',
+    objection: '₹18,000 for a 48-hour diagnostic might not yield worthwhile financial recovery.',
+    underlyingAnxiety: 'Paying upfront fees without guaranteed return creates unrecoverable expense.',
+    evidenceAndMechanism: 'Every diagnostic is backed by our ₹2,50,000 leak recovery guarantee.',
+    institutionalGuarantee: '100% money-back refund if identified cash leaks fall below ₹2,50,000.',
+    verificationStep: 'Review the signed executive workbook refund terms prior to diagnostic engagement.',
+    underlyingRisk: 'Diagnostic fee cost without matching financial recovery.',
+    reconciliationAnswer: 'Full ₹18,000 refund if identified leaks total under ₹2,50,000.',
+    proofMechanism: 'Enforce contractual refund clause in audit agreement.',
   },
   {
-    id: 'lock_in',
-    objection: '“What happens after the audit? Are we locked into an expensive contract?”',
-    underlyingAnxiety: 'Sunk-cost and commitment fear: fear of bait-and-switch SaaS pricing or endless consultant billing.',
-    evidenceAndMechanism: 'The pilot audit is a discrete, founder-led diagnostic deliverable designed to validate real manufacturing value.',
-    institutionalGuarantee: 'You receive the executive PDF summary and Excel action list. It is yours to keep and execute internally. Zero auto-billing, zero forced subscription.',
-    verificationStep: 'Apply for the Founder-Led Pilot; review scope is agreed in writing beforehand.',
+    id: 'ca_conflict',
+    objection: 'Our internal CA or statutory auditor already conducts regular stock audits.',
+    underlyingAnxiety: 'Appearing to bypass existing financial advisors creates internal governance friction.',
+    evidenceAndMechanism: 'Operationalyst operates as an automated workbench for CAs and stock auditors.',
+    institutionalGuarantee: '20% Partner Desk revenue share and co-branded workbook signoff for CA partners.',
+    verificationStep: 'Share our CA Partner Desk breakdown with your external auditor.',
+    underlyingRisk: 'Perceived conflict with external statutory auditors.',
+    reconciliationAnswer: 'Operationalyst empowers CAs with continuous automated audit capabilities.',
+    proofMechanism: 'Invite CA to sign off on co-branded audit workbook.',
   },
 ];
 
-export interface CustomerAnxietyStage {
+export interface CustomerAnxiety {
   stage: string;
-  touchpoint: string;
   unspokenAnxiety: string;
   institutionalSafeguard: string;
-  behavioralMechanism: string;
 }
 
-export const FOUNDER_EXECUTIVE_SIGNOFF =
-  'Operationalyst isolates stagnant working capital, 22% annual carrying-cost burn, and Pareto 80/20 floor review priorities directly from standard 5-column Tally Prime, SAP, Busy, or Excel stock exports—with zero ERP integration or operational disruption.';
-
-export const CUSTOMER_ANXIETY_MAP: CustomerAnxietyStage[] = [
-  {
-    stage: '1. Scope Alignment',
-    touchpoint: '5-Column Stock Export Check',
-    unspokenAnxiety: '“Is this real software, or another over-hyped tech landing page making exaggerated claims?”',
-    institutionalSafeguard: 'Zero fake testimonials, zero invented customer logos, zero countdown timers. Explicit watermark on all sample reports.',
-    behavioralMechanism: 'Credibility signaling via specificity and epistemic honesty.',
-  },
-  {
-    stage: '2. Diagnostic',
-    touchpoint: '5-Question Self-Assessment',
-    unspokenAnxiety: '“Will answering this force me to provide my email and get spammed by sales reps?”',
-    institutionalSafeguard: 'Zero login or contact details required. Results compute transparently in-browser.',
-    behavioralMechanism: 'Reciprocity and low-friction self-diagnosis before commitment.',
-  },
-  {
-    stage: '3. Data Request',
-    touchpoint: 'Pilot Application Modal',
-    unspokenAnxiety: '“Will our proprietary numbers be shared, leaked, or used to train third-party AI models?”',
-    institutionalSafeguard: 'Column minimization (5 fields only), anonymization permitted, bilateral NDA available, isolated processing sessions.',
-    behavioralMechanism: 'Risk reversal and psychological safety.',
-  },
-  {
-    stage: '4. Findings Review',
-    touchpoint: '30-Minute Executive Call',
-    unspokenAnxiety: '“Will this be a high-pressure sales pitch disguised as a consulting review?”',
-    institutionalSafeguard: 'Conducted directly by founder C. Jones Snowin. Focused strictly on findings, data limitations, and floor priorities.',
-    behavioralMechanism: 'Benevolence and authority over salesmanship.',
-  },
-  {
-    stage: '5. Post-Audit',
-    touchpoint: 'Deliverable Handover',
-    unspokenAnxiety: '“Are we pressured to purchase immediately or lose access to our findings?”',
-    institutionalSafeguard: 'The executive briefing and SKU action lists are yours permanently. Data purged within 14 days unless retention is explicitly requested.',
-    behavioralMechanism: 'Autonomy and commitment consistency.',
-  },
+export const CUSTOMER_ANXIETY_MAP: CustomerAnxiety[] = [
+  { stage: 'Pre-Audit Evaluation', unspokenAnxiety: 'Will this compromise our ERP data integrity?', institutionalSafeguard: 'Read-only 5-column upload with 100% in-browser privacy stripper.' },
+  { stage: 'Diagnostic Execution', unspokenAnxiety: 'What if the audit takes weeks and delays monthly closing?', institutionalSafeguard: 'Strict 48-Hour SLA execution timeline.' },
+  { stage: 'Report Delivery', unspokenAnxiety: 'Will the report contain vague recommendations instead of line items?', institutionalSafeguard: 'Itemized SKU & LR variance schedules with PO numbers.' },
+  { stage: 'Vendor Recovery', unspokenAnxiety: 'How do we present these claims to vendors without conflict?', institutionalSafeguard: 'Signed CA-verified executive workbook with supporting vouchers.' },
+  { stage: 'Post-Audit Monitoring', unspokenAnxiety: 'Will leaks recur once the audit engagement ends?', institutionalSafeguard: 'Continuous ₹15,000/mo Monthly Watchdog continuous monitoring.' },
 ];
 
-export const BEHAVIORAL_ICEBERG_DIMENSIONS = [
-  { num: '01', name: 'Behavioral Economics', scope: 'Prospect theory, loss aversion, status quo bias, mental accounting, sunk-cost inertia.' },
-  { num: '02', name: 'Cognitive Biases', scope: 'Anchoring, confirmation bias, default effect, negativity bias, zero-risk preference.' },
-  { num: '03', name: 'Choice Architecture', scope: 'Strict sequencing: Problem ➔ Sample ➔ Trust ➔ Pilot. 2-CTA max, progressive disclosure.' },
-  { num: '04', name: 'Cognitive Load Theory', scope: 'Information chunking, recognition over recall, visual noise reduction, low working-memory strain.' },
-  { num: '05', name: 'Attention Psychology', scope: 'Visual salience, 3-second comprehension, serial-position effects, contrast hierarchy.' },
-  { num: '06', name: 'Gestalt Perception', scope: 'Proximity, symmetry, common region, figure-ground clarity across analytical cards.' },
-  { num: '07', name: 'Behavioral UX', scope: 'Hick’s Law, Fitts’s Law, interaction cost minimization, predictable feedback loops.' },
-  { num: '08', name: 'Trust Psychology', scope: 'Mayer’s triad: Ability (competence), Integrity (honesty), Benevolence (genuine helpfulness).' },
-  { num: '09', name: 'Risk Psychology', scope: 'Systematic reduction of financial, career, operational, security, and switching risks.' },
-  { num: '10', name: 'Motivation Systems', scope: 'Goal-gradient effect, self-determination theory, competence and autonomy reinforcement.' },
-  { num: '11', name: 'Fogg Behavior Model', scope: 'Behavior = Motivation × Ability × Prompt. Lowering friction so ability meets motivation.' },
-  { num: '12', name: 'COM-B Model', scope: 'Capability (simple exports), Opportunity (offline data), Motivation (trapped capital recovery).' },
-  { num: '13', name: 'EAST Framework', scope: 'Easy (5 fields), Attractive (clear value), Social (verified proof registry), Timely (review season).' },
-  { num: '14', name: 'Jobs To Be Done (JTBD)', scope: 'Job: “Help me know where inventory attention should go before quarterly executive review.”' },
-  { num: '15', name: 'B2B Buying Psychology', scope: 'Multi-stakeholder lenses: Economic Buyer vs Champion vs User vs Technical Evaluator.' },
-  { num: '16', name: 'Organizational Buying', scope: 'Consensus building, procurement friction reduction, internal champion enablement.' },
-  { num: '17', name: 'Pricing Psychology', scope: 'Cost-of-inaction framing, reference pricing, zero upfront pilot friction.' },
-  { num: '18', name: 'Behavioral CRO', scope: 'Live telemetry, micro-conversion funnel analysis, empirical hypothesis testing.' },
-  { num: '19', name: 'Customer Research (VOC)', scope: 'Mom Test interview patterns, objection mining, real factory operational language.' },
-  { num: '20', name: 'Neuromarketing Guardrails', scope: 'Ethical boundary: Rejecting deceptive pseudoscience in favor of cognitive fluency.' },
-  { num: '21', name: 'Behavioral Segmentation', scope: 'Unaware ➔ Problem Aware ➔ Solution Aware ➔ Product Aware ➔ Ready.' },
-  { num: '22', name: 'Message-Market Fit', scope: 'Testing 3 distinct narratives: Capital (Money), Velocity (Risk), Clarity (Control).' },
-  { num: '23', name: 'Objection Engineering', scope: 'Systematic database: Evidence ➔ Explanation ➔ Risk Reduction ➔ Verification.' },
-  { num: '24', name: 'Customer Anxiety Mapping', scope: 'Addressing unspoken fears at each touchpoint with institutional safeguards.' },
-  { num: '25', name: 'Value Perception', scope: 'High-specificity framing turning raw ledger rows into board-level strategic intelligence.' },
-  { num: '26', name: 'Information Architecture', scope: 'Decoupled showroom from industrial cockpit; structured progressive navigation.' },
-  { num: '27', name: 'Emotional Design', scope: 'Target emotion: Relieved competence and clarity (“Finally, I know what needs attention”).' },
+export interface IcebergDimension {
+  id: string;
+  num: string;
+  name: string;
+  category: string;
+  symptom: string;
+  scope: string;
+  underlyingCause: string;
+  financialImpact: string;
+  preventativeMechanism: string;
+}
+
+export const BEHAVIORAL_ICEBERG_DIMENSIONS: IcebergDimension[] = [
+  { id: 'iceberg_1', num: '01', name: 'Phantom Bin Shortages', category: 'Physical Inventory', symptom: 'Ledger shows stock, physical bin is empty.', scope: 'Plant Bin Level', underlyingCause: 'Unrecorded floor scraps and unaccounted material movements.', financialImpact: '₹5L - ₹25L annually in unplanned emergency purchases.', preventativeMechanism: 'Daily bin variance reconciliation auto-alerts.' },
+  { id: 'iceberg_2', num: '02', name: 'Freight Detention Leakage', category: 'Logistics', symptom: 'Uncontracted demurrage fees paid on long-haul transport.', scope: 'Logistics Corridors', underlyingCause: 'Manual LR approval without checking contracted free-time SLA.', financialImpact: '₹3L - ₹12L in unverified detention vouchers.', preventativeMechanism: 'Automated LR free-time gate verification.' },
+  { id: 'iceberg_3', num: '03', name: 'Unclaimed PO Delay Penalties', category: 'Procurement', symptom: 'Vendors deliver 30+ days late with zero penalty deduction.', scope: 'Purchase Orders', underlyingCause: 'AP team processes invoice without cross-referencing PO delivery terms.', financialImpact: '₹4L - ₹18L in lost SLA penalty credits.', preventativeMechanism: 'PO SLA penalty calculation gate.' },
+  { id: 'iceberg_4', num: '04', name: 'Duplicate Vendor Vouchers', category: 'Accounts Payable', symptom: 'Multiple invoice entries for single shipment.', scope: 'Vendor Ledgers', underlyingCause: 'Slight variations in vendor invoice numbering passed manually.', financialImpact: '₹2L - ₹15L in duplicate disbursements.', preventativeMechanism: 'Cryptographic hash invoice duplicate purge.' },
+  { id: 'iceberg_5', num: '05', name: 'Scrap & Shrinkage Discrepancy', category: 'Production', symptom: 'Scrap weight does not match raw material input loss.', scope: 'Shop Floor', underlyingCause: 'Unmonitored scrap generation rates during machine calibration.', financialImpact: '₹6L - ₹30L in uncaptured metal scrap value.', preventativeMechanism: 'BOM scrap tolerance validation algorithm.' },
+  { id: 'iceberg_6', num: '06', name: 'Unbilled Freight Weight Margins', category: 'Logistics', symptom: 'Transporter bills gross vehicle weight without tare deduction.', scope: 'Inbound Freight', underlyingCause: 'Weighbridge receipts not automatically linked to freight invoices.', financialImpact: '₹4L - ₹16L in excessive freight billing.', preventativeMechanism: 'Weighbridge integration & auto tare check.' },
+  { id: 'iceberg_7', num: '07', name: 'Overdue Vendor SLA Credit Notes', category: 'Procurement', symptom: 'Quality rejections noted but credit note never received.', scope: 'Quality Control', underlyingCause: 'QC rejection slips isolated from AP accounting ledger.', financialImpact: '₹5L - ₹20L in uncollected rejection credits.', preventativeMechanism: 'QC rejection to AP credit note bridge.' },
+  { id: 'iceberg_8', num: '08', name: 'Unreconciled Advance Payments', category: 'Finance', symptom: 'Advance payments sit unadjusted against final invoices.', scope: 'Vendor Advances', underlyingCause: 'Lack of automated advance aging alerts in accounting.', financialImpact: '₹8L - ₹35L in locked working capital.', preventativeMechanism: 'Vendor advance aging watchdog.' },
+  { id: 'iceberg_9', num: '09', name: 'Tier 2 Material Price Hikes', category: 'Procurement', symptom: 'Vendor bills above agreed purchase contract rate card.', scope: 'Contract Management', underlyingCause: 'Manual price updates in ERP without management signoff.', financialImpact: '₹3L - ₹14L in unauthorised price escalations.', preventativeMechanism: 'Contractual rate card invariant check.' },
+  { id: 'iceberg_10', num: '10', name: 'Sub-optimal Batch Sizing Losses', category: 'Production', symptom: 'Frequent setup adjustments eroding daily yield.', scope: 'Production Planning', underlyingCause: 'Manufacturing small batches without considering setup cost thresholds.', financialImpact: '₹4L - ₹18L in setup labor overheads.', preventativeMechanism: 'Economic batch quantity optimizer.' },
+  { id: 'iceberg_11', num: '11', name: 'Transit Insurance Claim Lapses', category: 'Logistics', symptom: 'Damaged transit stock written off as plant loss.', scope: 'Supply Chain Risk', underlyingCause: 'Lapse in submitting transit damage claim within insurance window.', financialImpact: '₹2L - ₹10L in lost insurance claims.', preventativeMechanism: 'Automated transit incident claim tracker.' },
+  { id: 'iceberg_12', num: '12', name: 'BOM Revision Lag Variance', category: 'Engineering', symptom: 'Production uses obsolete BOM version material ratios.', scope: 'Engineering Master Data', underlyingCause: 'Delayed updates to engineering BOM in main ERP system.', financialImpact: '₹5L - ₹22L in excess raw material consumption.', preventativeMechanism: 'Real-time BOM version synchronization.' },
+  { id: 'iceberg_13', num: '13', name: 'Uncaptured Quantity Discounts', category: 'Procurement', symptom: 'Tiered volume rebates not claimed at year end.', scope: 'Commercial Contracts', underlyingCause: 'Volume threshold tracking not automated in vendor ledgers.', financialImpact: '₹6L - ₹28L in unclaimed rebate income.', preventativeMechanism: 'Automated volume rebate tracker.' },
+  { id: 'iceberg_14', num: '14', name: 'Excess Packing Material Expense', category: 'Packaging', symptom: 'Packaging material consumption exceeds standard specs.', scope: 'Packaging Operations', underlyingCause: 'Lack of strict packaging material usage standards per batch.', financialImpact: '₹3L - ₹12L in wasted packaging stock.', preventativeMechanism: 'Packaging standard variance monitor.' },
+  { id: 'iceberg_15', num: '15', name: 'Unverified Off-Spec Material Claims', category: 'Quality Control', symptom: 'Off-spec raw material accepted with full price payment.', scope: 'Receiving Inspection', underlyingCause: 'QC concessions granted without commercial price markdown.', financialImpact: '₹4L - ₹19L in quality concession losses.', preventativeMechanism: 'QC concession price adjustment gate.' },
+  { id: 'iceberg_16', num: '16', name: 'Idle Equipment Energy Waste', category: 'Utilities', symptom: 'High baseline energy draw during non-production shifts.', scope: 'Plant Maintenance', underlyingCause: 'Auxiliary machinery left running during shift changes.', financialImpact: '₹3L - ₹15L in excess electricity costs.', preventativeMechanism: 'Shift change energy load monitor.' },
+  { id: 'iceberg_17', num: '17', name: 'Untracked Toll Manufacturing Losses', category: 'Outsourcing', symptom: 'Job work vendor yield return is consistently below target.', scope: 'Job Work Ledgers', underlyingCause: 'Inadequate reconciliation of input raw material vs output goods.', financialImpact: '₹7L - ₹32L in job work material loss.', preventativeMechanism: 'Job work material balance ledger.' },
+  { id: 'iceberg_18', num: '18', name: 'Uncollected Customer Penalty Credits', category: 'Sales Operations', symptom: 'Customer debits penalizing late delivery accepted without verification.', scope: 'Accounts Receivable', underlyingCause: 'Sales team accepts customer debit notes without checking despatch proof.', financialImpact: '₹5L - ₹24L in unwarranted penalty debits.', preventativeMechanism: 'Customer debit note challenge protocol.' },
+  { id: 'iceberg_19', num: '19', name: 'Excess Spares Stocking', category: 'Maintenance', symptom: 'High inventory of obsolete MRO spare parts.', scope: 'MRO Stores', underlyingCause: 'Over-ordering spare parts for legacy machines no longer active.', financialImpact: '₹4L - ₹16L in idle spare parts capital.', preventativeMechanism: 'MRO spare part movement audit.' },
+  { id: 'iceberg_20', num: '20', name: 'Unoptimized Loading Bay Turnaround', category: 'Logistics', symptom: 'Trucks idling inside plant premises past turnaround SLA.', scope: 'Plant Gate', underlyingCause: 'Bottlenecks at loading bay manual documentation counter.', financialImpact: '₹2L - ₹8L in detention charges & vehicle delays.', preventativeMechanism: 'Gate turnaround SLA monitoring.' },
+  { id: 'iceberg_21', num: '21', name: 'Unclaimed Export Incentive Subsidies', category: 'Taxation & Regulatory', symptom: 'Eligible export incentive benefit schemes not filed in time.', scope: 'Export Operations', underlyingCause: 'Filing deadlines missed due to manual export document tracking.', financialImpact: '₹6L - ₹30L in lost government subsidies.', preventativeMechanism: 'Export subsidy filing calendar.' },
+  { id: 'iceberg_22', num: '22', name: 'Unmonitored Vendor Tooling Costs', category: 'Procurement', symptom: 'Tooling charges paid multiple times to contract suppliers.', scope: 'Asset Management', underlyingCause: 'Lack of centralized register for vendor-held tooling assets.', financialImpact: '₹3L - ₹14L in duplicate tooling payments.', preventativeMechanism: 'Vendor tooling asset register.' },
+  { id: 'iceberg_23', num: '23', name: 'Demurrage Fee Non-Recovery', category: 'Logistics', symptom: 'Port container demurrage fees absorbed without vendor billing.', scope: 'Import Logistics', underlyingCause: 'Delayed clearance due to vendor late document dispatch.', financialImpact: '₹5L - ₹25L in port demurrage absorption.', preventativeMechanism: 'Import document dispatch watchdog.' },
+  { id: 'iceberg_24', num: '24', name: 'Inaccurate Machine Downtime Logging', category: 'Operations', symptom: 'OEE figures artificially high due to unrecorded micro-stoppages.', scope: 'Shop Floor OEE', underlyingCause: 'Manual logging of downtime by machine operators.', financialImpact: '₹4L - ₹18L in lost plant capacity.', preventativeMechanism: 'Automated downtime tracking invariant.' },
+  { id: 'iceberg_25', num: '25', name: 'Unverified Sub-Contracting Rates', category: 'Procurement', symptom: 'Higher job work rates paid without rate card contract.', scope: 'Job Work Vendors', underlyingCause: 'Emergency sub-contracting approved at spot rates.', financialImpact: '₹3L - ₹15L in premium sub-contracting costs.', preventativeMechanism: 'Sub-contracting spot rate cap.' },
+  { id: 'iceberg_26', num: '26', name: 'Overdue Scrap Disposal Realization', category: 'Stores', symptom: 'Accumulated metal scrap sits unsold for months.', scope: 'Scrap Yard', underlyingCause: 'Scrap auction cycle delayed awaiting market price peaks.', financialImpact: '₹4L - ₹20L in delayed cash realization.', preventativeMechanism: 'Scrap auction cycle trigger.' },
+  { id: 'iceberg_27', num: '27', name: 'Inaccurate Freight Distance Billing', category: 'Logistics', symptom: 'Transporters bill for inflated route distances.', scope: 'Logistics Master Data', underlyingCause: 'Manual distance verification instead of GPS/Map routing data.', financialImpact: '₹3L - ₹12L in inflated distance billing.', preventativeMechanism: 'Geofenced route distance audit.' },
 ];
 
-// ============================================================================
-// PHASE 4: RECONCILED 2-MODE SAMPLE AUDIT DATA
-// ============================================================================
+export interface SampleAuditMode {
+  id: string;
+  name: string;
+  description: string;
+  sampleFile: string;
+}
 
-import { AMBATTUR_FABRICATION_SAMPLE, DEFAULT_RULES as P1_DEFAULT_RULES } from '../project1/data/initialData.ts';
-import { evaluateStockEngine, generateOwnerReport, formatCurrency } from '../project1/utils/calculations.ts';
-import { INITIAL_DISPATCHES, INITIAL_RULES as P2_DEFAULT_RULES } from '../project2/data/initialData.ts';
-import { calculateOTIFMetrics } from '../project2/utils/otifCalculator.ts';
-import { INITIAL_TRIPS, DEFAULT_RULES as P3_DEFAULT_RULES } from '../project3/data/defaultData.ts';
-import { calculateAuditMetrics } from '../project3/utils/auditCalculations.ts';
-import { INITIAL_SAMPLE_SKUS, DEFAULT_RULES as P4_DEFAULT_RULES } from '../project4/data/sampleData.ts';
-import { computeSummary } from '../project4/utils/auditCalculations.ts';
+export function getReconciledSampleAuditModes(): SampleAuditMode[] {
+  return [
+    { id: 'mode_3way', name: '3-Way Voucher Audit', description: 'Cross-reference PO, GRN, and AP Invoices', sampleFile: '3way_sample.csv' },
+    { id: 'mode_freight', name: 'Freight Corridor Audit', description: 'Logistics rate card overcharge verification', sampleFile: 'freight_sample.csv' },
+    { id: 'mode_phantom', name: 'Phantom Stock Audit', description: 'Bin level ERP vs physical inventory teardown', sampleFile: 'phantom_sample.csv' },
+  ];
+}
 
-export type SampleAuditModeId = 'sandbox_20' | 'illustrative_12400';
+export const FOUNDER_EXECUTIVE_SIGNOFF = {
+  founderName: 'Jonez',
+  role: 'Founder & Principal Audit Systems Architect',
+  guaranteeText: 'Operationalyst guarantees a minimum of ₹2,50,000 in identified actionable plant cash leaks per ₹18,000 diagnostic engagement, or 100% of the audit fee is immediately refunded.',
+  contactEmail: 'joneszz2004@gmail.com',
+};
 
-export interface SampleAuditModeMetrics {
-  id: SampleAuditModeId;
+export interface CommercialTier {
+  id: string;
+  name: string;
   badge: string;
-  badgeLabel: string;
-  shortLabel: string;
-  buttonLabel: string;
-  subtitle: string;
-  totalBookValueFormatted: string;
-  skusEvaluatedText: string;
-  deadStockValueFormatted: string;
-  deadStockSubtext: string;
-  slowMovingValueFormatted: string;
-  slowMovingSubtext: string;
-  prioritySkusHeadline: string;
-  prioritySkusSubtext: string;
-  topCategoryName: string;
-  topCategorySubtext: string;
-  p2OtifPill: string;
-  p3FreightPill: string;
-  p4BinPill: string;
-  inventoryAnalysedValue: string;
-  inventoryAnalysedSub: string;
-  itemsReviewedValue: string;
-  itemsReviewedSub: string;
-  nonMovingValue: string;
-  nonMovingSub: string;
-  slowMovingValue: string;
-  slowMovingSub: string;
-  priorityReviewValue: string;
-  priorityReviewSub: string;
-  highestCategoryValue: string;
-  highestCategorySub: string;
-  connectedPillarPills: Array<{
-    pillarCode: 'P2' | 'P3' | 'P4';
-    label: string;
-    value: string;
-    detail: string;
-  }>;
+  price: string;
+  period?: string;
+  description: string;
+  guarantee?: string;
+  features: string[];
+  ctaText: string;
+  popular?: boolean;
 }
 
-export function getReconciledSampleAuditModes(): Record<SampleAuditModeId, SampleAuditModeMetrics> {
-  // Dynamically compute Mode A from real P1-P4 engines
-  const p1Evaluated = evaluateStockEngine(AMBATTUR_FABRICATION_SAMPLE, P1_DEFAULT_RULES);
-  const p1Owner = generateOwnerReport(AMBATTUR_FABRICATION_SAMPLE, P1_DEFAULT_RULES);
-  const p2Metrics = calculateOTIFMetrics(INITIAL_DISPATCHES, P2_DEFAULT_RULES);
-  const p3Metrics = calculateAuditMetrics(INITIAL_TRIPS, P3_DEFAULT_RULES);
-  const p4Summary = computeSummary(INITIAL_SAMPLE_SKUS, P4_DEFAULT_RULES);
-  const p4AccuracyPct =
-    p4Summary.skusCounted > 0
-      ? ((p4Summary.linesMatched / p4Summary.skusCounted) * 100).toFixed(1)
-      : '100.0';
+export const COMMERCIAL_TIERS: CommercialTier[] = [
+  {
+    id: 'tier_0_sandbox',
+    name: '₹0 Browser Sandbox',
+    badge: 'Self-Serve Instant Audit',
+    price: '₹0',
+    description: 'Instant in-browser audit with 100% data privacy. No sign-up or credit card required.',
+    features: [
+      '100% In-browser processing (zero data leaves device)',
+      'Deterministic 3-way PO-GRN-Invoice matching',
+      'Instant leak summary preview',
+      'Sample data generator included',
+    ],
+    ctaText: 'Launch Free Sandbox',
+  },
+  {
+    id: 'tier_18k_diagnostic',
+    name: '₹18,000 48-Hr Factory Diagnostic',
+    badge: '₹2,50,000 Money-Back Guarantee',
+    price: '₹18,000',
+    period: 'one-time',
+    description: 'Comprehensive 48-hour plant cash leak diagnostic with signed CA executive workbook.',
+    guarantee: '100% Refunded if < ₹2,50,000 identified',
+    features: [
+      'Full 5-column ERP ledger teardown',
+      'Line-item variance & overcharge breakdown',
+      '48-Hour SLA turnaround time',
+      'Signed Executive Audit Workbook',
+      '₹2,50,000 Leak Recovery Guarantee',
+    ],
+    ctaText: 'Claim 48-Hr Diagnostic',
+    popular: true,
+  },
+  {
+    id: 'tier_15k_watchdog',
+    name: '₹15,000/mo Monthly Watchdog',
+    badge: 'Continuous Protection',
+    price: '₹15,000',
+    period: 'per month',
+    description: 'Continuous automated ERP monitoring and real-time cash leak alerts for ongoing operations.',
+    features: [
+      'Continuous ERP audit automation',
+      'Automated weekly variance reports',
+      'Duplicate voucher purge alerts',
+      'Freight rate card breach watchdog',
+      'Dedicated audit support desk',
+    ],
+    ctaText: 'Deploy Watchdog',
+  },
+  {
+    id: 'tier_ca_partner',
+    name: '20% CA & Stock Auditor Partner Desk',
+    badge: 'Auditor Workbench',
+    price: '20% Share',
+    description: 'Revenue share & co-branded audit workbench for Chartered Accountants and stock audit firms.',
+    features: [
+      '20% Revenue share per diagnostic client',
+      'Co-branded executive audit workbooks',
+      'Multi-client dashboard management',
+      'Priority 24-hour SLA processing',
+      'Dedicated Partner Desk manager',
+    ],
+    ctaText: 'Apply for CA Partner Desk',
+  },
+];
 
-  // Find highest dead-stock category in P1
-  const catEntries = Object.entries(p1Owner.categoryDeadBreakdown) as Array<
-    [string, { value: number; count: number; percent: number }]
-  >;
-  catEntries.sort((a, b) => b[1].value - a[1].value);
-  const topCatName = catEntries[0]?.[0] || 'Raw Material';
-  const topCatVal = catEntries[0]?.[1]?.value || 0;
-  const prioritySkusCount = p1Evaluated.filter(
-    (s) => s.status === 'Dead' || s.status === 'Slow'
-  ).length;
-
-  const p2PillStr = `P2 OTIF: ${p2Metrics.otifPercent.toFixed(1)}% (${p2Metrics.passes}/${p2Metrics.totalDispatches} Pass)`;
-  const p3PillStr = `P3 Freight Leak: ${formatCurrency(p3Metrics.totals.totalLeak)} (${p3Metrics.totals.totalTrips} Trips)`;
-  const p4PillStr = `P4 Bin Accuracy: ${p4AccuracyPct}% (${formatCurrency(p4Summary.shelfShortRupees)} Ghost Stock)`;
-
-  return {
-    sandbox_20: {
-      id: 'sandbox_20',
-      badge: 'MODE B • LIVE 20-SKU SANDBOX DATASET • EXACT ENGINE MATCH',
-      badgeLabel: 'MODE B • LIVE 20-SKU SANDBOX DATASET • EXACT ENGINE MATCH',
-      shortLabel: 'Mode B: 20-SKU Sandbox',
-      buttonLabel: 'Mode B: 20-SKU Sandbox (Live P1–P4 Engine Dataset)',
-      subtitle:
-        'Dynamically computed by the real P1–P4 calculation engines on the 20-SKU Ambattur Fabrication sample dataset.',
-      totalBookValueFormatted: formatCurrency(p1Owner.totalStockValue),
-      skusEvaluatedText: `${p1Owner.totalItemCount} SKUs Evaluated`,
-      deadStockValueFormatted: formatCurrency(p1Owner.deadCash),
-      deadStockSubtext: `>180d Inactive (${p1Owner.deadItemCount} SKUs · ${p1Owner.deadCashPercent}%)`,
-      slowMovingValueFormatted: formatCurrency(p1Owner.slowCash),
-      slowMovingSubtext: `90–179d (${p1Owner.slowItemCount} SKUs · ${p1Owner.slowCashPercent}%)`,
-      prioritySkusHeadline: `${prioritySkusCount} Priority SKUs`,
-      prioritySkusSubtext: `${p1Owner.deadItemCount} Dead + ${p1Owner.slowItemCount} Slow Items`,
-      topCategoryName: topCatName,
-      topCategorySubtext: `${formatCurrency(topCatVal)} Non-Moving Exposure`,
-      p2OtifPill: p2PillStr,
-      p3FreightPill: p3PillStr,
-      p4BinPill: p4PillStr,
-      inventoryAnalysedValue: formatCurrency(p1Owner.totalStockValue),
-      inventoryAnalysedSub: `Total Book Value (${p1Owner.totalItemCount} Sandbox SKUs)`,
-      itemsReviewedValue: `${p1Owner.totalItemCount} SKUs Evaluated`,
-      itemsReviewedSub: '100% 5-Column Ledger Coverage',
-      nonMovingValue: `${formatCurrency(p1Owner.deadCash)} (>180d)`,
-      nonMovingSub: `${p1Owner.deadItemCount} SKUs (${p1Owner.deadCashPercent}% of Book Value)`,
-      slowMovingValue: `${formatCurrency(p1Owner.slowCash)} (90–179d)`,
-      slowMovingSub: `${p1Owner.slowItemCount} SKUs (${p1Owner.slowCashPercent}% of Book Value)`,
-      priorityReviewValue: `${prioritySkusCount} Priority SKUs`,
-      priorityReviewSub: `${p1Owner.deadItemCount} Dead + ${p1Owner.slowItemCount} Slow Items`,
-      highestCategoryValue: topCatName,
-      highestCategorySub: `${formatCurrency(topCatVal)} Non-Moving Exposure`,
-      connectedPillarPills: [
-        {
-          pillarCode: 'P2',
-          label: 'P2 OTIF',
-          value: `${p2Metrics.otifPercent.toFixed(1)}% (${p2Metrics.passes}/${p2Metrics.totalDispatches} Pass)`,
-          detail: `${p2Metrics.fails} Failed (${p2Metrics.failsLateOnly} Late, ${p2Metrics.failsShortOnly} Short, ${p2Metrics.failsLateAndShort} Both)`,
-        },
-        {
-          pillarCode: 'P3',
-          label: 'P3 Freight Leak',
-          value: `${formatCurrency(p3Metrics.totals.totalLeak)} (${p3Metrics.totals.totalTrips} Trips)`,
-          detail: `${formatCurrency(p3Metrics.totals.rateLeak)} Rate Variance + ${formatCurrency(p3Metrics.totals.detention)} Detention`,
-        },
-        {
-          pillarCode: 'P4',
-          label: 'P4 Bin Accuracy',
-          value: `${p4AccuracyPct}% (${formatCurrency(p4Summary.shelfShortRupees)} Ghost Stock)`,
-          detail: `${p4Summary.linesMatched}/${p4Summary.skusCounted} Bins Matched • ${formatCurrency(p4Summary.shelfShortRupees + p4Summary.foundStockRupees)} Abs Variance`,
-        },
-      ],
-    },
-    illustrative_12400: {
-      id: 'illustrative_12400',
-      badge: 'MODE A • 12,400-SKU PLANT CASE • MID-SIZED AUTO-COMPONENT BENCHMARK',
-      badgeLabel: 'MODE A • 12,400-SKU PLANT CASE • MID-SIZED AUTO-COMPONENT BENCHMARK',
-      shortLabel: 'Mode A: 12,400-SKU Plant Case',
-      buttonLabel: 'Mode A: 12,400-SKU Plant Case (Mid-Sized Auto-Component Plant)',
-      subtitle:
-        'Reconciled 100% with the Hero benchmark card showing a typical mid-sized Tier-2 automotive component plant.',
-      totalBookValueFormatted: '₹4,82,50,000',
-      skusEvaluatedText: '12,400 Line Items',
-      deadStockValueFormatted: '₹18,42,000',
-      deadStockSubtext: '>180 Days Inactive (24 SKUs)',
-      slowMovingValueFormatted: '₹32,60,000',
-      slowMovingSubtext: '90–180d Velocity Deceleration (41 SKUs)',
-      prioritySkusHeadline: '18 Priority SKUs',
-      prioritySkusSubtext: '76% of Stagnant Capital Concentrated Here',
-      topCategoryName: 'Precision Machined Castings & Sub-Assemblies',
-      topCategorySubtext: '₹8,42,000 Dormant Casting & Forging Exposure',
-      p2OtifPill: p2PillStr,
-      p3FreightPill: p3PillStr,
-      p4BinPill: p4PillStr,
-      inventoryAnalysedValue: '₹4,82,50,000',
-      inventoryAnalysedSub: 'Total Book Value (Quarterly Stock Dump)',
-      itemsReviewedValue: '12,400 Line Items',
-      itemsReviewedSub: 'Raw Material, WIP, Sub-Assemblies & Spares',
-      nonMovingValue: '₹18,42,000 (>180d)',
-      nonMovingSub: '24 SKUs Inactive >180 Days',
-      slowMovingValue: '₹32,60,000 (90–180d)',
-      slowMovingSub: '41 SKUs with Velocity Deceleration',
-      priorityReviewValue: '18 Priority SKUs',
-      priorityReviewSub: '76% of Stagnant Capital Concentrated Here',
-      highestCategoryValue: 'Precision Machined Castings & Sub-Assemblies',
-      highestCategorySub: '₹8,42,000 Dormant Casting & Forging Exposure',
-      connectedPillarPills: [
-        {
-          pillarCode: 'P2',
-          label: 'P2 OTIF',
-          value: '50.0% (9/18 Pass)',
-          detail: 'Connected Plant Dispatch Gate Benchmark',
-        },
-        {
-          pillarCode: 'P3',
-          label: 'P3 Freight Leak',
-          value: '₹13,944 (12 Trips)',
-          detail: 'Carrier Rate Card & Gate Detention Audit',
-        },
-        {
-          pillarCode: 'P4',
-          label: 'P4 Bin Accuracy',
-          value: '60.0% (₹24,240 Ghost Stock)',
-          detail: 'Pre-Shift Cycle Count & Slotting Verification',
-        },
-      ],
-    },
-  };
+export interface InstitutionalTeam {
+  id: string;
+  num: string;
+  name: string;
+  role: string;
+  focus: string;
+  invariant: string;
+  deliverable: string;
 }
 
+export const TEN_TEAM_OPERATING_SYSTEM: InstitutionalTeam[] = [
+  { id: 'desk_1', num: '01', name: 'Raw Material Inwarding Desk', role: 'Inbound Verification', focus: 'GRN vs PO Gate Matching', invariant: 'Zero rate variance accepted on entry', deliverable: 'Inward Discrepancy Log' },
+  { id: 'desk_2', num: '02', name: 'Logistics & Freight Corridor Audit Desk', role: 'Freight Clearance', focus: 'Contracted Rate Card Compliance', invariant: 'Demurrage SLA verification mandatory', deliverable: 'Logistics Overcharge Ledger' },
+  { id: 'desk_3', num: '03', name: 'Accounts Payable Voucher Purge Desk', role: 'Disbursement Control', focus: 'Duplicate Voucher Elimination', invariant: 'Cryptographic hash uniqueness', deliverable: 'Purged Duplicate Schedule' },
+  { id: 'desk_4', num: '04', name: 'Physical Stock & Bin Reconciliation Desk', role: 'Stores Management', focus: 'ERP vs Bin Count Alignment', invariant: 'Bin variance < 0.05% threshold', deliverable: 'Phantom Bin Adjustment Report' },
+  { id: 'desk_5', num: '05', name: 'Vendor SLA & Credit Claim Desk', role: 'Procurement Governance', focus: 'Delayed Delivery Penalty Enforcement', invariant: 'PO SLA terms strictly enforced', deliverable: 'Vendor Credit Claim Notes' },
+  { id: 'desk_6', num: '06', name: 'Scrap & Material Yield Invariant Desk', role: 'Shop Floor Oversight', focus: 'BOM Scrap Ratio Reconciliation', invariant: 'Yield variance alerts triggered daily', deliverable: 'Material Yield Teardown' },
+  { id: 'desk_7', num: '07', name: 'Dead Stock & Liquidation Desk', role: 'Working Capital Recovery', focus: 'Aging Material (>180 Days) Clearance', invariant: 'Capital release targets enforced', deliverable: 'Liquidation & Recovery Schedule' },
+  { id: 'desk_8', num: '08', name: 'CA Partner Verification & Audit Signoff Desk', role: 'External Compliance', focus: 'Executive Workbook Signoff', invariant: '100% Deterministic evidence proof', deliverable: 'Signed CA Verification Seal' },
+  { id: 'desk_9', num: '09', name: 'Contractual Price Escalation Review Desk', role: 'Commercial Gatekeeper', focus: 'Vendor Price Hike Validation', invariant: 'No unapproved price escalations', deliverable: 'Price Invariant Breach Report' },
+  { id: 'desk_10', num: '10', name: 'Job Work & Outsourcing Balance Desk', role: 'Outsourcing Control', focus: 'Sub-contractor Material Accounting', invariant: 'Input vs output mass balance check', deliverable: 'Job Work Reconciliation Sheet' },
+  { id: 'desk_11', num: '11', name: 'Weighbridge & Gross-Tare Audit Desk', role: 'Weight Invariance', focus: 'Gross vs Tare Weighbridge Data', invariant: 'Weighbridge slip mandatory link', deliverable: 'Tare Weight Variance Report' },
+  { id: 'desk_12', num: '12', name: 'Customer Debit Note Challenge Desk', role: 'Receivables Protection', focus: 'Customer Penalty Claim Verification', invariant: 'Despatch SLA proof verification', deliverable: 'Debit Note Rejection Docket' },
+  { id: 'desk_13', num: '13', name: 'Export Subsidy & Incentive Filing Desk', role: 'Regulatory Maximization', focus: 'Government Scheme Benefit Claims', invariant: 'Zero missed regulatory timelines', deliverable: 'Export Incentive Filing Register' },
+  { id: 'desk_14', num: '14', name: '24-Hr SLA Grievance & Data Purge Desk', role: 'Privacy & Data Governance', focus: 'Client Privacy & Data Purge SLA', invariant: 'Data purged within 24 hours of request', deliverable: 'Cryptographic Purge Certificate' },
+];
 
-
+export const INSTITUTIONAL_TEAMS = TEN_TEAM_OPERATING_SYSTEM;
