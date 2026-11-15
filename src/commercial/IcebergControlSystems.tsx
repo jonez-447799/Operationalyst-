@@ -4,772 +4,604 @@
  */
 
 import React, { useState } from 'react';
-import {
-  ShieldCheck,
-  Layers,
-  TrendingUp,
-  Download,
-  Mail,
-  AlertTriangle,
-  CheckCircle2,
-  Lock,
-  Zap,
-  Building2,
-  FileSpreadsheet,
-  Clock,
-  ExternalLink,
-  FileCheck2,
-  Calculator
-} from 'lucide-react';
+import { BEHAVIORAL_ICEBERG_DIMENSIONS, IcebergDimension } from './homepageConfig';
 
-export interface IcebergControlSystemsProps {
-  onLaunchEngine?: (
-    engine:
-      | 'ceo_master'
-      | 'standalone_p1'
-      | 'standalone_p2'
-      | 'standalone_p3'
-      | 'standalone_p4'
-      | 'standalone_p5'
-      | 'merged_suite'
-  ) => void;
-  onOpenSmartMapper?: () => void;
-  onOpenAuditPage?: () => void;
-  onOpenSampleAuditPage?: () => void;
-  onOpenLeadInbox?: () => void;
+interface SampleLeakRow {
+  rowNum: number;
+  skuOrLr: string;
+  category: string;
+  discrepancyType: string;
+  amountLakhs: number;
+  status: string;
 }
 
-interface PlantPreset {
-  id: string;
-  name: string;
-  location: string;
-  partId: string;
-  dispatchId: string;
-  p1: number;
-  p2: number;
-  p3: number;
-  p4: number;
-  total: number;
-  description: string;
-}
-
-const PLANT_PRESETS: PlantPreset[] = [
-  {
-    id: 'auto-ancillary-chennai',
-    name: 'Auto Ancillary',
-    location: 'Chennai / Oragadam',
-    partId: 'ANC-CHE-8821',
-    dispatchId: 'DSP-CHE-994',
-    p4: 6.40,
-    p2: 14.20,
-    p3: 8.75,
-    p1: 38.50,
-    total: 67.85,
-    description: 'High-volume tier-1 auto component plant experiencing gate turnaround detention and phantom bin shortages.'
-  },
-  {
-    id: 'precision-cnc-hosur',
-    name: 'Precision CNC',
-    location: 'Hosur Industrial Hub',
-    partId: 'CNC-HOS-4402',
-    dispatchId: 'DSP-HOS-312',
-    p4: 9.10,
-    p2: 18.60,
-    p3: 5.30,
-    p1: 24.80,
-    total: 57.80,
-    description: 'Multi-axis CNC machining unit suffering from delayed line clearances and un-reconciled raw material bins.'
-  },
-  {
-    id: 'valves-foundry-coimbatore',
-    name: 'Valves & Foundry',
-    location: 'Coimbatore Cluster',
-    partId: 'VLV-CBE-1093',
-    dispatchId: 'DSP-CBE-771',
-    p4: 12.80,
-    p2: 22.40,
-    p3: 11.20,
-    p1: 45.10,
-    total: 91.50,
-    description: 'Heavy casting & industrial valve foundry with high WIP stagnation and spot freight rush dispatching.'
-  },
-  {
-    id: 'heavy-fab-pune',
-    name: 'Heavy Fabrication',
-    location: 'Pune / Chakan',
-    partId: 'FAB-PUN-5561',
-    dispatchId: 'DSP-PUN-404',
-    p4: 15.20,
-    p2: 31.50,
-    p3: 14.80,
-    p1: 62.00,
-    total: 123.50,
-    description: 'Large structural fabrication yard with trapped dead-stock plates and penalty-heavy OEM OTIF SLAs.'
-  }
+const SAMPLE_LEAK_ROWS: SampleLeakRow[] = [
+  { rowNum: 1, skuOrLr: 'SKU-8842 / LR-99214', category: 'Logistics', discrepancyType: 'Demurrage Free-Time Breach', amountLakhs: 4.85, status: 'Audited' },
+  { rowNum: 2, skuOrLr: 'SKU-1049 / PO-44812', category: 'Procurement', discrepancyType: 'PO SLA Late Delivery Penalty', amountLakhs: 3.90, status: 'Audited' },
+  { rowNum: 3, skuOrLr: 'SKU-7720 / INV-88103', category: 'Accounts Payable', discrepancyType: 'Duplicate Voucher Disbursement', amountLakhs: 2.75, status: 'Audited' },
+  { rowNum: 4, skuOrLr: 'SKU-3319 / BIN-00421', category: 'Physical Stock', discrepancyType: 'Phantom Bin Shortage', amountLakhs: 5.10, status: 'Locked' },
+  { rowNum: 5, skuOrLr: 'SKU-9921 / LR-44102', category: 'Inbound Freight', discrepancyType: 'Weighbridge Gross-Tare Variance', amountLakhs: 1.85, status: 'Locked' },
+  { rowNum: 6, skuOrLr: 'SKU-4402 / BOM-10294', category: 'Production', discrepancyType: 'BOM Scrap Ratio Exceeded', amountLakhs: 3.40, status: 'Locked' },
 ];
 
-export const IcebergControlSystems: React.FC<IcebergControlSystemsProps> = ({
-  onLaunchEngine,
-  onOpenSampleAuditPage
-}) => {
-  // Module A State
-  const [selectedPresetId, setSelectedPresetId] = useState<string>(PLANT_PRESETS[0].id);
-  const activePreset = PLANT_PRESETS.find(p => p.id === selectedPresetId) || PLANT_PRESETS[0];
+export const IcebergControlSystems: React.FC = () => {
+  const [selectedDimension, setSelectedDimension] = useState<IcebergDimension>(BEHAVIORAL_ICEBERG_DIMENSIONS[0]);
+  const [activeTab, setActiveTab] = useState<'tower' | 'teaser' | 'calculator' | 'builder' | 'purge'>('tower');
+  
+  // CA Partner Calculator state
+  const [monthlyAuditClients, setMonthlyAuditClients] = useState<number>(5);
+  const [avgClientLeakLakhs, setAvgClientLeakLakhs] = useState<number>(8.5);
 
-  // Module B State - CA Partner Calculator
-  const [quarterlyReferrals, setQuarterlyReferrals] = useState<number>(5);
-  const [activeWatchdogPlants, setActiveWatchdogPlants] = useState<number>(8);
+  // 48-Hr Scope Builder state
+  const [selectedErp, setSelectedErp] = useState<string>('Tally ERP / Prime');
+  const [plantCorridor, setPlantCorridor] = useState<string>('West & North Corridors');
+  const [requestedTier, setRequestedTier] = useState<string>('₹18,000 48-Hr Diagnostic');
 
-  // Module B State - 48-Hr Scope Intake
-  const [selectedErp, setSelectedErp] = useState<string>('Tally Prime');
-  const [selectedEngines, setSelectedEngines] = useState<Record<string, boolean>>({
-    P1: true,
-    P2: true,
-    P3: true,
-    P4: true
-  });
-  const [ndaAccepted, setNdaAccepted] = useState<boolean>(true);
+  // Privacy Stripper preview toggle state
+  const [stripPrivacyEnabled, setStripPrivacyEnabled] = useState<boolean>(true);
 
-  // Module C State - Grievance & Data Purge SLA Desk
-  const [requestType, setRequestType] = useState<string>('Immediate On-Demand Data Purge');
-  const [companyName, setCompanyName] = useState<string>('');
-  const [contactEmail, setContactEmail] = useState<string>('');
-  const [generatedTicket, setGeneratedTicket] = useState<{
-    ticketRef: string;
-    timestamp: string;
-    company: string;
-    email: string;
-    type: string;
-    targetSla: string;
-    team: string;
-  } | null>(null);
+  // 24-Hr SLA Data Purge form state
+  const [purgeEmail, setPurgeEmail] = useState<string>('');
+  const [purgeReference, setPurgeReference] = useState<string>('');
+  const [purgeSubmitted, setPurgeSubmitted] = useState<boolean>(false);
 
-  // Calculations for Module B
-  const upfrontQuarterlyPayout = quarterlyReferrals * 3600;
-  const monthlyRecurringPayout = activeWatchdogPlants * 3000;
-  const totalAnnualEarnings = (upfrontQuarterlyPayout * 4) + (monthlyRecurringPayout * 12);
+  // Calculations
+  const caPartnerMonthlyPayout = monthlyAuditClients * 18000 * 0.20;
+  const caPartnerAnnualPayout = caPartnerMonthlyPayout * 12;
+  const totalIdentifiedLeakLakhs = SAMPLE_LEAK_ROWS.reduce((acc, row) => acc + row.amountLakhs, 0);
 
-  const scopeRef = `SCOPE-2026-${selectedPresetId.slice(0, 3).toUpperCase()}-8819`;
-
-  // Export CFO Control Tower Matrix CSV
-  const handleExportCFOMatrix = () => {
-    const headers = [
-      'Corridor Preset',
-      'Location',
-      'Sample Part ID',
-      'Sample Dispatch ID',
-      'P4 Ghost Stock Variance (Lakhs)',
-      'P2 OTIF Dispatch Delay Risk (Lakhs)',
-      'P3 Emergency Freight & Detention Leak (Lakhs)',
-      'P1 Stagnant Capital Lock >180d (Lakhs)',
-      'Total Cross-Engine Recoverable Pool (Lakhs)',
-      'Audit Timestamp'
-    ];
-    const row = [
-      `"${activePreset.name}"`,
-      `"${activePreset.location}"`,
-      `"${activePreset.partId}"`,
-      `"${activePreset.dispatchId}"`,
-      activePreset.p4.toFixed(2),
-      activePreset.p2.toFixed(2),
-      activePreset.p3.toFixed(2),
-      activePreset.p1.toFixed(2),
-      activePreset.total.toFixed(2),
-      `"${new Date().toISOString()}"`
-    ];
-
-    const csvContent = [headers.join(','), row.join(',')].join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `cfo_control_tower_matrix_${activePreset.id}.csv`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  };
-
-  // Download Blank 5-Column CSV Template
-  const handleDownloadSampleCSV = () => {
-    const csvContent = 'Part_ID,Bin_Location,System_Qty,Physical_Qty,Unit_Cost_INR\nSKU-9901-CHE,BIN-A-14,450,380,1250.00\nSKU-8842-HOS,BIN-B-08,1200,1200,850.50\nSKU-7731-CBE,BIN-C-22,80,0,4200.00\nSKU-5510-PUN,BIN-D-05,310,290,1950.00\n';
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = 'operationalyst_5_column_audit_template.csv';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  };
-
-  // Generate SLA Ticket
-  const handleGenerateTicket = (e: React.FormEvent) => {
-    e.preventDefault();
-    const ticketId = 'OPL-SLA-2026-881902';
-    const now = new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' });
-    setGeneratedTicket({
-      ticketRef: ticketId,
-      timestamp: now,
-      company: companyName || 'Factory Plant Unit',
-      email: contactEmail || 'cfo@company.com',
-      type: requestType,
-      targetSla: '< 24 Hours (Guaranteed SLA Window)',
-      team: 'Team 12 — SLA Compliance & Governance Desk'
-    });
-  };
-
-  // Download SLA Receipt CSV / TXT
-  const handleDownloadSLAData = () => {
-    if (!generatedTicket) return;
-    const content = [
-      'OPERATIONALYST TEAM 12 — 24-HOUR SLA GOVERNANCE RECEIPT',
-      `Ticket Reference: ${generatedTicket.ticketRef}`,
-      `Timestamp: ${generatedTicket.timestamp}`,
-      `Company / Unit: ${generatedTicket.company}`,
-      `Contact Email: ${generatedTicket.email}`,
-      `Request Type: ${generatedTicket.type}`,
-      `Target SLA Resolution: ${generatedTicket.targetSla}`,
-      `Assigned Operations Unit: ${generatedTicket.team}`,
-      'Status: ACKNOWLEDGED & QUEUED FOR SLA EXECUTION',
-      'Guaranteed Purge / Response SLA: 24 Hours'
+  // Download Teaser Report handler
+  const handleDownloadTeaser = () => {
+    const csvContent = [
+      'Row,SKU/LR Reference,Category,Discrepancy Type,Amount (₹ Lakhs),Status',
+      ...SAMPLE_LEAK_ROWS.map(r => `${r.rowNum},"${r.skuOrLr}","${r.category}","${r.discrepancyType}",${r.amountLakhs},${r.status}`)
     ].join('\n');
 
-    const blob = new Blob([content], { type: 'text/plain;charset=utf-8;' });
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
-    link.href = url;
-    link.download = `sla_ticket_receipt_${generatedTicket.ticketRef}.txt`;
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'Operationalyst_Sample_Executive_Teaser_Report.csv');
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    URL.revokeObjectURL(url);
   };
 
-  const selectedEnginesList = Object.entries(selectedEngines)
-    .filter(([, enabled]) => enabled)
-    .map(([key]) => key);
+  // WhatsApp outreach URL construction
+  const whatsappMessage = encodeURIComponent(
+    `Hello Operationalyst Audit Desk, I would like to request an audit review.\nERP System: ${selectedErp}\nPlant Corridors: ${plantCorridor}\nRequested Engagement: ${requestedTier}`
+  );
+  const whatsappUrl = `https://wa.me/?text=${whatsappMessage}`;
 
-  const caMailtoHref = `mailto:joneszz2004@gmail.com?subject=CA%20Partner%20Desk%20Registration&body=Quarterly%20Referrals%3A%20${quarterlyReferrals}%2C%20Active%20Watchdog%3A%20${activeWatchdogPlants}%2C%20Annual%20Payout%3A%20INR%20${totalAnnualEarnings}`;
+  const mailtoUrl = `mailto:joneszz2004@gmail.com?subject=${encodeURIComponent('Audit Engagement Request: ' + requestedTier)}&body=${whatsappMessage}`;
 
-  const scopeMailtoHref = `mailto:joneszz2004@gmail.com?subject=48-Hour%20Diagnostic%20Scope%20Request%20${scopeRef}&body=ERP%3A%20${encodeURIComponent(selectedErp)}%2C%20Engines%3A%20${encodeURIComponent(selectedEnginesList.join(','))}%2C%20NDA%3A%20${ndaAccepted ? 'Confirmed' : 'Pending'}`;
-
-  const ticketMailtoHref = generatedTicket
-    ? `mailto:joneszz2004@gmail.com?subject=Team%2012%20SLA%20Ticket%20${generatedTicket.ticketRef}&body=Company%3A%20${encodeURIComponent(generatedTicket.company)}%2C%20Type%3A%20${encodeURIComponent(generatedTicket.type)}`
-    : 'mailto:joneszz2004@gmail.com';
+  const handlePurgeSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (purgeEmail && purgeReference) {
+      setPurgeSubmitted(true);
+    }
+  };
 
   return (
-    <div className="w-full bg-slate-950 text-slate-100 py-16 px-4 sm:px-6 lg:px-8 space-y-20 border-t border-slate-800">
-      
-      {/* Header Banner */}
-      <div className="max-w-7xl mx-auto text-center space-y-4">
-        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-semibold tracking-wide uppercase">
-          <ShieldCheck className="w-4 h-4" />
-          The Whole Iceberg &mdash; Operational Governance Suite
-        </div>
-        <h2 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
-          Below the Waterline: Cross-Engine Control, Partner Revenue &amp; 24-Hr SLA Desk
-        </h2>
-        <p className="max-w-3xl mx-auto text-slate-400 text-base sm:text-lg">
-          Connect P1&ndash;P4 operational leaks into a single deterministic board-level recovery matrix, model CA partner share earnings, and mandate 24-hour SLA data purges.
-        </p>
-      </div>
-
-      {/* MODULE A: Connected P1-P4 Cross-Engine Control Tower */}
-      <section id="control-tower" className="max-w-7xl mx-auto bg-slate-900/90 rounded-2xl border border-slate-800 p-6 sm:p-8 space-y-8 shadow-2xl">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-slate-800 pb-6">
+    <div className="w-full bg-slate-950 text-slate-100 py-12 px-4 sm:px-6 lg:px-8 font-sans">
+      <div className="max-w-7xl mx-auto space-y-8">
+        
+        {/* Top Control Tower Navigation */}
+        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-800 pb-4">
           <div>
-            <div className="flex items-center gap-2 text-emerald-400 text-xs font-bold uppercase tracking-wider mb-1">
-              <Layers className="w-4 h-4" /> Module A &mdash; Industrial Corridor Control Tower
-            </div>
-            <h3 className="text-2xl font-bold text-white">Compounding Leak Chain (P1 &rarr; P2 &rarr; P3 &rarr; P4)</h3>
-            <p className="text-sm text-slate-400">
-              Select an industrial corridor preset to inspect how ghost stock triggers gate delays, freight penalties, and stagnant capital lock.
+            <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white flex items-center gap-2">
+              <span className="text-cyan-400">Operationalyst</span> Control Tower
+            </h2>
+            <p className="text-sm text-slate-400 mt-1">
+              Institutional Cash Leak Diagnostic &amp; CA Partner Operations Workbench
             </p>
           </div>
-          
           <div className="flex flex-wrap gap-2">
             <button
-              onClick={handleExportCFOMatrix}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs rounded-lg transition-all shadow-md"
+              onClick={() => setActiveTab('tower')}
+              className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+                activeTab === 'tower'
+                  ? 'bg-cyan-500 text-slate-950 shadow-lg shadow-cyan-500/20'
+                  : 'bg-slate-900 text-slate-300 hover:bg-slate-800'
+              }`}
             >
-              <Download className="w-4 h-4" /> Export CFO Control Tower Matrix (CSV)
+              Control Tower
             </button>
-            {onLaunchEngine && (
-              <button
-                onClick={() => onLaunchEngine('merged_suite')}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-semibold text-xs rounded-lg transition-all"
-              >
-                <ExternalLink className="w-4 h-4" /> Open Sandbox Suite
-              </button>
-            )}
+            <button
+              onClick={() => setActiveTab('teaser')}
+              className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+                activeTab === 'teaser'
+                  ? 'bg-cyan-500 text-slate-950 shadow-lg shadow-cyan-500/20'
+                  : 'bg-slate-900 text-slate-300 hover:bg-slate-800'
+              }`}
+            >
+              Teaser Report Preview
+            </button>
+            <button
+              onClick={() => setActiveTab('calculator')}
+              className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+                activeTab === 'calculator'
+                  ? 'bg-cyan-500 text-slate-950 shadow-lg shadow-cyan-500/20'
+                  : 'bg-slate-900 text-slate-300 hover:bg-slate-800'
+              }`}
+            >
+              CA Partner Calculator
+            </button>
+            <button
+              onClick={() => setActiveTab('builder')}
+              className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+                activeTab === 'builder'
+                  ? 'bg-cyan-500 text-slate-950 shadow-lg shadow-cyan-500/20'
+                  : 'bg-slate-900 text-slate-300 hover:bg-slate-800'
+              }`}
+            >
+              48-Hr Scope Builder
+            </button>
+            <button
+              onClick={() => setActiveTab('purge')}
+              className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+                activeTab === 'purge'
+                  ? 'bg-rose-500 text-white shadow-lg shadow-rose-500/20'
+                  : 'bg-slate-900 text-slate-300 hover:bg-slate-800'
+              }`}
+            >
+              24-Hr SLA Data Purge
+            </button>
           </div>
         </div>
 
-        {/* Corridor Preset Selector */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-          {PLANT_PRESETS.map((preset) => {
-            const isSelected = preset.id === selectedPresetId;
-            return (
-              <button
-                key={preset.id}
-                onClick={() => setSelectedPresetId(preset.id)}
-                className={`text-left p-4 rounded-xl border transition-all ${
-                  isSelected
-                    ? 'bg-emerald-950/40 border-emerald-500 text-white shadow-lg shadow-emerald-950/50 ring-1 ring-emerald-500'
-                    : 'bg-slate-950/60 border-slate-800 text-slate-300 hover:border-slate-700 hover:bg-slate-900'
-                }`}
-              >
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-xs font-bold text-emerald-400">{preset.location}</span>
-                  {isSelected && <CheckCircle2 className="w-4 h-4 text-emerald-400" />}
-                </div>
-                <div className="font-bold text-sm text-white">{preset.name}</div>
-                <div className="text-xs text-slate-400 mt-2">
-                  Exposure: <span className="font-mono text-emerald-400 font-bold">₹{preset.total.toFixed(2)} Lakhs</span>
-                </div>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Selected Preset Details & Causal Chain */}
-        <div className="bg-slate-950/80 rounded-xl border border-slate-800 p-6 space-y-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800/80 pb-4">
-            <div>
-              <span className="text-xs text-slate-400">Active Corridor Preset:</span>
-              <h4 className="text-lg font-bold text-white flex items-center gap-2">
-                <Building2 className="w-5 h-5 text-emerald-400" />
-                {activePreset.name} &mdash; {activePreset.location}
-              </h4>
-              <p className="text-xs text-slate-400 mt-0.5">{activePreset.description}</p>
-            </div>
-            <div className="flex items-center gap-3 bg-slate-900 px-4 py-2.5 rounded-lg border border-slate-800">
-              <span className="text-xs text-slate-400">Sample Linked SKU / Dispatch:</span>
-              <span className="font-mono text-xs text-amber-400 font-bold">{activePreset.partId} / {activePreset.dispatchId}</span>
-            </div>
-          </div>
-
-          {/* 4-Step Causal Chain Flow */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            {/* Step 1: P4 */}
-            <div className="bg-slate-900/90 rounded-lg p-4 border border-slate-800 flex flex-col justify-between space-y-3">
-              <div className="space-y-1">
-                <div className="flex items-center justify-between text-xs text-amber-400 font-semibold">
-                  <span>STEP 1 &mdash; P4</span>
-                  <AlertTriangle className="w-3.5 h-3.5" />
-                </div>
-                <h5 className="text-sm font-bold text-white">Ghost Stock Variance</h5>
-                <p className="text-xs text-slate-400">System shows stock on shelf, but physical bin is short.</p>
-              </div>
-              <div className="pt-2 border-t border-slate-800/80 flex justify-between items-end">
-                <span className="text-[11px] text-slate-400">Bin Variance Leak</span>
-                <span className="font-mono text-sm font-bold text-amber-400">₹{activePreset.p4.toFixed(2)} L</span>
-              </div>
-            </div>
-
-            {/* Step 2: P2 */}
-            <div className="bg-slate-900/90 rounded-lg p-4 border border-slate-800 flex flex-col justify-between space-y-3">
-              <div className="space-y-1">
-                <div className="flex items-center justify-between text-xs text-amber-400 font-semibold">
-                  <span>STEP 2 &mdash; P2</span>
-                  <Clock className="w-3.5 h-3.5" />
-                </div>
-                <h5 className="text-sm font-bold text-white">OTIF Dispatch Delay</h5>
-                <p className="text-xs text-slate-400">Customer order misses gate SLA due to surprise bin shortage.</p>
-              </div>
-              <div className="pt-2 border-t border-slate-800/80 flex justify-between items-end">
-                <span className="text-[11px] text-slate-400">Gate SLA Penalty Risk</span>
-                <span className="font-mono text-sm font-bold text-amber-400">₹{activePreset.p2.toFixed(2)} L</span>
-              </div>
-            </div>
-
-            {/* Step 3: P3 */}
-            <div className="bg-slate-900/90 rounded-lg p-4 border border-slate-800 flex flex-col justify-between space-y-3">
-              <div className="space-y-1">
-                <div className="flex items-center justify-between text-xs text-amber-400 font-semibold">
-                  <span>STEP 3 &mdash; P3</span>
-                  <Zap className="w-3.5 h-3.5" />
-                </div>
-                <h5 className="text-sm font-bold text-white">Emergency Freight &amp; Detention</h5>
-                <p className="text-xs text-slate-400">Spot-rate truck premium + &gt;6 hr gate turnaround detention.</p>
-              </div>
-              <div className="pt-2 border-t border-slate-800/80 flex justify-between items-end">
-                <span className="text-[11px] text-slate-400">Spot &amp; Detention Leak</span>
-                <span className="font-mono text-sm font-bold text-amber-400">₹{activePreset.p3.toFixed(2)} L</span>
-              </div>
-            </div>
-
-            {/* Step 4: P1 */}
-            <div className="bg-slate-900/90 rounded-lg p-4 border border-slate-800 flex flex-col justify-between space-y-3">
-              <div className="space-y-1">
-                <div className="flex items-center justify-between text-xs text-emerald-400 font-semibold">
-                  <span>STEP 4 &mdash; P1</span>
-                  <Lock className="w-3.5 h-3.5" />
-                </div>
-                <h5 className="text-sm font-bold text-white">Stagnant Capital Lock</h5>
-                <p className="text-xs text-slate-400">Working capital frozen in unmoving SKUs (&gt;180d) instead of active runners.</p>
-              </div>
-              <div className="pt-2 border-t border-slate-800/80 flex justify-between items-end">
-                <span className="text-[11px] text-slate-400">Trapped Capital</span>
-                <span className="font-mono text-sm font-bold text-emerald-400">₹{activePreset.p1.toFixed(2)} L</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Unified Exposure Summary Banner */}
-          <div className="bg-emerald-950/30 border border-emerald-500/30 rounded-xl p-5 flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="p-3 bg-emerald-500/10 rounded-lg border border-emerald-500/20 text-emerald-400">
-                <TrendingUp className="w-6 h-6" />
-              </div>
-              <div>
-                <span className="text-xs text-slate-400 font-semibold uppercase tracking-wider">Total Unified Cross-Engine Exposure</span>
-                <div className="text-2xl font-extrabold text-white font-mono">
-                  ₹{activePreset.total.toFixed(2)} Lakhs <span className="text-xs font-sans text-emerald-400 font-semibold">Recoverable Pool</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3">
-              {onOpenSampleAuditPage && (
+        {/* TAB 1: Control Tower */}
+        {activeTab === 'tower' && (
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            <div className="lg:col-span-4 space-y-3 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
+              <h3 className="text-xs uppercase tracking-wider text-slate-400 font-bold mb-2">
+                27 Operational Iceberg Dimensions
+              </h3>
+              {BEHAVIORAL_ICEBERG_DIMENSIONS.map((dim) => (
                 <button
-                  onClick={onOpenSampleAuditPage}
-                  className="px-4 py-2 text-xs font-semibold rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white transition-all shadow-md"
+                  key={dim.id}
+                  onClick={() => setSelectedDimension(dim)}
+                  className={`w-full text-left p-3 rounded-lg border transition-all ${
+                    selectedDimension.id === dim.id
+                      ? 'border-cyan-500 bg-cyan-950/40 text-cyan-200 shadow-md'
+                      : 'border-slate-800 bg-slate-900/60 text-slate-400 hover:border-slate-700 hover:bg-slate-900'
+                  }`}
                 >
-                  View Sample Executive Audit
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-mono text-cyan-400 font-bold">#{dim.num}</span>
+                    <span className="text-xs px-2 py-0.5 rounded bg-slate-800 text-slate-300">{dim.category}</span>
+                  </div>
+                  <h4 className="text-sm font-bold text-slate-200 mt-1">{dim.name}</h4>
+                  <p className="text-xs text-slate-400 line-clamp-1 mt-0.5">{dim.symptom}</p>
                 </button>
-              )}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* MODULE B: CA Partner Calculator & 48-Hour Scope Builder */}
-      <section className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8">
-        
-        {/* Sub-Module B1: CA Partner Recurring Revenue Calculator */}
-        <div className="bg-slate-900/90 rounded-2xl border border-slate-800 p-6 sm:p-8 space-y-6 shadow-xl flex flex-col justify-between">
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="inline-flex items-center gap-2 text-amber-400 text-xs font-bold uppercase tracking-wider">
-                <Calculator className="w-4 h-4" /> Module B1 &mdash; CA &amp; Stock Auditor Partner Desk (Tier 4)
-              </div>
-              <span className="px-2.5 py-1 rounded bg-amber-500/10 text-amber-400 text-[11px] font-bold border border-amber-500/20">
-                20% Statutory Share
-              </span>
+              ))}
             </div>
 
-            <h3 className="text-xl font-bold text-white">Partner Recurring Revenue Calculator</h3>
-            <p className="text-xs text-slate-400">
-              Model your firm revenue share from quarterly plant diagnostic audits and ongoing monthly watchdog governance.
-            </p>
-
-            {/* Slider 1: Quarterly Referrals */}
-            <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2">
-              <div className="flex justify-between items-center text-xs">
-                <span className="text-slate-300 font-medium">Quarterly Diagnostic Referrals</span>
-                <span className="font-mono text-emerald-400 font-bold">{quarterlyReferrals} Plants / Qtr</span>
-              </div>
-              <input
-                type="range"
-                min="1"
-                max="15"
-                value={quarterlyReferrals}
-                onChange={(e) => setQuarterlyReferrals(parseInt(e.target.value, 10))}
-                className="w-full accent-emerald-500 bg-slate-800 h-2 rounded-lg cursor-pointer"
-              />
-              <div className="flex justify-between text-[11px] text-slate-400">
-                <span>Fee: ₹18,000 / plant</span>
-                <span>Partner Upfront Share (20%): <strong className="text-emerald-400">₹3,600 / plant</strong></span>
-              </div>
-            </div>
-
-            {/* Slider 2: Active Monthly Watchdog Plants */}
-            <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2">
-              <div className="flex justify-between items-center text-xs">
-                <span className="text-slate-300 font-medium">Active Monthly Watchdog Retainer Plants</span>
-                <span className="font-mono text-emerald-400 font-bold">{activeWatchdogPlants} Plants / Mo</span>
-              </div>
-              <input
-                type="range"
-                min="1"
-                max="25"
-                value={activeWatchdogPlants}
-                onChange={(e) => setActiveWatchdogPlants(parseInt(e.target.value, 10))}
-                className="w-full accent-emerald-500 bg-slate-800 h-2 rounded-lg cursor-pointer"
-              />
-              <div className="flex justify-between text-[11px] text-slate-400">
-                <span>Monthly Fee: ₹15,000 / plant</span>
-                <span>Partner Recurring Share (20%): <strong className="text-emerald-400">₹3,000 / mo per plant</strong></span>
-              </div>
-            </div>
-
-            {/* Revenue Highlights */}
-            <div className="grid grid-cols-2 gap-3 pt-2">
-              <div className="bg-slate-950 p-3.5 rounded-lg border border-slate-800">
-                <span className="text-[11px] text-slate-400 block">Monthly Recurring Payout</span>
-                <span className="text-lg font-bold font-mono text-emerald-400">₹{monthlyRecurringPayout.toLocaleString('en-IN')}</span>
-              </div>
-              <div className="bg-slate-950 p-3.5 rounded-lg border border-slate-800">
-                <span className="text-[11px] text-slate-400 block">Total Annual Partner Earnings</span>
-                <span className="text-lg font-bold font-mono text-white">₹{totalAnnualEarnings.toLocaleString('en-IN')}</span>
-              </div>
-            </div>
-
-            {/* Badge */}
-            <div className="flex items-center gap-2 p-3 bg-slate-950 rounded-lg border border-slate-800 text-xs text-slate-300">
-              <FileCheck2 className="w-4 h-4 text-emerald-400 shrink-0" />
-              <span>Includes <strong>Co-Branded Statutory Stock Audit Working Papers</strong> badge and audit sign-off templates.</span>
-            </div>
-          </div>
-
-          <div className="pt-4 border-t border-slate-800">
-            <a
-              href={caMailtoHref}
-              className="w-full inline-flex items-center justify-center gap-2 py-3 bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs rounded-xl transition-all shadow-md"
-            >
-              <Mail className="w-4 h-4" /> Register CA Partner Desk
-            </a>
-          </div>
-        </div>
-
-        {/* Sub-Module B2: 48-Hour Diagnostic Scope & NDA Intake Builder */}
-        <div className="bg-slate-900/90 rounded-2xl border border-slate-800 p-6 sm:p-8 space-y-6 shadow-xl flex flex-col justify-between">
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="inline-flex items-center gap-2 text-emerald-400 text-xs font-bold uppercase tracking-wider">
-                <FileSpreadsheet className="w-4 h-4" /> Module B2 &mdash; 48-Hour Diagnostic Scope Intake (Tier 1)
-              </div>
-              <span className="px-2.5 py-1 rounded bg-emerald-500/10 text-emerald-400 text-[11px] font-bold border border-emerald-500/20">
-                100% Refund Guarantee
-              </span>
-            </div>
-
-            <h3 className="text-xl font-bold text-white">Scope &amp; NDA intake Builder</h3>
-            <p className="text-xs text-slate-400">
-              Select your plant ERP format, choose target engines, and request a fixed 48-hour diagnostic audit agreement.
-            </p>
-
-            {/* ERP Selector */}
-            <div className="space-y-2">
-              <label className="text-xs font-semibold text-slate-300">Select Plant ERP Export Format:</label>
-              <div className="grid grid-cols-2 gap-2">
-                {['Tally Prime', 'SAP B1 / S/4HANA', 'Busy / Marg', 'Excel / CSV'].map((erp) => (
-                  <button
-                    key={erp}
-                    type="button"
-                    onClick={() => setSelectedErp(erp)}
-                    className={`py-2 px-3 text-xs font-medium rounded-lg border text-left transition-all ${
-                      selectedErp === erp
-                        ? 'bg-emerald-950/60 border-emerald-500 text-white font-bold'
-                        : 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700'
-                    }`}
-                  >
-                    {erp}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Audit Engine Checkboxes */}
-            <div className="space-y-2">
-              <label className="text-xs font-semibold text-slate-300">Target Audit Engines:</label>
-              <div className="grid grid-cols-2 gap-2">
-                {[
-                  { id: 'P1', label: 'P1 (Dead Capital Lock)' },
-                  { id: 'P2', label: 'P2 (OTIF Gate SLA)' },
-                  { id: 'P3', label: 'P3 (Freight & Detention)' },
-                  { id: 'P4', label: 'P4 (Ghost Bin Stock)' }
-                ].map((item) => (
-                  <label
-                    key={item.id}
-                    className="flex items-center gap-2 p-2 rounded-lg bg-slate-950 border border-slate-800 text-xs text-slate-300 cursor-pointer hover:border-slate-700"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={selectedEngines[item.id]}
-                      onChange={(e) =>
-                        setSelectedEngines(prev => ({ ...prev, [item.id]: e.target.checked }))
-                      }
-                      className="rounded accent-emerald-500 bg-slate-800 border-slate-700"
-                    />
-                    <span>{item.label}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-
-            {/* Mutual NDA & Guarantee Indicator */}
-            <div className="bg-slate-950 p-3 rounded-lg border border-slate-800 flex items-start gap-2 text-xs text-slate-300">
-              <input
-                type="checkbox"
-                checked={ndaAccepted}
-                onChange={(e) => setNdaAccepted(e.target.checked)}
-                className="mt-0.5 rounded accent-emerald-500 bg-slate-800 border-slate-700"
-              />
-              <span>
-                <strong>Mutual NDA + ₹2,50,000 Leak 100% Refund Guarantee</strong> confirmed. If zero actionable leaks are identified in 48 hours, audit fee is refunded in full.
-              </span>
-            </div>
-
-            <div className="text-[11px] text-slate-400 font-mono">
-              Generated Scope Reference Code: <strong className="text-amber-400">{scopeRef}</strong>
-            </div>
-          </div>
-
-          <div className="pt-4 border-t border-slate-800 flex flex-col sm:flex-row gap-3">
-            <button
-              onClick={handleDownloadSampleCSV}
-              className="flex-1 py-3 px-3 bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-xs rounded-xl border border-slate-700 transition-all inline-flex items-center justify-center gap-2"
-            >
-              <Download className="w-4 h-4" /> Download Blank 5-Column CSV Template
-            </button>
-            <a
-              href={scopeMailtoHref}
-              className="flex-1 py-3 px-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl transition-all shadow-md inline-flex items-center justify-center gap-2"
-            >
-              <Mail className="w-4 h-4" /> Request 48-Hr Diagnostic Scope
-            </a>
-          </div>
-        </div>
-
-      </section>
-
-      {/* MODULE C: Interactive 24-Hour SLA Grievance & Deterministic Data Purge Desk */}
-      <section id="grievance-desk" className="max-w-7xl mx-auto bg-slate-900/90 rounded-2xl border border-slate-800 p-6 sm:p-8 space-y-8 shadow-2xl">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-slate-800 pb-6">
-          <div>
-            <div className="flex items-center gap-2 text-emerald-400 text-xs font-bold uppercase tracking-wider mb-1">
-              <Clock className="w-4 h-4" /> Module C &mdash; Team 12 Governance Live Desk
-            </div>
-            <h3 className="text-2xl font-bold text-white">Interactive 24-Hour SLA Grievance &amp; Data Purge Desk</h3>
-            <p className="text-sm text-slate-400">
-              Request immediate on-demand data purge certificates, NDA verification, or submit an audit calculation grievance directly to Team 12.
-            </p>
-          </div>
-
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-bold">
-            <ShieldCheck className="w-4 h-4" /> Team 12 Resolution SLA: &lt; 24 Hours
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Ticket Request Form */}
-          <form onSubmit={handleGenerateTicket} className="space-y-4">
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-300">Governance Request Type:</label>
-              <select
-                value={requestType}
-                onChange={(e) => setRequestType(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-emerald-500"
-              >
-                <option value="Immediate On-Demand Data Purge">Immediate On-Demand Data Purge</option>
-                <option value="14-Day Post-Audit Purge Certificate">14-Day Post-Audit Purge Certificate</option>
-                <option value="Mutual NDA Verification">Mutual NDA Verification</option>
-                <option value="Audit Calculation Grievance">Audit Calculation Grievance</option>
-              </select>
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-300">Plant / Company Name:</label>
-              <input
-                type="text"
-                placeholder="e.g. Oragadam Auto Components Pvt Ltd"
-                value={companyName}
-                onChange={(e) => setCompanyName(e.target.value)}
-                required
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-300">Contact Email:</label>
-              <input
-                type="email"
-                placeholder="cfo@company.com"
-                value={contactEmail}
-                onChange={(e) => setContactEmail(e.target.value)}
-                required
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
-              />
-            </div>
-
-            <button
-              type="submit"
-              className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl transition-all shadow-lg flex items-center justify-center gap-2"
-            >
-              <Zap className="w-4 h-4" /> Generate 24-Hr SLA Ticket
-            </button>
-          </form>
-
-          {/* Ticket Receipt Display */}
-          <div className="bg-slate-950/80 rounded-xl border border-slate-800 p-6 flex flex-col justify-between space-y-6">
-            {generatedTicket ? (
-              <div className="space-y-4">
-                <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-                  <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-400" /> SLA Ticket Formally Registered
+            <div className="lg:col-span-8 bg-slate-900/80 border border-slate-800 rounded-xl p-6 space-y-6">
+              <div className="flex items-start justify-between border-b border-slate-800 pb-4">
+                <div>
+                  <span className="text-xs font-mono text-cyan-400 font-bold uppercase tracking-wider">
+                    Dimension #{selectedDimension.num} — {selectedDimension.category}
                   </span>
-                  <span className="font-mono text-xs text-amber-400 font-bold">{generatedTicket.ticketRef}</span>
+                  <h3 className="text-2xl font-bold text-white mt-1">{selectedDimension.name}</h3>
+                  <p className="text-sm text-slate-400 mt-1">Scope: {selectedDimension.scope}</p>
+                </div>
+                <div className="bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 px-3 py-1.5 rounded-lg text-xs font-semibold">
+                  Active Control Invariant
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="bg-slate-950/60 border border-slate-800 p-4 rounded-lg space-y-1">
+                  <span className="text-xs text-amber-400 font-bold uppercase tracking-wider">Operational Symptom</span>
+                  <p className="text-sm text-slate-200">{selectedDimension.symptom}</p>
                 </div>
 
-                <div className="space-y-2 text-xs">
-                  <div className="flex justify-between border-b border-slate-900 pb-1.5">
-                    <span className="text-slate-400">Timestamp:</span>
-                    <span className="text-slate-200 font-mono">{generatedTicket.timestamp}</span>
+                <div className="bg-slate-950/60 border border-slate-800 p-4 rounded-lg space-y-1">
+                  <span className="text-xs text-rose-400 font-bold uppercase tracking-wider">Underlying Cause</span>
+                  <p className="text-sm text-slate-200">{selectedDimension.underlyingCause}</p>
+                </div>
+
+                <div className="bg-slate-950/60 border border-slate-800 p-4 rounded-lg space-y-1">
+                  <span className="text-xs text-emerald-400 font-bold uppercase tracking-wider">Financial Impact</span>
+                  <p className="text-sm font-semibold text-emerald-300">{selectedDimension.financialImpact}</p>
+                </div>
+
+                <div className="bg-slate-950/60 border border-slate-800 p-4 rounded-lg space-y-1">
+                  <span className="text-xs text-cyan-400 font-bold uppercase tracking-wider">Preventative Mechanism</span>
+                  <p className="text-sm text-slate-200">{selectedDimension.preventativeMechanism}</p>
+                </div>
+              </div>
+
+              <div className="bg-cyan-950/30 border border-cyan-500/20 p-4 rounded-lg flex flex-wrap items-center justify-between gap-4">
+                <div>
+                  <h4 className="text-sm font-bold text-cyan-200">Test this dimension on your ERP data</h4>
+                  <p className="text-xs text-slate-400">Run a ₹0 in-browser audit sandbox to detect this leak category.</p>
+                </div>
+                <button
+                  onClick={() => setActiveTab('teaser')}
+                  className="px-4 py-2 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs rounded-lg transition-all shadow-md"
+                >
+                  Preview Teaser Report
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* TAB 2: Blurred Executive Teaser Report Preview */}
+        {activeTab === 'teaser' && (
+          <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-6 space-y-6">
+            <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-800 pb-4">
+              <div>
+                <span className="text-xs font-mono text-cyan-400 font-bold uppercase tracking-wider">
+                  Sale #1 Conversion Kit
+                </span>
+                <h3 className="text-2xl font-bold text-white mt-1">
+                  Blurred Executive Teaser Report Preview
+                </h3>
+                <p className="text-sm text-slate-400 mt-1">
+                  Total Plant Cash Leak Identified: <span className="text-emerald-400 font-extrabold text-lg">₹ {totalIdentifiedLeakLakhs.toFixed(2)} Lakhs</span>
+                </p>
+              </div>
+              <button
+                onClick={handleDownloadTeaser}
+                className="px-4 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs rounded-lg transition-all flex items-center gap-2 shadow-lg shadow-emerald-500/20"
+              >
+                <span>Download Sample Executive Teaser (HTML/CSV)</span>
+              </button>
+            </div>
+
+            {/* In-Browser Privacy Stripper Toggle */}
+            <div className="bg-slate-950 border border-slate-800 p-4 rounded-lg flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <span className="text-xs font-bold text-slate-300 uppercase tracking-wider">
+                  100% In-Browser Party &amp; Vendor Name Stripper:
+                </span>
+                <span className={`text-xs font-mono px-2 py-0.5 rounded ${stripPrivacyEnabled ? 'bg-emerald-950 text-emerald-400 border border-emerald-800' : 'bg-slate-800 text-slate-400'}`}>
+                  {stripPrivacyEnabled ? 'ACTIVE (Vendor Names Anonymized Local Client-Side)' : 'INACTIVE (Raw Ledger Mode)'}
+                </span>
+              </div>
+              <button
+                onClick={() => setStripPrivacyEnabled(!stripPrivacyEnabled)}
+                className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded border border-slate-700"
+              >
+                {stripPrivacyEnabled ? 'Disable Privacy Stripper Preview' : 'Enable Privacy Stripper'}
+              </button>
+            </div>
+
+            {/* Table displaying top 3 clear rows + blurred rows 4+ */}
+            <div className="relative overflow-hidden rounded-lg border border-slate-800 bg-slate-950">
+              <table className="w-full text-left text-xs text-slate-300">
+                <thead className="bg-slate-900 uppercase text-slate-400 font-mono text-[11px] border-b border-slate-800">
+                  <tr>
+                    <th className="py-3 px-4">#</th>
+                    <th className="py-3 px-4">SKU / LR Reference</th>
+                    <th className="py-3 px-4">Category</th>
+                    <th className="py-3 px-4">Discrepancy Type</th>
+                    <th className="py-3 px-4 text-right">Amount (₹ Lakhs)</th>
+                    <th className="py-3 px-4 text-center">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800/60 font-mono">
+                  {/* Top 3 High-Leak SKUs / Transporter LRs in full row-level clarity */}
+                  {SAMPLE_LEAK_ROWS.slice(0, 3).map((row) => (
+                    <tr key={row.rowNum} className="bg-slate-950 hover:bg-slate-900/50">
+                      <td className="py-3 px-4 font-bold text-cyan-400">{row.rowNum}</td>
+                      <td className="py-3 px-4 font-semibold text-white">
+                        {stripPrivacyEnabled ? row.skuOrLr.replace(/SKU|LR|INV|PO/g, 'ANON') : row.skuOrLr}
+                      </td>
+                      <td className="py-3 px-4 text-slate-300">{row.category}</td>
+                      <td className="py-3 px-4 text-slate-200">{row.discrepancyType}</td>
+                      <td className="py-3 px-4 text-right font-bold text-emerald-400">₹ {row.amountLakhs.toFixed(2)} L</td>
+                      <td className="py-3 px-4 text-center">
+                        <span className="px-2 py-0.5 rounded text-[10px] bg-emerald-950 text-emerald-300 border border-emerald-800">
+                          {row.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+
+                  {/* Rows 4+ visually blurred behind conversion callout */}
+                  {SAMPLE_LEAK_ROWS.slice(3).map((row) => (
+                    <tr key={row.rowNum} className="bg-slate-950 blur-sm select-none opacity-40">
+                      <td className="py-3 px-4 font-bold text-slate-500">{row.rowNum}</td>
+                      <td className="py-3 px-4 text-slate-500">{row.skuOrLr}</td>
+                      <td className="py-3 px-4 text-slate-500">{row.category}</td>
+                      <td className="py-3 px-4 text-slate-500">{row.discrepancyType}</td>
+                      <td className="py-3 px-4 text-right font-bold text-slate-500">₹ {row.amountLakhs.toFixed(2)} L</td>
+                      <td className="py-3 px-4 text-center">
+                        <span className="px-2 py-0.5 rounded text-[10px] bg-slate-800 text-slate-500">
+                          {row.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+
+              {/* Conversion Overlay */}
+              <div className="absolute inset-x-0 bottom-0 top-[140px] flex flex-col items-center justify-center p-6 text-center bg-slate-950/80 backdrop-blur-xs">
+                <div className="bg-slate-900 border-2 border-cyan-500/60 p-6 rounded-xl max-w-2xl shadow-2xl space-y-4">
+                  <span className="bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider">
+                    Executive Audit Lockdown
+                  </span>
+                  <h4 className="text-base sm:text-lg font-extrabold text-white">
+                    Unlock All Audited Leak Rows + 48-Hr Signed Executive Workbook (₹18,000 — 100% Refunded if &lt; ₹2,50,000 Identified)
+                  </h4>
+                  <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+                    <a
+                      href={whatsappUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-lg transition-all flex items-center gap-2 shadow-lg shadow-emerald-600/30"
+                    >
+                      <span>WhatsApp Audit Desk (Instant Review)</span>
+                    </a>
+                    <button
+                      onClick={() => setActiveTab('builder')}
+                      className="px-5 py-2.5 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs rounded-lg transition-all shadow-lg"
+                    >
+                      Configure 48-Hr Scope
+                    </button>
                   </div>
-                  <div className="flex justify-between border-b border-slate-900 pb-1.5">
-                    <span className="text-slate-400">Company / Unit:</span>
-                    <span className="text-slate-200 font-semibold">{generatedTicket.company}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* TAB 3: CA Partner Calculator */}
+        {activeTab === 'calculator' && (
+          <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-6 space-y-6">
+            <div className="border-b border-slate-800 pb-4">
+              <span className="text-xs font-mono text-cyan-400 font-bold uppercase tracking-wider">
+                Auditor Partner Desk Workbench
+              </span>
+              <h3 className="text-2xl font-bold text-white mt-1">CA &amp; Stock Auditor Revenue Share Calculator</h3>
+              <p className="text-sm text-slate-400 mt-1">
+                Calculate your 20% Partner Desk revenue payout for introducing plant clients to 48-Hr Diagnostics.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              <div className="space-y-6">
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">
+                    Monthly Audit Clients Referred: <span className="text-cyan-400 text-sm font-extrabold">{monthlyAuditClients}</span>
+                  </label>
+                  <input
+                    type="range"
+                    min="1"
+                    max="30"
+                    value={monthlyAuditClients}
+                    onChange={(e) => setMonthlyAuditClients(parseInt(e.target.value, 10))}
+                    className="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-cyan-400"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">
+                    Est. Avg Identified Leaks Per Client: <span className="text-emerald-400 text-sm font-extrabold">₹ {avgClientLeakLakhs} Lakhs</span>
+                  </label>
+                  <input
+                    type="range"
+                    min="2.5"
+                    max="50"
+                    step="0.5"
+                    value={avgClientLeakLakhs}
+                    onChange={(e) => setAvgClientLeakLakhs(parseFloat(e.target.value))}
+                    className="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-emerald-400"
+                  />
+                </div>
+
+                <div className="bg-slate-950 p-4 rounded-lg border border-slate-800 text-xs text-slate-400 space-y-1">
+                  <p className="font-bold text-slate-300">Partner Desk Terms:</p>
+                  <p>• 20% direct payout per ₹18,000 diagnostic (₹3,600 per client).</p>
+                  <p>• Co-branded CA verification seal on executive workbook.</p>
+                  <p>• Priority 24-hour turnaround for partner desk submissions.</p>
+                </div>
+              </div>
+
+              <div className="bg-slate-950 border border-slate-800 rounded-xl p-6 flex flex-col justify-between space-y-6">
+                <div className="space-y-4">
+                  <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Estimated Earnings</span>
+                  <div>
+                    <span className="text-xs text-slate-400 block">Monthly Partner Revenue Share</span>
+                    <span className="text-3xl font-extrabold text-cyan-400">₹ {caPartnerMonthlyPayout.toLocaleString('en-IN')}</span>
                   </div>
-                  <div className="flex justify-between border-b border-slate-900 pb-1.5">
-                    <span className="text-slate-400">Contact Email:</span>
-                    <span className="text-slate-200">{generatedTicket.email}</span>
-                  </div>
-                  <div className="flex justify-between border-b border-slate-900 pb-1.5">
-                    <span className="text-slate-400">Request Type:</span>
-                    <span className="text-emerald-400 font-semibold">{generatedTicket.type}</span>
-                  </div>
-                  <div className="flex justify-between border-b border-slate-900 pb-1.5">
-                    <span className="text-slate-400">Resolution SLA:</span>
-                    <span className="text-amber-400 font-semibold">{generatedTicket.targetSla}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-400">Handling Unit:</span>
-                    <span className="text-slate-300">{generatedTicket.team}</span>
+                  <div>
+                    <span className="text-xs text-slate-400 block">Annualized Revenue Share</span>
+                    <span className="text-3xl font-extrabold text-emerald-400">₹ {caPartnerAnnualPayout.toLocaleString('en-IN')}</span>
                   </div>
                 </div>
 
-                <div className="pt-2 flex flex-col sm:flex-row gap-3">
-                  <button
-                    onClick={handleDownloadSLAData}
-                    className="flex-1 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-xs rounded-lg border border-slate-700 transition-all flex items-center justify-center gap-2"
-                  >
-                    <Download className="w-4 h-4" /> 1-Click Download SLA Receipt
-                  </button>
+                <div className="pt-4 border-t border-slate-800">
                   <a
-                    href={ticketMailtoHref}
-                    className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-lg transition-all flex items-center justify-center gap-2 text-center"
+                    href={whatsappUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full py-3 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs rounded-lg transition-all flex items-center justify-center gap-2 shadow-lg"
                   >
-                    <Mail className="w-4 h-4" /> Email Team 12 Desk
+                    <span>Apply for 20% CA Partner Desk via WhatsApp</span>
                   </a>
                 </div>
               </div>
-            ) : (
-              <div className="h-full flex flex-col items-center justify-center text-center p-6 space-y-3">
-                <ShieldCheck className="w-12 h-12 text-slate-700" />
-                <h4 className="text-sm font-bold text-slate-300">No SLA Ticket Generated Yet</h4>
-                <p className="text-xs text-slate-500 max-w-xs">
-                  Fill in your company name and email, choose a request type, and click &quot;Generate 24-Hr SLA Ticket&quot; to issue a binding ticket receipt.
-                </p>
+            </div>
+          </div>
+        )}
+
+        {/* TAB 4: 48-Hr Scope Builder */}
+        {activeTab === 'builder' && (
+          <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-6 space-y-6">
+            <div className="border-b border-slate-800 pb-4">
+              <span className="text-xs font-mono text-cyan-400 font-bold uppercase tracking-wider">
+                Instant Configuration
+              </span>
+              <h3 className="text-2xl font-bold text-white mt-1">48-Hr Diagnostic Scope Builder</h3>
+              <p className="text-sm text-slate-400 mt-1">
+                Select your ERP stack, plant corridors, and tier to initiate outreach with instant WhatsApp or Email.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div>
+                <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">
+                  Select Primary ERP / Accounting System
+                </label>
+                <select
+                  value={selectedErp}
+                  onChange={(e) => setSelectedErp(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-800 text-slate-200 text-xs rounded-lg p-3 focus:border-cyan-500 focus:outline-none"
+                >
+                  <option value="Tally ERP / Prime">Tally ERP / Prime</option>
+                  <option value="SAP S/4HANA">SAP S/4HANA</option>
+                  <option value="Oracle ERP Cloud">Oracle ERP Cloud</option>
+                  <option value="Microsoft Dynamics 365">Microsoft Dynamics 365</option>
+                  <option value="Zoho Books / Busy">Zoho Books / Busy</option>
+                  <option value="Custom Excel / CSV Ledger">Custom Excel / CSV Ledger</option>
+                </select>
               </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">
+                  Plant &amp; Freight Corridors
+                </label>
+                <select
+                  value={plantCorridor}
+                  onChange={(e) => setPlantCorridor(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-800 text-slate-200 text-xs rounded-lg p-3 focus:border-cyan-500 focus:outline-none"
+                >
+                  <option value="West & North Corridors">West &amp; North Corridors</option>
+                  <option value="South Corridors (TN/KA/TS)">South Corridors (TN/KA/TS)</option>
+                  <option value="East & Central Industrial Belts">East &amp; Central Industrial Belts</option>
+                  <option value="Pan-India Multi-Plant Corridors">Pan-India Multi-Plant Corridors</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">
+                  Requested Commercial Tier
+                </label>
+                <select
+                  value={requestedTier}
+                  onChange={(e) => setRequestedTier(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-800 text-slate-200 text-xs rounded-lg p-3 focus:border-cyan-500 focus:outline-none"
+                >
+                  <option value="₹18,000 48-Hr Diagnostic">₹18,000 48-Hr Diagnostic (₹2.5L Guarantee)</option>
+                  <option value="₹15,000/mo Monthly Watchdog">₹15,000/mo Monthly Watchdog</option>
+                  <option value="20% CA Partner Desk">20% CA &amp; Stock Auditor Partner Desk</option>
+                  <option value="₹0 Browser Sandbox">₹0 Browser Sandbox</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Instant WhatsApp + 15-Min Leak Review Outreach Bar */}
+            <div className="bg-slate-950 border border-slate-800 p-6 rounded-xl space-y-4">
+              <h4 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                Instant Outreach &amp; 15-Min Leak Review Desk
+              </h4>
+              <p className="text-xs text-slate-400">
+                Contact our audit engineering team directly with your configured scope. Response SLA: under 15 minutes.
+              </p>
+              <div className="flex flex-wrap items-center gap-4 pt-2">
+                <a
+                  href={whatsappUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-lg transition-all flex items-center gap-2 shadow-lg shadow-emerald-600/30"
+                >
+                  <span>WhatsApp Audit Desk (Instant Review)</span>
+                </a>
+                <a
+                  href={mailtoUrl}
+                  className="px-6 py-3 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs rounded-lg transition-all border border-slate-700"
+                >
+                  Email Audit Desk (joneszz2004@gmail.com)
+                </a>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* TAB 5: 24-Hr SLA Grievance & Data Purge Desk */}
+        {activeTab === 'purge' && (
+          <div className="bg-slate-900/90 border border-rose-950/60 rounded-xl p-6 space-y-6">
+            <div className="border-b border-slate-800 pb-4">
+              <span className="text-xs font-mono text-rose-400 font-bold uppercase tracking-wider">
+                Institutional Data Invariant
+              </span>
+              <h3 className="text-2xl font-bold text-white mt-1">24-Hr SLA Data Purge &amp; Grievance Desk</h3>
+              <p className="text-sm text-slate-400 mt-1">
+                Enforce complete data destruction and issue cryptographic purge certificates within 24 hours.
+              </p>
+            </div>
+
+            {purgeSubmitted ? (
+              <div className="bg-emerald-950/40 border border-emerald-500/30 p-6 rounded-xl text-center space-y-3">
+                <span className="text-emerald-400 text-2xl font-bold block">✓ Purge Request Registered</span>
+                <p className="text-sm text-slate-200">
+                  Your cryptographic data purge ticket for reference <span className="font-mono text-cyan-400">{purgeReference}</span> has been logged.
+                </p>
+                <p className="text-xs text-slate-400">
+                  A signed certificate of data destruction will be dispatched to <span className="text-slate-300">{purgeEmail}</span> within 24 hours.
+                </p>
+                <button
+                  onClick={() => {
+                    setPurgeSubmitted(false);
+                    setPurgeEmail('');
+                    setPurgeReference('');
+                  }}
+                  className="mt-2 px-4 py-2 bg-slate-800 text-slate-300 text-xs font-semibold rounded hover:bg-slate-700"
+                >
+                  Submit Another Request
+                </button>
+              </div>
+            ) : (
+              <form onSubmit={handlePurgeSubmit} className="space-y-4 max-w-xl">
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">
+                    Authorized Contact Email
+                  </label>
+                  <input
+                    type="email"
+                    required
+                    value={purgeEmail}
+                    onChange={(e) => setPurgeEmail(e.target.value)}
+                    placeholder="md@company.com"
+                    className="w-full bg-slate-950 border border-slate-800 text-slate-200 text-xs rounded-lg p-3 focus:border-rose-500 focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">
+                    Audit Reference / Session Hash
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={purgeReference}
+                    onChange={(e) => setPurgeReference(e.target.value)}
+                    placeholder="AUD-2026-99412"
+                    className="w-full bg-slate-950 border border-slate-800 text-slate-200 text-xs rounded-lg p-3 focus:border-rose-500 focus:outline-none"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  className="w-full py-3 bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs rounded-lg transition-all shadow-lg shadow-rose-600/30"
+                >
+                  Request 24-Hr SLA Data Purge
+                </button>
+              </form>
             )}
           </div>
-        </div>
-      </section>
+        )}
 
+      </div>
     </div>
   );
 };
+
+export default IcebergControlSystems;
