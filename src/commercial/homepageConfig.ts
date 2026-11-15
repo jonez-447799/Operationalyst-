@@ -105,10 +105,14 @@ export const FAQ_ITEMS = [
 ];
 
 export interface StakeholderPerspective {
+  id?: 'economic_buyer' | 'champion' | 'user' | 'evaluator';
   roleId: 'economic_buyer' | 'champion' | 'user' | 'evaluator';
   title: string;
+  roleTitle?: string;
   role: string;
+  stakeholderType?: string;
   coreQuestion: string;
+  priorityOutcome?: string;
   unspokenAnxiety: string;
   riskMitigation: string;
   keyMetrics: string[];
@@ -116,37 +120,53 @@ export interface StakeholderPerspective {
 
 export const STAKEHOLDER_PERSPECTIVES: StakeholderPerspective[] = [
   {
+    id: 'economic_buyer',
     roleId: 'economic_buyer',
     title: 'Managing Director / Founder',
+    roleTitle: 'Managing Director / Founder',
     role: 'P&L Owner & Capital Allocator',
+    stakeholderType: 'P&L Owner & Capital Allocator',
     coreQuestion: 'Will this diagnostic recover real capital without disrupting ongoing plant operations?',
+    priorityOutcome: 'Recover ₹2.5L+ in leaked capital with zero operational downtime.',
     unspokenAnxiety: 'I cannot afford complex IT projects that consume team bandwidth without guaranteed ROI.',
     riskMitigation: '₹2,50,000 leak recovery guarantee backed by 100% fee refund clause.',
     keyMetrics: ['Net Capital Recovered', 'ROI Multiple on Audit Fee', 'Plant Friction Score'],
   },
   {
+    id: 'champion',
     roleId: 'champion',
     title: 'Head of Operations / Plant Head',
+    roleTitle: 'Head of Operations / Plant Head',
     role: 'Execution Leader',
+    stakeholderType: 'Execution Leader',
     coreQuestion: 'Can we run this audit using existing standard ERP reports without extra data entry?',
+    priorityOutcome: 'Automate 3-way matching without manual spreadsheet data entry.',
     unspokenAnxiety: 'My team is already stretched thin; manual data prep will stall plant operations.',
     riskMitigation: 'Simple 5-column CSV drag & drop requiring zero custom ERP integration.',
     keyMetrics: ['Setup Time (< 15 mins)', 'Phantom Shortage Elimination', 'Line-Item Accuracy'],
   },
   {
+    id: 'user',
     roleId: 'user',
     title: 'Internal Auditor / Commercial Manager',
+    roleTitle: 'Internal Auditor / Commercial Manager',
     role: 'Day-to-Day User',
+    stakeholderType: 'Day-to-Day User',
     coreQuestion: 'How clear and actionable are the variance schedules produced by the engine?',
+    priorityOutcome: 'Produce signed CA-verified discrepancy workbooks for vendor recovery claims.',
     unspokenAnxiety: 'If false positives are high, vendors will dispute our claims and ruin supplier relationships.',
     riskMitigation: '100% deterministic 3-way matching rules verified by CA stock auditors.',
     keyMetrics: ['Discrepancy Resolution Rate', 'Vendor Recovery Claims Accepted', 'Cycle Time'],
   },
   {
+    id: 'evaluator',
     roleId: 'evaluator',
     title: 'Chief Financial Officer / CA Advisor',
+    roleTitle: 'Chief Financial Officer / CA Advisor',
     role: 'Governance & Compliance Signoff',
+    stakeholderType: 'Governance & Compliance Signoff',
     coreQuestion: 'Does this platform meet enterprise data security and audit standards?',
+    priorityOutcome: 'Ensure 100% data privacy compliance with zero cloud raw ledger retention.',
     unspokenAnxiety: 'Sending sensitive ledger data offsite could violate confidentiality protocols.',
     riskMitigation: '100% in-browser party name stripping & zero data retention architecture.',
     keyMetrics: ['Privacy Invariant Score', 'Data Purge Verification Time', 'Audit Signoff Compliance'],
@@ -389,7 +409,7 @@ export const COMMERCIAL_TIERS: CommercialTier[] = [
     ],
     ctaText: 'Apply for CA Partner Desk',
   },
-  ];
+];
 
 export interface InstitutionalTeam {
   id: string;
