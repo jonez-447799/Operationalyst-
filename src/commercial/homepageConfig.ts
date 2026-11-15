@@ -389,7 +389,7 @@ export const COMMERCIAL_TIERS: CommercialTier[] = [
     ],
     ctaText: 'Apply for CA Partner Desk',
   },
-];
+  ];
 
 export interface InstitutionalTeam {
   id: string;
