@@ -25,34 +25,32 @@ export const HERO_HEADLINE_VARIANTS: Record<'A' | 'B' | 'C', HeadlineVariant> = 
 
 export const ACTIVE_DEFAULT_VARIANT: 'A' | 'B' | 'C' = 'A';
 
-export const PROBLEM_QUESTIONS = [
+export const PROBLEM_QUESTIONS: string[] = [
+  'How much inventory has sat unmoved for over 90 days?',
+  'Which purchase orders were received after promised date without SLA credit claim?',
+  'What is the discrepancy between freight invoices and contracted rate cards?'
+];
+
+export const METHODOLOGY_STAGES = [
   {
     num: '01',
-    label: 'STAGNANCY',
-    question: 'Which SKUs have not moved?',
-    description:
-      'Items sitting on warehouse racks with zero consumption across multiple months or quarters, continuing to occupy physical footprint unnoticed.'
+    title: 'Data Ingestion',
+    desc: 'Ingest purchase orders, goods receipts, and freight invoices with zero workflow disruption.'
   },
   {
     num: '02',
-    label: 'AGEING VELOCITY',
-    question: 'How long have they been inactive?',
-    description:
-      'Tracking 90, 180, and 360+ day aging thresholds before items deteriorate, rust, or turn into irreversible scrap write-downs.'
+    title: 'Algorithmic Supervision',
+    desc: 'Run multi-layer mathematical invariant checks across lead times, unit costs, and SLA rules.'
   },
   {
     num: '03',
-    label: 'VALUE CONCENTRATION',
-    question: 'Where is inventory value concentrated?',
-    description:
-      'The Pareto 80/20 distribution showing which handful of high-value parts lock up the majority of idle working capital.'
+    title: 'Evidence Generation',
+    desc: 'Produce audit-ready proof packs linking every variance back to source transactional records.'
   },
   {
     num: '04',
-    label: 'PRIORITY RANKING',
-    question: 'Which items should be investigated first?',
-    description:
-      'Algorithmic prioritization ranking inventory items by carrying cost burn and liquidation feasibility.'
+    title: 'Capital Recovery',
+    desc: 'Execute vendor credit notes, penalty enforcement, and inventory liquidation playbooks.'
   }
 ];
 
@@ -63,361 +61,233 @@ export interface SampleAuditMode {
   requiredColumns: string[];
   sampleLeak: string;
   deliverable: string;
+  badge?: string;
+  shortLabel?: string;
+  totalBookValueFormatted?: string;
+  skusEvaluatedText?: string;
+  deadStockValueFormatted?: string;
+  deadStockSubtext?: string;
+  slowMovingValueFormatted?: string;
+  slowMovingSubtext?: string;
+  prioritySkusHeadline?: string;
+  prioritySkusSubtext?: string;
 }
 
-export type SampleAuditModeId = 'p1_dead_stock' | 'p2_otif' | 'p3_freight' | 'p4_bin_variance' | 'sandbox_20' | string;
-
-export type SampleAuditModeMap = SampleAuditMode[] & Record<string, SampleAuditMode>;
-
-export const getReconciledSampleAuditModes = (): SampleAuditModeMap => {
-  const modes: SampleAuditMode[] = [
+export function getReconciledSampleAuditModes(): SampleAuditMode[] {
+  return [
     {
-      id: 'sandbox_20',
-      name: 'P1: Dead Stock & Working Capital',
-      category: 'Inventory Stagnation',
-      requiredColumns: ['SKU_ID', 'Batch_Date', 'Quantity', 'Unit_Cost', 'Location'],
-      sampleLeak: 'Batch #B-8842: 1,420 units inactive for 214 days. Trapped Working Capital: ₹18,46,000',
-      deliverable: 'P1 Stagnant Inventory Liquidation Schedule & Provisioning Matrix'
+      id: 'inventory_stagnancy',
+      name: 'Un-reconciled Dead Stock & Batch Stagnancy',
+      category: 'Inventory Capital',
+      requiredColumns: ['SKU_ID', 'Batch_No', 'Received_Date', 'Last_Dispatched_Date', 'Unit_Cost', 'Qty_On_Hand'],
+      sampleLeak: 'Warehouse racks occupied by items with zero movement for 180+ days.',
+      deliverable: 'SKU-level batch aging ledger with automated liquidation triggers.',
+      badge: 'High Impact',
+      shortLabel: 'Dead Stock',
+      totalBookValueFormatted: '$1.42M',
+      skusEvaluatedText: '4,850 SKUs across 3 facilities',
+      deadStockValueFormatted: '$412,000',
+      deadStockSubtext: 'Zero movement > 180 days',
+      slowMovingValueFormatted: '$285,000',
+      slowMovingSubtext: '< 5 dispatches per quarter',
+      prioritySkusHeadline: 'Top 12 SKUs represent 68% of trapped capital',
+      prioritySkusSubtext: 'Immediate liquidation & return playbooks generated'
     },
     {
-      id: 'p1_dead_stock',
-      name: 'P1: Dead Stock & Working Capital',
-      category: 'Inventory Stagnation',
-      requiredColumns: ['SKU_ID', 'Batch_Date', 'Quantity', 'Unit_Cost', 'Location'],
-      sampleLeak: 'Batch #B-8842: 1,420 units inactive for 214 days. Trapped Working Capital: ₹18,46,000',
-      deliverable: 'P1 Stagnant Inventory Liquidation Schedule & Provisioning Matrix'
+      id: 'otif_breach',
+      name: 'Un-enforced Transporter OTIF SLA Penalties',
+      category: 'Dispatch Operations',
+      requiredColumns: ['PO_ID', 'Transporter_Code', 'Promised_Dispatch_Date', 'Actual_Dispatch_Date', 'SLA_Penalty_Rate'],
+      sampleLeak: 'Delayed customer dispatches leading to customer debit notes and lost repeat orders.',
+      deliverable: 'Transporter debit note schedule cross-referenced against promised vs actual GRN receipts.',
+      badge: 'Contractual SLA',
+      shortLabel: 'OTIF Breaches',
+      totalBookValueFormatted: '$890K Spend',
+      skusEvaluatedText: '1,240 Transporter Shipments',
+      deadStockValueFormatted: '$84,500',
+      deadStockSubtext: 'Unclaimed OTIF SLA Penalties',
+      slowMovingValueFormatted: '$32,000',
+      slowMovingSubtext: 'Late dispatch customer debit notes',
+      prioritySkusHeadline: 'Transporter SLA breach rate exceeds 14.2%',
+      prioritySkusSubtext: 'Automated debit notes drafted for top 3 carriers'
     },
     {
-      id: 'p2_otif',
-      name: 'P2: OTIF Dispatch Reliability',
-      category: 'Dispatch Penalties',
-      requiredColumns: ['Order_ID', 'Promised_Date', 'Dispatch_Date', 'Penalty_Rate'],
-      sampleLeak: 'Order #ORD-9912: Dispatch delayed 4 days without customer waiver. Penalty Leak: ₹1,24,000',
-      deliverable: 'P2 OTIF Penalty Reconciliation & SLA Enforcement Guide'
-    },
-    {
-      id: 'p3_freight',
-      name: 'P3: Freight Rate-Card & Detention Audit',
-      category: 'Logistics Overcharge',
-      requiredColumns: ['Invoice_ID', 'Vehicle_Type', 'Contract_Rate', 'Billed_Rate', 'Detention_Hours'],
-      sampleLeak: 'Invoice #INV-4401: Billed freight rate ₹45/km vs contracted ₹38/km. Overcharge: ₹87,500',
-      deliverable: 'P3 Freight Invoice Recovery Pack & Transporter Overcharge Recovery'
-    },
-    {
-      id: 'p4_bin_variance',
-      name: 'P4: Warehouse Bin Variance & Ghost Stock',
-      category: 'Physical Shrinkage',
-      requiredColumns: ['Bin_ID', 'System_Qty', 'Physical_Qty', 'Unit_Value'],
-      sampleLeak: 'Bin #C-14: System shows 500 units, physical count 320 units. Ghost Stock Leak: ₹3,15,000',
-      deliverable: 'P4 Bin Variance Reconciliation & Shrinkage Prevention Plan'
+      id: 'freight_variance',
+      name: 'Logistics Freight Rate-Card Variance',
+      category: 'Logistics Cost',
+      requiredColumns: ['Invoice_ID', 'Transporter_Code', 'Lane_ID', 'Billed_Amount', 'Contracted_Rate'],
+      sampleLeak: 'Freight invoices paid as billed without contract rate-card validation.',
+      deliverable: 'Line-item freight invoice variance audit report detailing exact overcharge amounts.',
+      badge: 'Billing Variance',
+      shortLabel: 'Freight Overcharge',
+      totalBookValueFormatted: '$620K Freight',
+      skusEvaluatedText: '840 Logistics Invoices',
+      deadStockValueFormatted: '$53,200',
+      deadStockSubtext: 'Billed rate exceeding contracted rate card',
+      slowMovingValueFormatted: '$18,400',
+      slowMovingSubtext: 'Un-audited detention & demurrage charges',
+      prioritySkusHeadline: '8.5% average freight invoice overcharge rate',
+      prioritySkusSubtext: 'Reconciliation report ready for logistics provider sign-off'
     }
   ];
-
-  const mapObj: Record<string, SampleAuditMode> = {
-    sandbox_20: modes[0],
-    p1_dead_stock: modes[1],
-    p2_otif: modes[2],
-    p3_freight: modes[3],
-    p4_bin_variance: modes[4]
-  };
-
-  return Object.assign(modes, mapObj) as SampleAuditModeMap;
-};
-
-export interface MethodologyStage {
-  phase: string;
-  name: string;
-  description: string;
 }
 
-export const METHODOLOGY_STAGES: MethodologyStage[] = [
-  {
-    phase: 'Phase 1',
-    name: 'Data Ingestion & Normalization',
-    description: 'Standardize ERP data tables into algorithmic invariant structures.'
-  },
-  {
-    phase: 'Phase 2',
-    name: 'Mathematical Rule Execution',
-    description: 'Execute P1–P4 audit checks across 100% of transaction rows.'
-  }
+export const TEN_TEAM_OPERATING_SYSTEM = [
+  { id: 'desk_1', title: 'Inventory Capital & Stagnancy Supervision', category: 'Working Capital' },
+  { id: 'desk_2', title: 'Transporter OTIF & SLA Penalty Supervision', category: 'Dispatch SLA' },
+  { id: 'desk_3', title: 'Logistics Freight Rate-Card Variance', category: 'Logistics' },
+  { id: 'desk_4', title: 'Supplier Price Escalation & Contract Audit', category: 'Procurement' },
+  { id: 'desk_5', title: 'Warehouse Bin Variance & Shrinkage', category: 'Assets' },
+  { id: 'desk_6', title: 'Order-to-Cash Margin Leak Supervision', category: 'Revenue Integrity' },
+  { id: 'desk_7', title: 'Vendor Rebate & Early Payment Discount Recovery', category: 'Commercial Terms' },
+  { id: 'desk_8', title: 'Quality Rejection & Scrap Loss Audit', category: 'Quality Control' },
+  { id: 'desk_9', title: 'Production Yield Variance & Material Waste', category: 'Manufacturing' },
+  { id: 'desk_10', title: 'Working Capital & Payment Terms Optimization', category: 'Executive Finance' },
+  { id: 'desk_11', title: 'Customer Credit Terms & Bad Debt Early Warning', category: 'Credit Risk' },
+  { id: 'desk_12', title: 'Multi-Location Inter-Warehouse Transfer Efficiency', category: 'Network Ops' },
+  { id: 'desk_13', title: 'Customs Duty & Tariff Classification Audit', category: 'Import/Export' },
+  { id: 'desk_14', title: 'Return-to-Vendor (RTV) & Warranty Claim Recovery', category: 'Vendor Recovery' }
 ];
 
-export const FOUNDER_EXECUTIVE_SIGNOFF = {
-  name: 'Operationalyst Engineering & Audit Governance',
-  title: 'Institutional Profit Leak Supervision',
-  note: 'Backed by our contractually guaranteed ₹2,50,000 minimum leak discovery or 100% money back.'
-};
+export const INSTITUTIONAL_TEAMS = TEN_TEAM_OPERATING_SYSTEM;
 
 export interface CommercialTier {
   id: string;
-  title: string;
-  tagline: string;
-  price: string;
-  pricing: string;
   tierName: string;
+  badge?: string;
+  monthlyPrice: string;
+  annualPrice: string;
   targetAudience: string;
-  deliverable: string;
-  guarantee: string;
-  iconName: string;
-  recommendedRole: string;
-  scopeLimit: string;
+  desksIncluded: string;
+  keyHighlights: string[];
+  auditCadence: string;
   ctaText: string;
-  features: string[];
 }
 
 export const COMMERCIAL_TIERS: CommercialTier[] = [
   {
-    id: 'sandbox',
-    title: '₹0 Sandbox / Self-Serve',
-    tagline: 'Early Stage & Exploratory Operations',
-    price: '₹0',
-    pricing: '₹0',
-    tierName: '₹0 Sandbox / Self-Serve',
-    targetAudience: 'Early Stage & Exploratory Operations',
-    deliverable: 'Instant Automated ERP Data Ingestion & Preliminary Leak Detection',
-    guarantee: '100% Free Access to Core Audit Sandbox',
-    iconName: 'ShieldCheck',
-    recommendedRole: 'Operations Analyst',
-    scopeLimit: '1 ERP Data Source / 10,000 Rows',
-    ctaText: 'Launch Sandbox',
-    features: ['Instant Automated ERP Data Ingestion & Preliminary Leak Detection', '100% Free Access to Core Audit Sandbox']
+    id: 'starter',
+    tierName: 'Operational Pilot',
+    badge: 'Risk-Free Trial',
+    monthlyPrice: '$0',
+    annualPrice: '$0 upfront',
+    targetAudience: 'Single-facility operations looking to audit inventory stagnancy & freight overcharges',
+    desksIncluded: '2 Operating Desks (Inventory + Logistics)',
+    keyHighlights: [
+      '14-day sample data audit',
+      'Up to $50,000 detected leak report',
+      'SKU-level dead stock aging ledger',
+      'Email audit support'
+    ],
+    auditCadence: 'One-Time Pilot Audit',
+    ctaText: 'Start Free Pilot'
   },
   {
-    id: 'diagnostic',
-    title: '₹18,000 Diagnostic Audit',
-    tagline: 'Mid-Market & Rapid Growth Operations',
-    price: '₹18,000',
-    pricing: '₹18,000',
-    tierName: '₹18,000 Diagnostic Audit',
-    targetAudience: 'Mid-Market & Rapid Growth Operations',
-    deliverable: 'Complete P1–P4 Profit Leak Reconciliation & Executive Recovery Playbook',
-    guarantee: 'Guaranteed ₹2,50,000 Minimum Leak Discovery or 100% Refund',
-    iconName: 'FileCheck',
-    recommendedRole: 'CFO / VP Supply Chain',
-    scopeLimit: 'Full Annual ERP Historical Data Audit',
-    ctaText: 'Request Diagnostic',
-    features: ['Complete P1–P4 Profit Leak Reconciliation & Executive Recovery Playbook', 'Guaranteed ₹2,50,000 Minimum Leak Discovery or 100% Refund']
+    id: 'growth',
+    tierName: 'Commercial Supervision',
+    badge: 'Most Popular',
+    monthlyPrice: '$2,450',
+    annualPrice: '$2,050/mo billed annually',
+    targetAudience: 'Growing mid-market manufacturing & distribution enterprises',
+    desksIncluded: '5 Operating Desks (Inventory, Transporter, Freight, Procurement, Bin Variance)',
+    keyHighlights: [
+      'Weekly automated data ingestion',
+      'Full mathematical invariant supervision',
+      'Automated vendor debit note generation',
+      'Dedicated audit engineer support'
+    ],
+    auditCadence: 'Weekly Automated Runs',
+    ctaText: 'Deploy Supervision'
   },
   {
-    id: 'watchdog',
-    title: '₹15,000/mo Watchdog',
-    tagline: 'Enterprise Supply Chains & Multi-Facility Logistics',
-    price: '₹15,000/mo',
-    pricing: '₹15,000/mo',
-    tierName: '₹15,000/mo Watchdog',
-    targetAudience: 'Enterprise Supply Chains & Multi-Facility Logistics',
-    deliverable: 'Continuous Automated Monitoring & Real-time Profit Leak Prevention Alerts',
-    guarantee: 'Ongoing Real-time SLA & Rate Card Compliance Enforcement',
-    iconName: 'Activity',
-    recommendedRole: 'Head of Audit / Chief Operating Officer',
-    scopeLimit: 'Unlimited Transactions & Continuous Sync',
-    ctaText: 'Activate Watchdog',
-    features: ['Continuous Automated Monitoring & Real-time Profit Leak Prevention Alerts', 'Ongoing Real-time SLA & Rate Card Compliance Enforcement']
+    id: 'enterprise',
+    tierName: 'Enterprise Operating System',
+    badge: 'Full Suite',
+    monthlyPrice: '$4,950',
+    annualPrice: '$4,150/mo billed annually',
+    targetAudience: 'Multi-plant enterprise operations with complex supply chains',
+    desksIncluded: 'All 14 Operating Desks Included',
+    keyHighlights: [
+      'Daily continuous audit execution',
+      'Custom ERP API connectors & automated ingestion',
+      'Board-ready executive financial dashboards',
+      'Guaranteed 10x ROI audit SLA'
+    ],
+    auditCadence: 'Continuous Daily Audit',
+    ctaText: 'Schedule Executive Demo'
   },
   {
-    id: 'ca_partner',
-    title: '20% CA Partner Desk',
-    tagline: 'Chartered Accountants & Fractional CFO Partners',
-    price: '20%',
-    pricing: '20%',
-    tierName: '20% CA Partner Desk',
-    targetAudience: 'Chartered Accountants & Fractional CFO Partners',
-    deliverable: 'White-Labeled Audit Portal, Co-branded Reports & Partner Revenue Share',
-    guarantee: '20% Success Share on Verified Leak Recovery Audit Engagements',
-    iconName: 'Briefcase',
-    recommendedRole: 'CA Firm Principal / Fractional CFO',
-    scopeLimit: 'Multi-Client Partner Dashboard',
-    ctaText: 'Join Partner Desk',
-    features: ['White-Labeled Audit Portal, Co-branded Reports & Partner Revenue Share', '20% Success Share on Verified Leak Recovery Audit Engagements']
+    id: 'custom',
+    tierName: 'Custom Sovereign Audit',
+    monthlyPrice: 'Custom',
+    annualPrice: 'Bespoke Terms',
+    targetAudience: 'Global enterprises requiring on-premise deployment & custom mathematical models',
+    desksIncluded: 'Custom Desk Architecture',
+    keyHighlights: [
+      'Sovereign on-premise / private cloud deployment',
+      'Bespoke invariant algorithm development',
+      'Dedicated quantitative audit team',
+      'Custom SLA & credit recovery management'
+    ],
+    auditCadence: 'Real-Time Continuous',
+    ctaText: 'Contact Enterprise Team'
   }
 ];
 
-export interface TenTeamOperatingSystemEntry {
-  id: string;
-  code: string;
-  name: string;
-  teamName: string;
-  mandate: string;
-  engine: string;
-  primaryMetric: string;
-  leakVector: string;
-  invariantMechanism: string;
-  governanceArtifact: string;
-}
+export const FOUNDER_EXECUTIVE_SIGNOFF = {
+  quote: "Operational leaks are not theoretical—they represent hard cash draining out of your balance sheet every day. Operationalyst was built to give operations leaders deterministic mathematical proof of every dollar lost.",
+  founderName: 'Operationalyst Engineering Team',
+  title: 'Operationalyst Supervision Systems',
+  evidenceAndMechanism: 'Every detected leak links to specific line-item PO numbers, invoice IDs, and physical batch locations.',
+  institutionalGuarantee: 'Contractually backed leak recovery playbook detailing exact credit note and claim mechanisms.',
+  verificationStep: 'Inspect our sample recovery dossier with exact line-item evidence packs.',
+  response: 'Every finding includes row-level proof-specific invoice numbers, freight rate card discrepancies, and SKU batch locations ready for immediate recovery claims.'
+};
 
-export const TEN_TEAM_OPERATING_SYSTEM: TenTeamOperatingSystemEntry[] = [
+export const NAV_LINKS = [
+  { label: 'Problem', href: '#problem' },
+  { label: 'Methodology', href: '#methodology' },
+  { label: 'Desks', href: '#desks' },
+  { label: 'Tiers', href: '#tiers' },
+  { label: 'B2B Behavioral', href: '#b2b' },
+  { label: 'FAQ', href: '#faq' }
+];
+
+export const HERO_CONTENT = {
+  badge: 'Autonomous Profit Protection Engine',
+  title: 'Stop Cash Leakage Across Supply Chain & Freight Operations',
+  subtitle: 'Continuous mathematical invariant supervision that surfaces trapped working capital, un-enforced OTIF penalties, and freight overcharges with row-level proof.'
+};
+
+export const VALUE_PROPOSITIONS = [
   {
-    id: 'procurement',
-    code: 'T01',
-    name: 'Procurement & Vendor Management',
-    teamName: 'Procurement & Vendor Management',
-    mandate: 'Unsanctioned vendor price increases and un-reconciled volume rebates',
-    engine: 'Algorithmic line-item validation against historical rate-card invariants',
-    primaryMetric: 'Purchase Order Price Variance (PPV)',
-    leakVector: 'Unsanctioned vendor price increases and un-reconciled volume rebates',
-    invariantMechanism: 'Algorithmic line-item validation against historical rate-card invariants',
-    governanceArtifact: 'Automated PO Variance Flagging & Vendor SLA Audit Summary'
+    title: 'Deterministic Proof',
+    desc: 'Every finding is backed by row-level ERP evidence packs, eliminating internal disputes.'
   },
   {
-    id: 'warehouse',
-    code: 'T02',
-    name: 'Warehouse & Goods Receipt',
-    teamName: 'Warehouse & Goods Receipt',
-    mandate: 'Unrecorded damaged stock arrivals and mis-binned inventory items',
-    engine: 'Real-time double-entry bin reconciliation protocol',
-    primaryMetric: 'GRN Bin Placement Accuracy & Cycle Count Delta',
-    leakVector: 'Unrecorded damaged stock arrivals and mis-binned inventory items',
-    invariantMechanism: 'Real-time double-entry bin reconciliation protocol',
-    governanceArtifact: 'Physical Inventory Variance Matrix & Shrinkage Root Cause Audit'
+    title: 'Zero Workflow Interruption',
+    desc: 'Operates on standard CSV data exports with no complex software integrations required.'
   },
   {
-    id: 'inventory_control',
-    code: 'T03',
-    name: 'Inventory Control & Provisioning',
-    teamName: 'Inventory Control & Provisioning',
-    mandate: 'Stagnant inventory aging past 180 days with zero consumption alerts',
-    engine: 'Automated aging velocity tracking & write-down forecasting',
-    primaryMetric: 'Dead Stock & Slow-Moving Capital Lockup',
-    leakVector: 'Stagnant inventory aging past 180 days with zero consumption alerts',
-    invariantMechanism: 'Automated aging velocity tracking & write-down forecasting',
-    governanceArtifact: 'P1 Inventory Liquidation Schedule & Stagnancy Playbook'
-  },
-  {
-    id: 'logistics',
-    code: 'T04',
-    name: 'Logistics & Freight Audit',
-    teamName: 'Logistics & Freight Audit',
-    mandate: 'Transporter overcharges, unauthorized detention fees, and route inflation',
-    engine: 'Automated freight invoice audit against contract rate matrices',
-    primaryMetric: 'OTIF Dispatch Reliability & Rate Card Compliance',
-    leakVector: 'Transporter overcharges, unauthorized detention fees, and route inflation',
-    invariantMechanism: 'Automated freight invoice audit against contract rate matrices',
-    governanceArtifact: 'P3 Freight Rate Recovery Pack & Transporter SLA Scorecard'
-  },
-  {
-    id: 'accounts_payable',
-    code: 'T05',
-    name: 'Accounts Payable & Invoicing',
-    teamName: 'Accounts Payable & Invoicing',
-    mandate: 'Duplicate invoice payments and missed early payment cash discounts',
-    engine: 'Automated 3-way match invariant enforcement (PO vs GRN vs Invoice)',
-    primaryMetric: '3-Way Matching Compliance Rate',
-    leakVector: 'Duplicate invoice payments and missed early payment cash discounts',
-    invariantMechanism: 'Automated 3-way match invariant enforcement (PO vs GRN vs Invoice)',
-    governanceArtifact: 'Duplicate Payment Recovery Ledger & Early Payment Discount Log'
-  },
-  {
-    id: 'accounts_receivable',
-    code: 'T06',
-    name: 'Accounts Receivable & Credit Risk',
-    teamName: 'Accounts Receivable & Credit Risk',
-    mandate: 'Uncollected bad debt and un-billed customer freight surcharges',
-    engine: 'Automated aging waterfall & credit line freeze triggers',
-    primaryMetric: 'DSO (Days Sales Outstanding) & Credit Limit Breach Delta',
-    leakVector: 'Uncollected bad debt and un-billed customer freight surcharges',
-    invariantMechanism: 'Automated aging waterfall & credit line freeze triggers',
-    governanceArtifact: 'Receivables Aging Reconciliation & Customer Credit Governance Report'
-  },
-  {
-    id: 'sales_ops',
-    code: 'T07',
-    name: 'Sales Operations & Commercial Terms',
-    teamName: 'Sales Operations & Commercial Terms',
-    mandate: 'Unauthorized sales discounts and un-audited promotional rebates',
-    engine: 'Strict algorithmic threshold enforcement for discount matrix overrides',
-    primaryMetric: 'Discount Invariant Compliance & Margin Erosion Delta',
-    leakVector: 'Unauthorized sales discounts and un-audited promotional rebates',
-    invariantMechanism: 'Strict algorithmic threshold enforcement for discount matrix overrides',
-    governanceArtifact: 'Margin Protection Audit & Discount Violation Remediation Log'
-  },
-  {
-    id: 'quality_assurance',
-    code: 'T08',
-    name: 'Quality Assurance & Returns (RMA)',
-    teamName: 'Quality Assurance & Returns (RMA)',
-    mandate: 'Unclaimed vendor debit notes for rejected raw materials and scrap',
-    engine: 'Automated defect log to vendor debit note conversion pipeline',
-    primaryMetric: 'RMA Processing Velocity & Vendor Scrap Debit Note Claims',
-    leakVector: 'Unclaimed vendor debit notes for rejected raw materials and scrap',
-    invariantMechanism: 'Automated defect log to vendor debit note conversion pipeline',
-    governanceArtifact: 'Vendor Debit Note Claim Register & QA Rejection Audit'
-  },
-  {
-    id: 'production_planning',
-    code: 'T09',
-    name: 'Production Planning & Material Yield',
-    teamName: 'Production Planning & Material Yield',
-    mandate: 'Excess material wastage and un-tracked production scrap losses',
-    engine: 'Real-time BOM consumption vs finished goods yield audit',
-    primaryMetric: 'BOM (Bill of Materials) Variance & Scrap Allowance Invariant',
-    leakVector: 'Excess material wastage and un-tracked production scrap losses',
-    invariantMechanism: 'Real-time BOM consumption vs finished goods yield audit',
-    governanceArtifact: 'Material Yield Reconciliation & Production Scrap Audit Report'
-  },
-  {
-    id: 'executive_finance',
-    code: 'T10',
-    name: 'Executive Finance & CFO Oversight',
-    teamName: 'Executive Finance & CFO Oversight',
-    mandate: 'Executive blind spots across decentralized multi-unit operational leaks',
-    engine: 'Unified profit leak supervision portal with automated recovery tracking',
-    primaryMetric: 'Net Working Capital Days & Cash Leak Velocity',
-    leakVector: 'Executive blind spots across decentralized multi-unit operational leaks',
-    invariantMechanism: 'Unified profit leak supervision portal with automated recovery tracking',
-    governanceArtifact: 'Executive Working Capital Leak Executive Brief & Board Governance Deck'
-  },
-  {
-    id: 'tax_compliance',
-    code: 'T11',
-    name: 'Tax & Regulatory Compliance',
-    teamName: 'Tax & Regulatory Compliance',
-    mandate: 'Unclaimed GST/VAT input credits due to vendor filing mismatches',
-    engine: 'Automated GSTR-2B vs ERP invoice reconciliation algorithm',
-    primaryMetric: 'ITC (Input Tax Credit) Mismatch & Penalty Prevention',
-    leakVector: 'Unclaimed GST/VAT input credits due to vendor filing mismatches',
-    invariantMechanism: 'Automated GSTR-2B vs ERP invoice reconciliation algorithm',
-    governanceArtifact: 'Input Tax Credit Reconciliation Register & Vendor Compliance Matrix'
-  },
-  {
-    id: 'store_operations',
-    code: 'T12',
-    name: 'Store Operations & Retail Fulfillment',
-    teamName: 'Store Operations & Retail Fulfillment',
-    mandate: 'Point-of-sale inventory leakage, un-recorded transfers, and store scrap',
-    engine: 'Daily store POS to ERP perpetual inventory balance check',
-    primaryMetric: 'Store-Level Shrinkage & Inventory Accuracy',
-    leakVector: 'Point-of-sale inventory leakage, un-recorded transfers, and store scrap',
-    invariantMechanism: 'Daily store POS to ERP perpetual inventory balance check',
-    governanceArtifact: 'Store Shrinkage Variance Matrix & Inter-Store Transfer Log'
-  },
-  {
-    id: 'contract_governance',
-    code: 'T13',
-    name: 'Contract Governance & Vendor Claims',
-    teamName: 'Contract Governance & Vendor Claims',
-    mandate: 'Un-enforced vendor SLA delay penalties and missed service credits',
-    engine: 'Automated SLA breach tracking against contractual penalty matrices',
-    primaryMetric: 'Contractual SLA Compliance & Penalty Enforceability',
-    leakVector: 'Un-enforced vendor SLA delay penalties and missed service credits',
-    invariantMechanism: 'Automated SLA breach tracking against contractual penalty matrices',
-    governanceArtifact: 'Contractual Penalty Recovery Dossier & SLA Audit Register'
-  },
-  {
-    id: 'ca_partner_desk',
-    code: 'T14',
-    name: 'CA Partner Desk & External Audit',
-    teamName: 'CA Partner Desk & External Audit',
-    mandate: 'Missed profit leak recovery opportunities during traditional annual audits',
-    engine: 'Continuous algorithmic audit overlay for fractional CFOs & CA firms',
-    primaryMetric: 'External Recovery Verification & Revenue Share Audit',
-    leakVector: 'Missed profit leak recovery opportunities during traditional annual audits',
-    invariantMechanism: 'Continuous algorithmic audit overlay for fractional CFOs & CA firms',
-    governanceArtifact: 'External CA Partner Co-Branded Profit Leak Audit Report'
+    title: 'Immediate Cash Recovery',
+    desc: 'Actionable debit notes and claim deliverables ready for execution on day one.'
   }
 ];
 
-export const INSTITUTIONAL_TEAMS = TEN_TEAM_OPERATING_SYSTEM;
+export const FAQ_ITEMS = [
+  {
+    q: 'How does Operationalyst access our operational data?',
+    a: 'Operationalyst works via standard file exports (CSV/Excel) from your existing ERP or warehouse software. Zero API integration or IT overhead required.'
+  },
+  {
+    q: 'How quickly can we expect to see audit findings?',
+    a: 'Initial pilot findings are typically delivered within 48-72 hours after initial sample data ingestion.'
+  },
+  {
+    q: 'What happens if no operational leaks are found?',
+    a: 'If our initial sample audit uncovers zero verified leaks, you receive a clean compliance sign-off certificate at zero cost.'
+  }
+];
 
 export interface StakeholderPerspective {
   id: 'economic_buyer' | 'champion' | 'user' | 'evaluator';
@@ -448,82 +318,28 @@ export const STAKEHOLDER_PERSPECTIVES: StakeholderPerspective[] = [
     coreQuestion: 'Can this show us exact SKUs, batch numbers, and bin locations without burdening my team with manual audit work?',
     priorityOutcome: 'Automated identification of dead stock, OTIF penalties, and freight overcharges with actionable resolution steps.',
     unspokenAnxiety: 'Will this make my team look incompetent or disrupt our daily dispatch operations?',
-    riskMitigation: 'Frames leak detection as system/process improvement, not personal fault. Non-invasive read-only data ingestion.',
-    keyMetrics: ['OTIF Reliability %', 'Bin Variance Delta', 'Slow-Moving Stock Reduction']
+    riskMitigation: 'Non-invasive CSV ingestion requiring zero API integration or IT overhead. Designed as an operational asset for supply chain leads.',
+    keyMetrics: ['Dead Stock Recovery', 'OTIF Breach Penalties', 'Freight Rate Discrepancies']
   },
   {
     id: 'user',
-    roleTitle: 'Warehouse Manager / Inventory Controller',
-    stakeholderType: 'Primary User',
-    coreQuestion: 'Will this give me a clear list of what to move, liquidate, or audit first today?',
-    priorityOutcome: 'Prioritized daily action queues for stagnant batch liquidation and physical cycle counts.',
-    unspokenAnxiety: 'Is this another complicated software tool I have to spend hours learning and feeding data into?',
-    riskMitigation: 'Simple CSV/Excel batch upload with pre-configured templates. Instant output in standard operational terms.',
-    keyMetrics: ['Physical Count Accuracy', 'Batch Liquidation Velocity', 'Bin Utilization Rate']
+    roleTitle: 'Warehouse Manager / Dispatch Lead',
+    stakeholderType: 'Daily User / Practitioner',
+    coreQuestion: 'How quickly can I clear blocked shelf space and stop spending hours matching POs to freight bills?',
+    priorityOutcome: 'Instant discrepancy alerts with line-item ERP proof ready for immediate vendor credit claims.',
+    unspokenAnxiety: 'Is this another complicated software tool that will slow down daily dispatches?',
+    riskMitigation: 'Zero data entry required. Upload standard ERP CSV reports and get instant actionable audit deliverables.',
+    keyMetrics: ['Dispatch Variance Rate', 'Un-reconciled GRN Receipts', 'Claim Settlement Speed']
   },
   {
     id: 'evaluator',
-    roleTitle: 'IT Director / Data Governance Lead',
-    stakeholderType: 'Technical Evaluator',
-    coreQuestion: 'How is data secured, processed, and validated for mathematical accuracy?',
-    priorityOutcome: 'Zero core ERP schema modification, standard file interface, clear data privacy and encryption guarantees.',
-    unspokenAnxiety: 'Will this require complex API integrations or risk compromising operational ERP data integrity?',
-    riskMitigation: 'File-based ingestion options (CSV/XLSX), client-side mathematical invariant execution, zero database writes.',
-    keyMetrics: ['Data Ingestion Time', 'Schema Match Rate', 'Zero Write Footprint']
-  }
-];
-
-export interface ObjectionItem {
-  id: string;
-  objection: string;
-  category: string;
-  underlyingAnxiety: string;
-  evidenceAndMechanism: string;
-  institutionalGuarantee: string;
-  verificationStep: string;
-  response?: string;
-}
-
-export const OBJECTION_MATRIX: ObjectionItem[] = [
-  {
-    id: 'obj_1',
-    objection: 'Our ERP and internal team already track inventory and logistics variance.',
-    category: 'Process Capability',
-    underlyingAnxiety: 'Fear that existing internal controls are being questioned or that buying external audit tools is redundant.',
-    evidenceAndMechanism: 'Standard ERP reports summarize totals but rarely run multi-table invariant checks across batch aging, rate cards, and OTIF waivers simultaneously.',
-    institutionalGuarantee: 'Zero cost pilot finding guarantee: We identify at least ₹2,50,000 in un-reconciled leaks or there is no fee.',
-    verificationStep: 'Upload sample past 90-day dispatch & invoice CSV files to test against our P1–P4 audit rules.',
-    response: 'Internal ERP systems log transactions, but Operationalyst applies continuous mathematical invariant algorithms specifically designed to uncover hidden cross-table profit leaks.'
-  },
-  {
-    id: 'obj_2',
-    objection: 'We cannot share sensitive operational and pricing data externally.',
-    category: 'Data Security',
-    underlyingAnxiety: 'Concern regarding proprietary customer pricing, vendor rate cards, or operational leak exposure.',
-    evidenceAndMechanism: 'Data processing can run completely on anonymized CSV files with masked vendor and customer IDs.',
-    institutionalGuarantee: 'Strict enterprise NDA with option for completely client-side local data processing.',
-    verificationStep: 'Review our data sanitization specification and sample anonymized ingestion schema.',
-    response: 'Security is guaranteed: all analysis operates on sanitized CSV data or client-side execution with zero database write back.'
-  },
-  {
-    id: 'obj_3',
-    objection: 'Our team does not have time to implement or learn another complex platform.',
-    category: 'Operational Burden',
-    underlyingAnxiety: 'Worry about heavy IT setup, staff training overhead, and implementation delays.',
-    evidenceAndMechanism: 'Zero IT integration required. Operationalyst ingests standard CSV export files without API development.',
-    institutionalGuarantee: 'Turnkey operationalization: full initial audit setup completed within 48 hours.',
-    verificationStep: 'Run a 15-minute diagnostic test with standard ERP report exports.',
-    response: 'No integration required. Just upload your existing ERP CSV exports, and instant audit deliverables are generated automatically.'
-  },
-  {
-    id: 'obj_4',
-    objection: 'How do we know the identified leaks are recoverable cash and not theoretical accounting numbers?',
-    category: 'Financial ROI',
-    underlyingAnxiety: 'Skepticism about theoretical vs actual cash flow impact and recovery enforceability.',
-    evidenceAndMechanism: 'Every detected leak links to specific line-item PO numbers, invoice IDs, and physical batch locations.',
-    institutionalGuarantee: 'Contractually backed leak recovery playbook detailing exact credit note and claim mechanisms.',
-    verificationStep: 'Inspect our sample recovery dossier with exact line-item evidence packs.',
-    response: 'Every finding includes row-level proof—specific invoice numbers, freight rate card discrepancies, and SKU batch locations ready for immediate recovery claims.'
+    roleTitle: 'Head of Finance & Controlling / Internal Auditor',
+    stakeholderType: 'Evaluator / Risk Lead',
+    coreQuestion: 'Are these audit findings mathematically verifiable with a complete audit trail back to source invoices?',
+    priorityOutcome: '100% deterministic mathematical invariant verification with immutable audit evidence packages.',
+    unspokenAnxiety: 'What if false positives create friction with key suppliers or warehouse teams?',
+    riskMitigation: 'Dual-reconciliation algorithm requiring multi-table cross-validation before flagging any leak.',
+    keyMetrics: ['Audit Trail Coverage', 'Mathematical Invariant Accuracy', 'Vendor Claim Rebuttal Rate']
   }
 ];
 
@@ -587,6 +403,38 @@ export const BEHAVIORAL_ICEBERG_DIMENSIONS: IcebergDimension[] = [
 ];
 
 export const ICEBERG_DIMENSIONS = BEHAVIORAL_ICEBERG_DIMENSIONS;
+
+export interface ObjectionItem {
+  id: string;
+  objection: string;
+  underlyingRisk: string;
+  reconciliationAnswer: string;
+  proofMechanism: string;
+}
+
+export const OBJECTION_MATRIX: ObjectionItem[] = [
+  {
+    id: 'objection_1',
+    objection: 'Our team already tracks inventory aging in Excel.',
+    underlyingRisk: 'Manual spreadsheets miss cross-table correlation and lack automated enforcement triggers.',
+    reconciliationAnswer: 'Operationalyst automates multi-source cross-table reconciliation across ERP, WMS, and logistics rate cards continuously.',
+    proofMechanism: 'Automated multi-table join and invariant validation engine.'
+  },
+  {
+    id: 'objection_2',
+    objection: 'We cannot afford a complex IT integration right now.',
+    underlyingRisk: 'Fear of long implementation cycles and heavy IT resource drain.',
+    reconciliationAnswer: 'Zero integration required. Operationalyst ingests standard file exports directly from day one.',
+    proofMechanism: 'Non-invasive file parser supporting standard CSV/XLSX formats.'
+  },
+  {
+    id: 'objection_3',
+    objection: 'What if the audit findings create friction with our suppliers?',
+    underlyingRisk: 'Concern over inaccurate claims damaging key vendor relationships.',
+    reconciliationAnswer: 'Every finding is backed by row-level transactional proof linking POs, GRNs, and invoices before flagging.',
+    proofMechanism: 'Deterministic mathematical invariant verification packs.'
+  }
+];
 
 export const CUSTOMER_ANXIETY_MAP = [
   {
