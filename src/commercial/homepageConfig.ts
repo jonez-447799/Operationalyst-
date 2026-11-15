@@ -65,42 +65,64 @@ export interface SampleAuditMode {
   deliverable: string;
 }
 
-export type SampleAuditModeId = 'p1_dead_stock' | 'p2_otif' | 'p3_freight' | 'p4_bin_variance';
+export type SampleAuditModeId = 'p1_dead_stock' | 'p2_otif' | 'p3_freight' | 'p4_bin_variance' | 'sandbox_20' | string;
 
-export const getReconciledSampleAuditModes = (): SampleAuditMode[] => [
-  {
-    id: 'p1_dead_stock',
-    name: 'P1: Dead Stock & Working Capital',
-    category: 'Inventory Stagnation',
-    requiredColumns: ['SKU_ID', 'Batch_Date', 'Quantity', 'Unit_Cost', 'Location'],
-    sampleLeak: 'Batch #B-8842: 1,420 units inactive for 214 days. Trapped Working Capital: ₹18,46,000',
-    deliverable: 'P1 Stagnant Inventory Liquidation Schedule & Provisioning Matrix'
-  },
-  {
-    id: 'p2_otif',
-    name: 'P2: OTIF Dispatch Reliability',
-    category: 'Dispatch Penalties',
-    requiredColumns: ['Order_ID', 'Promised_Date', 'Dispatch_Date', 'Penalty_Rate'],
-    sampleLeak: 'Order #ORD-9912: Dispatch delayed 4 days without customer waiver. Penalty Leak: ₹1,24,000',
-    deliverable: 'P2 OTIF Penalty Reconciliation & SLA Enforcement Guide'
-  },
-  {
-    id: 'p3_freight',
-    name: 'P3: Freight Rate-Card & Detention Audit',
-    category: 'Logistics Overcharge',
-    requiredColumns: ['Invoice_ID', 'Vehicle_Type', 'Contract_Rate', 'Billed_Rate', 'Detention_Hours'],
-    sampleLeak: 'Invoice #INV-4401: Billed freight rate ₹45/km vs contracted ₹38/km. Overcharge: ₹87,500',
-    deliverable: 'P3 Freight Invoice Recovery Pack & Transporter Overcharge Recovery'
-  },
-  {
-    id: 'p4_bin_variance',
-    name: 'P4: Warehouse Bin Variance & Ghost Stock',
-    category: 'Physical Shrinkage',
-    requiredColumns: ['Bin_ID', 'System_Qty', 'Physical_Qty', 'Unit_Value'],
-    sampleLeak: 'Bin #C-14: System shows 500 units, physical count 320 units. Ghost Stock Leak: ₹3,15,000',
-    deliverable: 'P4 Bin Variance Reconciliation & Shrinkage Prevention Plan'
-  }
-];
+export type SampleAuditModeMap = SampleAuditMode[] & Record<string, SampleAuditMode>;
+
+export const getReconciledSampleAuditModes = (): SampleAuditModeMap => {
+  const modes: SampleAuditMode[] = [
+    {
+      id: 'sandbox_20',
+      name: 'P1: Dead Stock & Working Capital',
+      category: 'Inventory Stagnation',
+      requiredColumns: ['SKU_ID', 'Batch_Date', 'Quantity', 'Unit_Cost', 'Location'],
+      sampleLeak: 'Batch #B-8842: 1,420 units inactive for 214 days. Trapped Working Capital: ₹18,46,000',
+      deliverable: 'P1 Stagnant Inventory Liquidation Schedule & Provisioning Matrix'
+    },
+    {
+      id: 'p1_dead_stock',
+      name: 'P1: Dead Stock & Working Capital',
+      category: 'Inventory Stagnation',
+      requiredColumns: ['SKU_ID', 'Batch_Date', 'Quantity', 'Unit_Cost', 'Location'],
+      sampleLeak: 'Batch #B-8842: 1,420 units inactive for 214 days. Trapped Working Capital: ₹18,46,000',
+      deliverable: 'P1 Stagnant Inventory Liquidation Schedule & Provisioning Matrix'
+    },
+    {
+      id: 'p2_otif',
+      name: 'P2: OTIF Dispatch Reliability',
+      category: 'Dispatch Penalties',
+      requiredColumns: ['Order_ID', 'Promised_Date', 'Dispatch_Date', 'Penalty_Rate'],
+      sampleLeak: 'Order #ORD-9912: Dispatch delayed 4 days without customer waiver. Penalty Leak: ₹1,24,000',
+      deliverable: 'P2 OTIF Penalty Reconciliation & SLA Enforcement Guide'
+    },
+    {
+      id: 'p3_freight',
+      name: 'P3: Freight Rate-Card & Detention Audit',
+      category: 'Logistics Overcharge',
+      requiredColumns: ['Invoice_ID', 'Vehicle_Type', 'Contract_Rate', 'Billed_Rate', 'Detention_Hours'],
+      sampleLeak: 'Invoice #INV-4401: Billed freight rate ₹45/km vs contracted ₹38/km. Overcharge: ₹87,500',
+      deliverable: 'P3 Freight Invoice Recovery Pack & Transporter Overcharge Recovery'
+    },
+    {
+      id: 'p4_bin_variance',
+      name: 'P4: Warehouse Bin Variance & Ghost Stock',
+      category: 'Physical Shrinkage',
+      requiredColumns: ['Bin_ID', 'System_Qty', 'Physical_Qty', 'Unit_Value'],
+      sampleLeak: 'Bin #C-14: System shows 500 units, physical count 320 units. Ghost Stock Leak: ₹3,15,000',
+      deliverable: 'P4 Bin Variance Reconciliation & Shrinkage Prevention Plan'
+    }
+  ];
+
+  const mapObj: Record<string, SampleAuditMode> = {
+    sandbox_20: modes[0],
+    p1_dead_stock: modes[1],
+    p2_otif: modes[2],
+    p3_freight: modes[3],
+    p4_bin_variance: modes[4]
+  };
+
+  return Object.assign(modes, mapObj) as SampleAuditModeMap;
+};
 
 export interface MethodologyStage {
   phase: string;
@@ -129,8 +151,11 @@ export const FOUNDER_EXECUTIVE_SIGNOFF = {
 
 export interface CommercialTier {
   id: string;
-  tierName: string;
+  title: string;
+  tagline: string;
+  price: string;
   pricing: string;
+  tierName: string;
   targetAudience: string;
   deliverable: string;
   guarantee: string;
@@ -138,62 +163,83 @@ export interface CommercialTier {
   recommendedRole: string;
   scopeLimit: string;
   ctaText: string;
+  features: string[];
 }
 
 export const COMMERCIAL_TIERS: CommercialTier[] = [
   {
     id: 'sandbox',
-    tierName: '₹0 Sandbox / Self-Serve',
+    title: '₹0 Sandbox / Self-Serve',
+    tagline: 'Early Stage & Exploratory Operations',
+    price: '₹0',
     pricing: '₹0',
+    tierName: '₹0 Sandbox / Self-Serve',
     targetAudience: 'Early Stage & Exploratory Operations',
     deliverable: 'Instant Automated ERP Data Ingestion & Preliminary Leak Detection',
     guarantee: '100% Free Access to Core Audit Sandbox',
     iconName: 'ShieldCheck',
     recommendedRole: 'Operations Analyst',
     scopeLimit: '1 ERP Data Source / 10,000 Rows',
-    ctaText: 'Launch Sandbox'
+    ctaText: 'Launch Sandbox',
+    features: ['Instant Automated ERP Data Ingestion & Preliminary Leak Detection', '100% Free Access to Core Audit Sandbox']
   },
   {
     id: 'diagnostic',
-    tierName: '₹18,000 Diagnostic Audit',
+    title: '₹18,000 Diagnostic Audit',
+    tagline: 'Mid-Market & Rapid Growth Operations',
+    price: '₹18,000',
     pricing: '₹18,000',
+    tierName: '₹18,000 Diagnostic Audit',
     targetAudience: 'Mid-Market & Rapid Growth Operations',
     deliverable: 'Complete P1–P4 Profit Leak Reconciliation & Executive Recovery Playbook',
     guarantee: 'Guaranteed ₹2,50,000 Minimum Leak Discovery or 100% Refund',
     iconName: 'FileCheck',
     recommendedRole: 'CFO / VP Supply Chain',
     scopeLimit: 'Full Annual ERP Historical Data Audit',
-    ctaText: 'Request Diagnostic'
+    ctaText: 'Request Diagnostic',
+    features: ['Complete P1–P4 Profit Leak Reconciliation & Executive Recovery Playbook', 'Guaranteed ₹2,50,000 Minimum Leak Discovery or 100% Refund']
   },
   {
     id: 'watchdog',
-    tierName: '₹15,000/mo Watchdog',
+    title: '₹15,000/mo Watchdog',
+    tagline: 'Enterprise Supply Chains & Multi-Facility Logistics',
+    price: '₹15,000/mo',
     pricing: '₹15,000/mo',
+    tierName: '₹15,000/mo Watchdog',
     targetAudience: 'Enterprise Supply Chains & Multi-Facility Logistics',
     deliverable: 'Continuous Automated Monitoring & Real-time Profit Leak Prevention Alerts',
     guarantee: 'Ongoing Real-time SLA & Rate Card Compliance Enforcement',
     iconName: 'Activity',
     recommendedRole: 'Head of Audit / Chief Operating Officer',
     scopeLimit: 'Unlimited Transactions & Continuous Sync',
-    ctaText: 'Activate Watchdog'
+    ctaText: 'Activate Watchdog',
+    features: ['Continuous Automated Monitoring & Real-time Profit Leak Prevention Alerts', 'Ongoing Real-time SLA & Rate Card Compliance Enforcement']
   },
   {
     id: 'ca_partner',
-    tierName: '20% CA Partner Desk',
+    title: '20% CA Partner Desk',
+    tagline: 'Chartered Accountants & Fractional CFO Partners',
+    price: '20%',
     pricing: '20%',
+    tierName: '20% CA Partner Desk',
     targetAudience: 'Chartered Accountants & Fractional CFO Partners',
     deliverable: 'White-Labeled Audit Portal, Co-branded Reports & Partner Revenue Share',
     guarantee: '20% Success Share on Verified Leak Recovery Audit Engagements',
     iconName: 'Briefcase',
     recommendedRole: 'CA Firm Principal / Fractional CFO',
     scopeLimit: 'Multi-Client Partner Dashboard',
-    ctaText: 'Join Partner Desk'
+    ctaText: 'Join Partner Desk',
+    features: ['White-Labeled Audit Portal, Co-branded Reports & Partner Revenue Share', '20% Success Share on Verified Leak Recovery Audit Engagements']
   }
 ];
 
 export interface TenTeamOperatingSystemEntry {
   id: string;
+  code: string;
+  name: string;
   teamName: string;
+  mandate: string;
+  engine: string;
   primaryMetric: string;
   leakVector: string;
   invariantMechanism: string;
@@ -203,7 +249,11 @@ export interface TenTeamOperatingSystemEntry {
 export const TEN_TEAM_OPERATING_SYSTEM: TenTeamOperatingSystemEntry[] = [
   {
     id: 'procurement',
+    code: 'T01',
+    name: 'Procurement & Vendor Management',
     teamName: 'Procurement & Vendor Management',
+    mandate: 'Unsanctioned vendor price increases and un-reconciled volume rebates',
+    engine: 'Algorithmic line-item validation against historical rate-card invariants',
     primaryMetric: 'Purchase Order Price Variance (PPV)',
     leakVector: 'Unsanctioned vendor price increases and un-reconciled volume rebates',
     invariantMechanism: 'Algorithmic line-item validation against historical rate-card invariants',
@@ -211,7 +261,11 @@ export const TEN_TEAM_OPERATING_SYSTEM: TenTeamOperatingSystemEntry[] = [
   },
   {
     id: 'warehouse',
+    code: 'T02',
+    name: 'Warehouse & Goods Receipt',
     teamName: 'Warehouse & Goods Receipt',
+    mandate: 'Unrecorded damaged stock arrivals and mis-binned inventory items',
+    engine: 'Real-time double-entry bin reconciliation protocol',
     primaryMetric: 'GRN Bin Placement Accuracy & Cycle Count Delta',
     leakVector: 'Unrecorded damaged stock arrivals and mis-binned inventory items',
     invariantMechanism: 'Real-time double-entry bin reconciliation protocol',
@@ -219,7 +273,11 @@ export const TEN_TEAM_OPERATING_SYSTEM: TenTeamOperatingSystemEntry[] = [
   },
   {
     id: 'inventory_control',
+    code: 'T03',
+    name: 'Inventory Control & Provisioning',
     teamName: 'Inventory Control & Provisioning',
+    mandate: 'Stagnant inventory aging past 180 days with zero consumption alerts',
+    engine: 'Automated aging velocity tracking & write-down forecasting',
     primaryMetric: 'Dead Stock & Slow-Moving Capital Lockup',
     leakVector: 'Stagnant inventory aging past 180 days with zero consumption alerts',
     invariantMechanism: 'Automated aging velocity tracking & write-down forecasting',
@@ -227,7 +285,11 @@ export const TEN_TEAM_OPERATING_SYSTEM: TenTeamOperatingSystemEntry[] = [
   },
   {
     id: 'logistics',
+    code: 'T04',
+    name: 'Logistics & Freight Audit',
     teamName: 'Logistics & Freight Audit',
+    mandate: 'Transporter overcharges, unauthorized detention fees, and route inflation',
+    engine: 'Automated freight invoice audit against contract rate matrices',
     primaryMetric: 'OTIF Dispatch Reliability & Rate Card Compliance',
     leakVector: 'Transporter overcharges, unauthorized detention fees, and route inflation',
     invariantMechanism: 'Automated freight invoice audit against contract rate matrices',
@@ -235,7 +297,11 @@ export const TEN_TEAM_OPERATING_SYSTEM: TenTeamOperatingSystemEntry[] = [
   },
   {
     id: 'accounts_payable',
+    code: 'T05',
+    name: 'Accounts Payable & Invoicing',
     teamName: 'Accounts Payable & Invoicing',
+    mandate: 'Duplicate invoice payments and missed early payment cash discounts',
+    engine: 'Automated 3-way match invariant enforcement (PO vs GRN vs Invoice)',
     primaryMetric: '3-Way Matching Compliance Rate',
     leakVector: 'Duplicate invoice payments and missed early payment cash discounts',
     invariantMechanism: 'Automated 3-way match invariant enforcement (PO vs GRN vs Invoice)',
@@ -243,7 +309,11 @@ export const TEN_TEAM_OPERATING_SYSTEM: TenTeamOperatingSystemEntry[] = [
   },
   {
     id: 'accounts_receivable',
+    code: 'T06',
+    name: 'Accounts Receivable & Credit Risk',
     teamName: 'Accounts Receivable & Credit Risk',
+    mandate: 'Uncollected bad debt and un-billed customer freight surcharges',
+    engine: 'Automated aging waterfall & credit line freeze triggers',
     primaryMetric: 'DSO (Days Sales Outstanding) & Credit Limit Breach Delta',
     leakVector: 'Uncollected bad debt and un-billed customer freight surcharges',
     invariantMechanism: 'Automated aging waterfall & credit line freeze triggers',
@@ -251,7 +321,11 @@ export const TEN_TEAM_OPERATING_SYSTEM: TenTeamOperatingSystemEntry[] = [
   },
   {
     id: 'sales_ops',
+    code: 'T07',
+    name: 'Sales Operations & Commercial Terms',
     teamName: 'Sales Operations & Commercial Terms',
+    mandate: 'Unauthorized sales discounts and un-audited promotional rebates',
+    engine: 'Strict algorithmic threshold enforcement for discount matrix overrides',
     primaryMetric: 'Discount Invariant Compliance & Margin Erosion Delta',
     leakVector: 'Unauthorized sales discounts and un-audited promotional rebates',
     invariantMechanism: 'Strict algorithmic threshold enforcement for discount matrix overrides',
@@ -259,7 +333,11 @@ export const TEN_TEAM_OPERATING_SYSTEM: TenTeamOperatingSystemEntry[] = [
   },
   {
     id: 'quality_assurance',
+    code: 'T08',
+    name: 'Quality Assurance & Returns (RMA)',
     teamName: 'Quality Assurance & Returns (RMA)',
+    mandate: 'Unclaimed vendor debit notes for rejected raw materials and scrap',
+    engine: 'Automated defect log to vendor debit note conversion pipeline',
     primaryMetric: 'RMA Processing Velocity & Vendor Scrap Debit Note Claims',
     leakVector: 'Unclaimed vendor debit notes for rejected raw materials and scrap',
     invariantMechanism: 'Automated defect log to vendor debit note conversion pipeline',
@@ -267,7 +345,11 @@ export const TEN_TEAM_OPERATING_SYSTEM: TenTeamOperatingSystemEntry[] = [
   },
   {
     id: 'production_planning',
+    code: 'T09',
+    name: 'Production Planning & Material Yield',
     teamName: 'Production Planning & Material Yield',
+    mandate: 'Excess material wastage and un-tracked production scrap losses',
+    engine: 'Real-time BOM consumption vs finished goods yield audit',
     primaryMetric: 'BOM (Bill of Materials) Variance & Scrap Allowance Invariant',
     leakVector: 'Excess material wastage and un-tracked production scrap losses',
     invariantMechanism: 'Real-time BOM consumption vs finished goods yield audit',
@@ -275,7 +357,11 @@ export const TEN_TEAM_OPERATING_SYSTEM: TenTeamOperatingSystemEntry[] = [
   },
   {
     id: 'executive_finance',
+    code: 'T10',
+    name: 'Executive Finance & CFO Oversight',
     teamName: 'Executive Finance & CFO Oversight',
+    mandate: 'Executive blind spots across decentralized multi-unit operational leaks',
+    engine: 'Unified profit leak supervision portal with automated recovery tracking',
     primaryMetric: 'Net Working Capital Days & Cash Leak Velocity',
     leakVector: 'Executive blind spots across decentralized multi-unit operational leaks',
     invariantMechanism: 'Unified profit leak supervision portal with automated recovery tracking',
@@ -283,7 +369,11 @@ export const TEN_TEAM_OPERATING_SYSTEM: TenTeamOperatingSystemEntry[] = [
   },
   {
     id: 'tax_compliance',
+    code: 'T11',
+    name: 'Tax & Regulatory Compliance',
     teamName: 'Tax & Regulatory Compliance',
+    mandate: 'Unclaimed GST/VAT input credits due to vendor filing mismatches',
+    engine: 'Automated GSTR-2B vs ERP invoice reconciliation algorithm',
     primaryMetric: 'ITC (Input Tax Credit) Mismatch & Penalty Prevention',
     leakVector: 'Unclaimed GST/VAT input credits due to vendor filing mismatches',
     invariantMechanism: 'Automated GSTR-2B vs ERP invoice reconciliation algorithm',
@@ -291,7 +381,11 @@ export const TEN_TEAM_OPERATING_SYSTEM: TenTeamOperatingSystemEntry[] = [
   },
   {
     id: 'store_operations',
+    code: 'T12',
+    name: 'Store Operations & Retail Fulfillment',
     teamName: 'Store Operations & Retail Fulfillment',
+    mandate: 'Point-of-sale inventory leakage, un-recorded transfers, and store scrap',
+    engine: 'Daily store POS to ERP perpetual inventory balance check',
     primaryMetric: 'Store-Level Shrinkage & Inventory Accuracy',
     leakVector: 'Point-of-sale inventory leakage, un-recorded transfers, and store scrap',
     invariantMechanism: 'Daily store POS to ERP perpetual inventory balance check',
@@ -299,7 +393,11 @@ export const TEN_TEAM_OPERATING_SYSTEM: TenTeamOperatingSystemEntry[] = [
   },
   {
     id: 'contract_governance',
+    code: 'T13',
+    name: 'Contract Governance & Vendor Claims',
     teamName: 'Contract Governance & Vendor Claims',
+    mandate: 'Un-enforced vendor SLA delay penalties and missed service credits',
+    engine: 'Automated SLA breach tracking against contractual penalty matrices',
     primaryMetric: 'Contractual SLA Compliance & Penalty Enforceability',
     leakVector: 'Un-enforced vendor SLA delay penalties and missed service credits',
     invariantMechanism: 'Automated SLA breach tracking against contractual penalty matrices',
@@ -307,7 +405,11 @@ export const TEN_TEAM_OPERATING_SYSTEM: TenTeamOperatingSystemEntry[] = [
   },
   {
     id: 'ca_partner_desk',
+    code: 'T14',
+    name: 'CA Partner Desk & External Audit',
     teamName: 'CA Partner Desk & External Audit',
+    mandate: 'Missed profit leak recovery opportunities during traditional annual audits',
+    engine: 'Continuous algorithmic audit overlay for fractional CFOs & CA firms',
     primaryMetric: 'External Recovery Verification & Revenue Share Audit',
     leakVector: 'Missed profit leak recovery opportunities during traditional annual audits',
     invariantMechanism: 'Continuous algorithmic audit overlay for fractional CFOs & CA firms',
