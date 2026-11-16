@@ -16,19 +16,13 @@ import {
 } from 'lucide-react';
 import { StockItem, RulesConfig, CurrencyCode } from '../types';
 import { evaluateStockEngine, formatCurrency } from '../utils/calculations';
+import { exportPrintableRtvClaimLetter } from '../../commercial/TallyCleanerAndClaims';
 
 export interface CashRecoveryEngineV2Props {
   items: StockItem[];
   rules: RulesConfig;
   currency: CurrencyCode;
-  onNavigateToStock?: () => void;
 }
-
-export type RecoveryDispositionCategory =
-  | 'RTV / Credit Note'
-  | 'BOM Substitution / Reuse'
-  | 'Scrap / Salvage Liquidation'
-  | 'Active Stock';
 
 export interface DispositionItem {
   id: string;
@@ -36,27 +30,14 @@ export interface DispositionItem {
   itemName: string;
   daysIdle: number;
   bookValue: number;
-  recommendedDisposition: RecoveryDispositionCategory;
+  recommendedDisposition: 'RTV / Credit Note' | 'BOM Substitution / Reuse' | 'Scrap / Salvage Liquidation';
   estimatedRecoveryPercentage: number;
   estimatedRecoveryINR: number;
   assignedDesk: string;
 }
 
-export const CashRecoveryEngineV2: React.FC<CashRecoveryEngineV2Props> = ({
-  items,
-  rules,
-  currency,
-  onNavigateToStock
-}) => {
-  const [activeSubTab, setActiveSubTab] = useState<
-    'disposition_planner' | 'aging_top10' | 'abc_pareto_tracker' | 'freeze_forecast_ai'
-  >('disposition_planner');
-
-  const [dispositionFilter, setDispositionFilter] = useState<'ALL' | 'RTV' | 'BOM' | 'SCRAP'>('ALL');
-
-  const evaluation = useMemo(() => {
-    return evaluateStockEngine(items, rules);
-  }, [items, rules]);
+export function CashRecoveryEngineV2({ items, rules, currency }: CashRecoveryEngineV2Props) {
+  const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string>('ALL');
 
   const dispositionItems: DispositionItem[] = useMemo(() => {
     return items
@@ -65,7 +46,7 @@ export const CashRecoveryEngineV2: React.FC<CashRecoveryEngineV2Props> = ({
         const days = item.daysIdle || 0;
         const bookVal = item.closingValue || (item.qtyOnHand * item.costRate) || 0;
 
-        let recommendedDisposition: RecoveryDispositionCategory = 'RTV / Credit Note';
+        let recommendedDisposition: DispositionItem['recommendedDisposition'] = 'RTV / Credit Note';
         let estimatedRecoveryPercentage = 0.75;
         let assignedDesk = 'Procurement / Vendor Desk';
 
@@ -96,58 +77,47 @@ export const CashRecoveryEngineV2: React.FC<CashRecoveryEngineV2Props> = ({
           estimatedRecoveryINR,
           assignedDesk
         };
-      })
-      .sort((a, b) => b.bookValue - a.bookValue);
+      });
   }, [items]);
 
-  const filteredDispositionItems = useMemo(() => {
-    if (dispositionFilter === 'RTV') {
-      return dispositionItems.filter(i => i.recommendedDisposition === 'RTV / Credit Note');
-    }
-    if (dispositionFilter === 'BOM') {
-      return dispositionItems.filter(i => i.recommendedDisposition === 'BOM Substitution / Reuse');
-    }
-    if (dispositionFilter === 'SCRAP') {
-      return dispositionItems.filter(i => i.recommendedDisposition === 'Scrap / Salvage Liquidation');
-    }
-    return dispositionItems;
-  }, [dispositionItems, dispositionFilter]);
+  const totals = useMemo(() => {
+    const totalStagnantBookValue = dispositionItems.reduce((acc, curr) => acc + curr.bookValue, 0);
+    const totalEstimatedRecovery = dispositionItems.reduce((acc, curr) => acc + curr.estimatedRecoveryINR, 0);
 
-  const dispositionTotals = useMemo(() => {
-    const totalBookValue = dispositionItems.reduce((acc, i) => acc + i.bookValue, 0);
-    const totalEstimatedRecovery = dispositionItems.reduce((acc, i) => acc + i.estimatedRecoveryINR, 0);
-    const rtvCount = dispositionItems.filter(i => i.recommendedDisposition === 'RTV / Credit Note').length;
-    const bomCount = dispositionItems.filter(i => i.recommendedDisposition === 'BOM Substitution / Reuse').length;
-    const scrapCount = dispositionItems.filter(i => i.recommendedDisposition === 'Scrap / Salvage Liquidation').length;
+    const rtvItems = dispositionItems.filter(i => i.recommendedDisposition === 'RTV / Credit Note');
+    const bomItems = dispositionItems.filter(i => i.recommendedDisposition === 'BOM Substitution / Reuse');
+    const scrapItems = dispositionItems.filter(i => i.recommendedDisposition === 'Scrap / Salvage Liquidation');
 
     return {
-      totalBookValue,
+      totalStagnantBookValue,
       totalEstimatedRecovery,
-      rtvCount,
-      bomCount,
-      scrapCount,
-      totalCount: dispositionItems.length
+      rtvRecovery: rtvItems.reduce((acc, curr) => acc + curr.estimatedRecoveryINR, 0),
+      bomRecovery: bomItems.reduce((acc, curr) => acc + curr.estimatedRecoveryINR, 0),
+      scrapRecovery: scrapItems.reduce((acc, curr) => acc + curr.estimatedRecoveryINR, 0),
+      count: dispositionItems.length
     };
   }, [dispositionItems]);
 
   const handleExportDispositionCSV = () => {
     const headers = [
-      'Part_ID',
-      'Description',
-      'Days_Stagnant',
+      'Item_Code',
+      'Item_Name',
+      'Days_Idle',
       'Book_Value_INR',
       'Recommended_Disposition',
-      'Estimated_Recovery_INR',
-      'Assigned_Team_Desk'
+      'Est_Recovery_Pct',
+      'Est_Recovery_INR',
+      'Assigned_Action_Desk'
     ];
 
     const rows = dispositionItems.map(item => [
       `"${item.itemCode}"`,
       `"${item.itemName.replace(/"/g, '""')}"`,
       item.daysIdle,
-      item.bookValue.toFixed(2),
+      item.bookValue,
       `"${item.recommendedDisposition}"`,
-      item.estimatedRecoveryINR.toFixed(2),
+      `${(item.estimatedRecoveryPercentage * 100).toFixed(0)}%`,
+      item.estimatedRecoveryINR,
       `"${item.assignedDesk}"`
     ]);
 
@@ -156,27 +126,85 @@ export const CashRecoveryEngineV2: React.FC<CashRecoveryEngineV2Props> = ({
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.setAttribute('href', url);
-    link.setAttribute('download', `Operationalyst_Disposition_Action_Sheet_${new Date().toISOString().slice(0, 10)}.csv`);
+    link.setAttribute('download', `Disposition_Action_Plan_${new Date().toISOString().slice(0, 10)}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+  };
+
+  const handleExportRtvClaimPDF = () => {
+    const stagnantItems = items.filter(item => (item.daysIdle || 0) > 180);
+    const targetItems = stagnantItems.length > 0 ? stagnantItems : items;
+
+    let totalRtv = 0;
+    let totalBom = 0;
+    let totalScrap = 0;
+    let totalCash = 0;
+
+    const formattedItems = targetItems.map(item => {
+      const days = item.daysIdle || 0;
+      const bookVal = item.closingValue || (item.qtyOnHand * item.costRate) || 0;
+      let recAction = 'RTV / Credit Note';
+      let estPct = 0.75;
+
+      if (days > 365) {
+        recAction = 'Scrap / Salvage Liquidation';
+        estPct = 0.20;
+      } else if (days >= 271) {
+        recAction = 'BOM Substitution / Reuse';
+        estPct = 0.55;
+      } else {
+        recAction = 'RTV / Credit Note';
+        estPct = 0.75;
+      }
+
+      const recoveryINR = Math.round(bookVal * estPct);
+      if (days > 365) totalScrap += recoveryINR;
+      else if (days >= 271) totalBom += recoveryINR;
+      else totalRtv += recoveryINR;
+      totalCash += recoveryINR;
+
+      return {
+        partNumber: item.itemCode,
+        description: item.itemName,
+        ageDays: days,
+        qty: item.qtyOnHand,
+        unitValue: item.costRate,
+        totalValue: bookVal,
+        recommendedAction: recAction
+      };
+    });
+
+    exportPrintableRtvClaimLetter({
+      plantName: 'Central Operations Plant',
+      referenceNo: `RTV-${Date.now().toString().slice(-6)}`,
+      date: new Date().toISOString().split('T')[0],
+      items: formattedItems,
+      totalRtvRecovery: totalRtv,
+      totalBomReuse: totalBom,
+      totalScrapLiquidation: totalScrap,
+      totalCashRelease: totalCash
+    });
   };
 
   return (
-    <div className="space-y-6 text-slate-100">
-      <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 pb-6 border-b border-slate-800">
+    <div className="space-y-6">
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl">
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div>
-            <div className="flex items-center gap-2 text-emerald-400 font-semibold text-sm mb-1">
-              <Sparkles className="w-4 h-4" /> ENGINE P1 — CASH RECOVERY & DISPOSITION PLANNER
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 bg-emerald-500/10 text-emerald-400 rounded-xl border border-emerald-500/20">
+                <Sparkles className="w-6 h-6" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                  Engine P1: Inventory Cash Recovery & Liquidation Desk
+                </h2>
+                <p className="text-sm text-slate-400">
+                  Automated disposition routing for slow-moving, non-moving, and stagnant inventory (&gt;180 days idle)
+                </p>
+              </div>
             </div>
-            <h2 className="text-2xl font-bold text-white tracking-tight">
-              Stagnant Inventory Liquidation & Recovery Engine
-            </h2>
-            <p className="text-slate-400 text-sm mt-1">
-              Classifies &gt;180 day idle stock into RTV (75%), BOM Reuse (55%), and Salvage (20%) desks with 1-Click Executive Export.
-            </p>
           </div>
           <div className="flex items-center gap-3">
             <button
@@ -185,242 +213,108 @@ export const CashRecoveryEngineV2: React.FC<CashRecoveryEngineV2Props> = ({
             >
               <FileSpreadsheet className="w-4 h-4" /> Export Disposition Action Sheet (CSV)
             </button>
-            {onNavigateToStock && (
-              <button
-                onClick={onNavigateToStock}
-                className="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-sm font-medium rounded-lg transition flex items-center gap-2 border border-slate-700"
-              >
-                View Full Stock Register <ArrowRight className="w-4 h-4" />
-              </button>
-            )}
+            <button
+              onClick={handleExportRtvClaimPDF}
+              className="px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold rounded-lg shadow-lg hover:shadow-blue-900/40 transition flex items-center gap-2 border border-blue-500/30"
+            >
+              <FileSpreadsheet className="w-4 h-4" /> Print / Save PDF: RTV & Scrap Claim Letter
+            </button>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="bg-slate-950/80 border border-slate-800 p-4 rounded-lg">
-            <div className="text-slate-400 text-xs font-semibold uppercase tracking-wider mb-1 flex items-center gap-1.5">
-              <Ban className="w-3.5 h-3.5 text-rose-400" /> Stagnant Book Value (&gt;180d)
-            </div>
-            <div className="text-xl font-bold text-rose-400">
-              {formatCurrency(dispositionTotals.totalBookValue, currency)}
-            </div>
-            <div className="text-xs text-slate-500 mt-1">{dispositionTotals.totalCount} high-risk SKU items</div>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-6">
+          <div className="bg-slate-950/60 border border-slate-800 rounded-xl p-4">
+            <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Identified Stagnant Inventory</div>
+            <div className="text-2xl font-bold text-white mt-1">{totals.count} Items</div>
+            <div className="text-xs text-slate-500 mt-1">Book Value: {formatCurrency(totals.totalStagnantBookValue, currency)}</div>
           </div>
 
-          <div className="bg-slate-950/80 border border-slate-800 p-4 rounded-lg">
-            <div className="text-slate-400 text-xs font-semibold uppercase tracking-wider mb-1 flex items-center gap-1.5">
-              <IndianRupee className="w-3.5 h-3.5 text-emerald-400" /> Estimated Cash Recovery
-            </div>
-            <div className="text-xl font-bold text-emerald-400">
-              {formatCurrency(dispositionTotals.totalEstimatedRecovery, currency)}
-            </div>
-            <div className="text-xs text-emerald-500/80 mt-1">
-              {dispositionTotals.totalBookValue > 0
-                ? `${((dispositionTotals.totalEstimatedRecovery / dispositionTotals.totalBookValue) * 100).toFixed(1)}% recovery yield`
-                : '0% yield'}
-            </div>
+          <div className="bg-slate-950/60 border border-emerald-500/20 rounded-xl p-4">
+            <div className="text-xs font-semibold text-emerald-400 uppercase tracking-wider">Total Est. Cash Release</div>
+            <div className="text-2xl font-bold text-emerald-400 mt-1">{formatCurrency(totals.totalEstimatedRecovery, currency)}</div>
+            <div className="text-xs text-emerald-500/80 mt-1">Weighted Recovery Potential</div>
           </div>
 
-          <div className="bg-slate-950/80 border border-slate-800 p-4 rounded-lg">
-            <div className="text-slate-400 text-xs font-semibold uppercase tracking-wider mb-1 flex items-center gap-1.5">
-              <RefreshCw className="w-3.5 h-3.5 text-amber-400" /> RTV & BOM Candidates
-            </div>
-            <div className="text-xl font-bold text-amber-400">
-              {dispositionTotals.rtvCount + dispositionTotals.bomCount} SKUs
-            </div>
-            <div className="text-xs text-slate-500 mt-1">
-              RTV (181–270d): {dispositionTotals.rtvCount} | BOM (271–365d): {dispositionTotals.bomCount}
-            </div>
+          <div className="bg-slate-950/60 border border-blue-500/20 rounded-xl p-4">
+            <div className="text-xs font-semibold text-blue-400 uppercase tracking-wider">RTV Vendor Recovery (180-270d)</div>
+            <div className="text-2xl font-bold text-blue-400 mt-1">{formatCurrency(totals.rtvRecovery, currency)}</div>
+            <div className="text-xs text-blue-500/80 mt-1">75% Est. Recovery Rate</div>
           </div>
 
-          <div className="bg-slate-950/80 border border-slate-800 p-4 rounded-lg">
-            <div className="text-slate-400 text-xs font-semibold uppercase tracking-wider mb-1 flex items-center gap-1.5">
-              <ShieldAlert className="w-3.5 h-3.5 text-blue-400" /> Scrap Liquidation
-            </div>
-            <div className="text-xl font-bold text-blue-400">
-              {dispositionTotals.scrapCount} SKUs
-            </div>
-            <div className="text-xs text-slate-500 mt-1">Items &gt;365 days idle (20% recovery)</div>
+          <div className="bg-slate-950/60 border border-amber-500/20 rounded-xl p-4">
+            <div className="text-xs font-semibold text-amber-400 uppercase tracking-wider">BOM Reuse &amp; Scrap (271d+)</div>
+            <div className="text-2xl font-bold text-amber-400 mt-1">{formatCurrency(totals.bomRecovery + totals.scrapRecovery, currency)}</div>
+            <div className="text-xs text-amber-500/80 mt-1">Internal Reuse &amp; Salvage</div>
           </div>
         </div>
       </div>
 
-      <div className="flex border-b border-slate-800 gap-2">
-        <button
-          onClick={() => setActiveSubTab('disposition_planner')}
-          className={`px-4 py-2.5 text-sm font-semibold rounded-t-lg transition flex items-center gap-2 ${
-            activeSubTab === 'disposition_planner'
-              ? 'bg-slate-900 text-emerald-400 border-t-2 border-emerald-400 border-x border-slate-800'
-              : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/50'
-          }`}
-        >
-          <Layers className="w-4 h-4" /> Disposition Action Planner
-        </button>
-        <button
-          onClick={() => setActiveSubTab('aging_top10')}
-          className={`px-4 py-2.5 text-sm font-semibold rounded-t-lg transition flex items-center gap-2 ${
-            activeSubTab === 'aging_top10'
-              ? 'bg-slate-900 text-emerald-400 border-t-2 border-emerald-400 border-x border-slate-800'
-              : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/50'
-          }`}
-        >
-          <TrendingUp className="w-4 h-4" /> Top Dead Stock & Aging Breakdown
-        </button>
-        <button
-          onClick={() => setActiveSubTab('abc_pareto_tracker')}
-          className={`px-4 py-2.5 text-sm font-semibold rounded-t-lg transition flex items-center gap-2 ${
-            activeSubTab === 'abc_pareto_tracker'
-              ? 'bg-slate-900 text-emerald-400 border-t-2 border-emerald-400 border-x border-slate-800'
-              : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/50'
-          }`}
-        >
-          <Filter className="w-4 h-4" /> ABC / Pareto Capital Allocation
-        </button>
-      </div>
-
-      {activeSubTab === 'disposition_planner' && (
-        <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl space-y-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <h3 className="text-lg font-bold text-white flex items-center gap-2">
-              <CheckCircle2 className="w-5 h-5 text-emerald-400" /> Stagnant Item Action Desk (&gt;180 Days)
-            </h3>
-            <div className="flex items-center gap-2 text-xs font-semibold">
-              <span className="text-slate-400">Filter Disposition:</span>
-              <button
-                onClick={() => setDispositionFilter('ALL')}
-                className={`px-3 py-1.5 rounded-md transition ${
-                  dispositionFilter === 'ALL'
-                    ? 'bg-emerald-600 text-white'
-                    : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
-                }`}
-              >
-                All ({dispositionItems.length})
-              </button>
-              <button
-                onClick={() => setDispositionFilter('RTV')}
-                className={`px-3 py-1.5 rounded-md transition ${
-                  dispositionFilter === 'RTV'
-                    ? 'bg-emerald-600 text-white'
-                    : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
-                }`}
-              >
-                RTV (181-270d)
-              </button>
-              <button
-                onClick={() => setDispositionFilter('BOM')}
-                className={`px-3 py-1.5 rounded-md transition ${
-                  dispositionFilter === 'BOM'
-                    ? 'bg-emerald-600 text-white'
-                    : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
-                }`}
-              >
-                BOM Reuse (271-365d)
-              </button>
-              <button
-                onClick={() => setDispositionFilter('SCRAP')}
-                className={`px-3 py-1.5 rounded-md transition ${
-                  dispositionFilter === 'SCRAP'
-                    ? 'bg-emerald-600 text-white'
-                    : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
-                }`}
-              >
-                Scrap (&gt;365d)
-              </button>
-            </div>
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-bold text-white flex items-center gap-2">
+            <Layers className="w-5 h-5 text-emerald-400" /> Stagnant Inventory Disposition Routing Table
+          </h3>
+          <div className="text-xs text-slate-400">
+            Showing {dispositionItems.length} items requiring immediate commercial disposition
           </div>
+        </div>
 
-          <div className="overflow-x-auto border border-slate-800 rounded-lg">
-            <table className="w-full text-left text-xs text-slate-300">
-              <thead className="bg-slate-950 text-slate-400 uppercase font-semibold border-b border-slate-800">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm text-slate-300">
+            <thead className="bg-slate-950 text-slate-400 uppercase text-xs font-semibold border-b border-slate-800">
+              <tr>
+                <th className="px-4 py-3">Item Code &amp; Name</th>
+                <th className="px-4 py-3">Idle Days</th>
+                <th className="px-4 py-3">Book Value</th>
+                <th className="px-4 py-3">Recommended Disposition</th>
+                <th className="px-4 py-3">Est. Recovery %</th>
+                <th className="px-4 py-3">Est. Recovery (INR)</th>
+                <th className="px-4 py-3">Assigned Desk</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-800/60">
+              {dispositionItems.length === 0 ? (
                 <tr>
-                  <th className="py-3 px-4">Part ID</th>
-                  <th className="py-3 px-4">Description</th>
-                  <th className="py-3 px-4 text-center">Days Stagnant</th>
-                  <th className="py-3 px-4 text-right">Book Value (INR)</th>
-                  <th className="py-3 px-4">Recommended Disposition</th>
-                  <th className="py-3 px-4 text-right">Est. Recovery (INR)</th>
-                  <th className="py-3 px-4">Assigned Team Desk</th>
+                  <td colSpan={7} className="px-4 py-8 text-center text-slate-500">
+                    No stagnant inventory items found matching criteria (&gt;180 days idle).
+                  </td>
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-800/60 font-mono">
-                {filteredDispositionItems.length === 0 ? (
-                  <tr>
-                    <td colSpan={7} className="py-8 text-center text-slate-500 font-sans">
-                      No stagnant items match the selected filter.
+              ) : (
+                dispositionItems.map(item => (
+                  <tr key={item.id} className="hover:bg-slate-800/40 transition">
+                    <td className="px-4 py-3 font-medium text-white">
+                      <div>{item.itemName}</div>
+                      <div className="text-xs text-slate-500 font-mono">{item.itemCode}</div>
                     </td>
+                    <td className="px-4 py-3 font-semibold text-amber-400">{item.daysIdle} days</td>
+                    <td className="px-4 py-3 font-mono">{formatCurrency(item.bookValue, currency)}</td>
+                    <td className="px-4 py-3">
+                      <span
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          item.recommendedDisposition === 'RTV / Credit Note'
+                            ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
+                            : item.recommendedDisposition === 'BOM Substitution / Reuse'
+                            ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                            : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
+                        }`}
+                      >
+                        {item.recommendedDisposition}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 font-mono">{(item.estimatedRecoveryPercentage * 100).toFixed(0)}%</td>
+                    <td className="px-4 py-3 font-mono text-emerald-400 font-semibold">
+                      {formatCurrency(item.estimatedRecoveryINR, currency)}
+                    </td>
+                    <td className="px-4 py-3 text-xs text-slate-400">{item.assignedDesk}</td>
                   </tr>
-                ) : (
-                  filteredDispositionItems.map(item => (
-                    <tr key={item.id} className="hover:bg-slate-800/40 transition-colors">
-                      <td className="py-3 px-4 text-emerald-400 font-bold">{item.itemCode}</td>
-                      <td className="py-3 px-4 font-sans text-slate-200">{item.itemName}</td>
-                      <td className="py-3 px-4 text-center font-bold text-amber-400">{item.daysIdle} d</td>
-                      <td className="py-3 px-4 text-right font-bold text-white">
-                        {formatCurrency(item.bookValue, currency)}
-                      </td>
-                      <td className="py-3 px-4 font-sans">
-                        <span
-                          className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold ${
-                            item.recommendedDisposition === 'RTV / Credit Note'
-                              ? 'bg-emerald-950 text-emerald-400 border border-emerald-700/50'
-                              : item.recommendedDisposition === 'BOM Substitution / Reuse'
-                              ? 'bg-amber-950 text-amber-400 border border-amber-700/50'
-                              : 'bg-rose-950 text-rose-400 border border-rose-700/50'
-                          }`}
-                        >
-                          {item.recommendedDisposition}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4 text-right font-bold text-emerald-400">
-                        {formatCurrency(item.estimatedRecoveryINR, currency)}
-                        <span className="text-[10px] text-slate-500 block font-normal">
-                          ({(item.estimatedRecoveryPercentage * 100).toFixed(0)}%)
-                        </span>
-                      </td>
-                      <td className="py-3 px-4 font-sans text-slate-400">{item.assignedDesk}</td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
-      )}
-
-      {activeSubTab === 'aging_top10' && (
-        <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl space-y-6">
-          <h3 className="text-lg font-bold text-white flex items-center gap-2">
-            <AlertOctagon className="w-5 h-5 text-amber-400" /> Dead Stock Risk Evaluation
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="bg-slate-950 border border-slate-800 p-4 rounded-lg">
-              <h4 className="text-sm font-semibold text-slate-300 mb-2">Total Evaluated Stock Items</h4>
-              <p className="text-2xl font-bold text-white">{items.length} SKUs</p>
-              <p className="text-xs text-slate-500 mt-1">Rule threshold: {rules.slowMovingDays} days idle threshold</p>
-            </div>
-            <div className="bg-slate-950 border border-slate-800 p-4 rounded-lg">
-              <h4 className="text-sm font-semibold text-slate-300 mb-2">Evaluated Dead Stock Exposure</h4>
-              <p className="text-2xl font-bold text-rose-400">
-                {formatCurrency(evaluation.deadStockValue, currency)}
-              </p>
-              <p className="text-xs text-slate-500 mt-1">Identified across stagnant inventory buckets</p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {activeSubTab === 'abc_pareto_tracker' && (
-        <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl space-y-4">
-          <h3 className="text-lg font-bold text-white flex items-center gap-2">
-            <TrendingUp className="w-5 h-5 text-emerald-400" /> ABC / Pareto Analysis
-          </h3>
-          <p className="text-sm text-slate-400">
-            Categorization based on cumulative investment value to optimize cycle counts and working capital lockup.
-          </p>
-        </div>
-      )}
+      </div>
     </div>
   );
-};
+}
 
 export default CashRecoveryEngineV2;
