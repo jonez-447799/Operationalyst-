@@ -265,5 +265,37 @@
     "metadata": {
       "sourceSection": "landing_page_load"
     }
+  },
+  {
+    "eventId": "FNLEVT-20261116-6A92",
+    "timestamp": "2026-11-16T13:54:58.524Z",
+    "eventType": "LANDING_PAGE_VIEW",
+    "metadata": {
+      "sourceSection": "commercial_home"
+    }
+  },
+  {
+    "eventId": "FNLEVT-20261116-E616",
+    "timestamp": "2026-11-16T13:56:34.272Z",
+    "eventType": "LANDING_PAGE_VIEW",
+    "metadata": {
+      "sourceSection": "commercial_home"
+    }
+  },
+  {
+    "eventId": "FNLEVT-20261116-BF04",
+    "timestamp": "2026-11-16T13:57:23.720Z",
+    "eventType": "LANDING_PAGE_VIEW",
+    "metadata": {
+      "sourceSection": "commercial_home"
+    }
+  },
+  {
+    "eventId": "FNLEVT-20261116-A192",
+    "timestamp": "2026-11-16T13:58:11.703Z",
+    "eventType": "LANDING_PAGE_VIEW",
+    "metadata": {
+      "sourceSection": "commercial_home"
+    }
   }
 ]

@@ -4673,6 +4673,61 @@ test('Phase 18 Outbound CRM Persistence, Status Updates, Add Target Factory & CS
   }
 });
 
+test('Control-Tower Dark Mode Iceberg Brand Mark (70-22-8 Palette): Verifies public/favicon.svg, index.html icon wiring, public/og-banner.svg, server.ts SVG endpoints, and CommercialLandingPage ControlTowerIcebergEmblem', async () => {
+  const fs = await import('fs/promises');
+  const path = await import('path');
+
+  const faviconSvg = await fs.readFile(path.join(process.cwd(), 'public/favicon.svg'), 'utf-8');
+  assert.ok(faviconSvg.includes('<svg'));
+  assert.ok(faviconSvg.includes('viewBox="0 0 128 128"'));
+  for (const hex of ['#0B1320', '#111C2D', '#475569', '#F8FAFC', '#F59E0B', '#FBBF24']) {
+    assert.ok(
+      faviconSvg.includes(hex),
+      `public/favicon.svg must include Control-Tower palette token ${hex}`
+    );
+  }
+  assert.ok(faviconSvg.includes('<circle'));
+
+  const indexHtml = await fs.readFile(path.join(process.cwd(), 'index.html'), 'utf-8');
+  assert.ok(indexHtml.includes('<link rel="icon" type="image/svg+xml" href="/favicon.svg" />'));
+  assert.ok(indexHtml.includes('Inter'));
+  assert.ok(indexHtml.includes('JetBrains+Mono'));
+
+  const ogSvg = await fs.readFile(path.join(process.cwd(), 'public/og-banner.svg'), 'utf-8');
+  assert.ok(ogSvg.includes('<svg'));
+  for (const hex of ['#0B1320', '#111C2D', '#475569', '#F8FAFC', '#F59E0B', '#FBBF24']) {
+    assert.ok(
+      ogSvg.includes(hex),
+      `public/og-banner.svg must include Control-Tower palette token ${hex}`
+    );
+  }
+  const ogUpper = ogSvg.toUpperCase();
+  assert.ok(ogUpper.includes('DEAD STOCK'));
+  assert.ok(ogUpper.includes('BIN VARIANCE'));
+  assert.ok(ogUpper.includes('OTIF'));
+  assert.ok(ogUpper.includes('FREIGHT AUDIT'));
+
+  const serverSrc = await fs.readFile(path.join(process.cwd(), 'server.ts'), 'utf-8');
+  assert.ok(serverSrc.includes('app.get("/favicon.svg"') || serverSrc.includes("app.get('/favicon.svg'"));
+  assert.ok(serverSrc.includes('app.get("/og-banner.svg"') || serverSrc.includes("app.get('/og-banner.svg'"));
+
+  const landingSrc = await fs.readFile(
+    path.join(process.cwd(), 'src/commercial/CommercialLandingPage.tsx'),
+    'utf-8'
+  );
+  assert.ok(landingSrc.includes('const ControlTowerIcebergEmblem'));
+  assert.ok(landingSrc.includes('<ControlTowerIcebergEmblem'));
+  for (const hex of ['#0B1320', '#111C2D', '#475569', '#F8FAFC', '#F59E0B', '#FBBF24']) {
+    assert.ok(
+      landingSrc.includes(hex),
+      `CommercialLandingPage.tsx must include Control-Tower palette token ${hex}`
+    );
+  }
+  assert.ok(landingSrc.includes("font-['Inter',system-ui,sans-serif]"));
+  assert.ok(landingSrc.includes("font-['JetBrains_Mono',monospace]"));
+});
+
+
 
 
 

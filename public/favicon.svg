@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128" role="img" aria-label="Operationalyst Control-Tower Dark Mode Iceberg Emblem">
+  <!-- 70% Control-Tower Obsidian Navy backdrop -->
+  <rect width="128" height="128" fill="#0B1320" />
+  <!-- Recessed Control-Tower Navy inner field -->
+  <circle cx="64" cy="64" r="54" fill="#111C2D" />
+  <!-- Thin Slate-Steel circular hairline retention ring -->
+  <circle cx="64" cy="64" r="54" fill="none" stroke="#475569" stroke-width="2" />
+
+  <!-- Above Waterline: Crisp Pure Slate White (#F8FAFC) Triangular Peak (Visible ERP Data) -->
+  <polygon points="64,20 35,51 64,51" fill="#F8FAFC" />
+  <polygon points="64,20 64,51 93,51" fill="#E2E8F0" />
+
+  <!-- Clean Horizontal #0B1320 Negative-Space Waterline Gap -->
+  <rect x="16" y="51" width="96" height="7" fill="#0B1320" />
+
+  <!-- Below Waterline: Luminous Signal Amber (#F59E0B outer / #FBBF24 inner) Inverted 4-Pillar Faceted Polygon -->
+  <!-- Pillar 1: Dead Stock (Outer Left) -->
+  <polygon points="24,58 44,58 50,91 37,83" fill="#F59E0B" />
+  <!-- Pillar 2: Bin Variance (Inner Left) -->
+  <polygon points="45.6,58 63.2,58 63.2,109 51.6,91" fill="#FBBF24" />
+  <!-- Pillar 3: OTIF (Inner Right) -->
+  <polygon points="64.8,58 82.4,58 76.4,91 64.8,109" fill="#FBBF24" />
+  <!-- Pillar 4: Freight Audit (Outer Right) -->
+  <polygon points="84,58 104,58 91,83 78,91" fill="#F59E0B" />
+</svg>

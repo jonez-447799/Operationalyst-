@@ -26,9 +26,14 @@ interface OwnerReportProps {
   items: StockItem[];
   rules: RulesConfig;
   currency: CurrencyCode;
+  userRole?: UserRole;
+  onUpdateItemMovement?: (itemId: string, newDate: string, logMessage: string) => void;
+  onResetItems?: () => void;
+  onPrint?: () => void;
+  onNavigateToStock?: () => void;
   onOpenAuditDossier?: () => void;
   onOpenSimulator?: () => void;
-  userRole?: UserRole;
+  onOpenTrialModal?: () => void;
 }
 
 export const OwnerReport: React.FC<OwnerReportProps> = ({
@@ -37,7 +42,7 @@ export const OwnerReport: React.FC<OwnerReportProps> = ({
   currency,
   onOpenAuditDossier,
   onOpenSimulator,
-  userRole = 'owner'
+  userRole = 'Owner'
 }) => {
   const [copiedScript, setCopiedScript] = useState(false);
 
@@ -55,7 +60,7 @@ export const OwnerReport: React.FC<OwnerReportProps> = ({
   const policyConfig: PolicyConfig = {
     cutoffDays: rules?.deadThresholdDays ?? 90,
     carryingCostPct: rules?.holdingCostPercent ?? 22,
-    excludeCriticalSpares: rules?.excludeCriticalSpares ?? true,
+    excludeCriticalSpares: true,
   };
 
   const optimizerResult = calculateWorkingCapitalOptimization(inventoryRecords, policyConfig);
@@ -63,15 +68,15 @@ export const OwnerReport: React.FC<OwnerReportProps> = ({
   const formatINR = (val: number) =>
     new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(val);
 
-  const report = generateOwnerReport(items, rules, currency);
+  const report = generateOwnerReport(items, rules);
 
   const whatsappMessage = `*Executive Operationalyst Summary*
-Plant Capital: ${formatCurrency(report.totalValuation, currency)}
-Dead Stock Exposure: ${formatCurrency(report.deadStockValuation, currency)} (${report.deadStockPercent.toFixed(1)}%)
-Annual Carrying Burn: ${formatCurrency(report.annualHoldingCostBurn, currency)}/yr
+Plant Capital: ${formatCurrency(report.totalStockValue, currency)}
+Dead Stock Exposure: ${formatCurrency(report.deadCash, currency)} (${report.deadCashPercent.toFixed(1)}%)
+Annual Carrying Burn: ${formatCurrency(report.annualHoldingBurn, currency)}/yr
 
 *Top Action Items:*
-${report.top5DeadItems.map(i => `• ${i.itemName} (${i.daysIdle} days): ${formatCurrency(i.totalCost, currency)}`).join('\n')}
+${report.topDeadItems.slice(0, 5).map(i => `• ${i.itemName} (${i.daysIdle} days): ${formatCurrency(i.closingValue ?? i.qtyOnHand * i.costRate, currency)}`).join('\n')}
 
 _Generated via Project 1 Engine | Verified Tally Summary_`;
 
@@ -243,7 +248,7 @@ _Generated via Project 1 Engine | Verified Tally Summary_`;
             <Package className="w-4 h-4 text-neutral-400" />
           </div>
           <div className="text-2xl font-bold text-neutral-900 dark:text-neutral-100 mt-2">
-            {formatCurrency(report.totalValuation, currency)}
+            {formatCurrency(report.totalStockValue, currency)}
           </div>
           <div className="text-xs text-neutral-500 mt-1">
             Across {items.length} active SKUs
@@ -256,10 +261,10 @@ _Generated via Project 1 Engine | Verified Tally Summary_`;
             <Flame className="w-4 h-4 text-amber-500" />
           </div>
           <div className="text-2xl font-bold text-amber-600 dark:text-amber-400 mt-2">
-            {formatCurrency(report.deadStockValuation, currency)}
+            {formatCurrency(report.deadCash, currency)}
           </div>
           <div className="text-xs text-amber-600/80 dark:text-amber-400/80 mt-1">
-            {report.deadStockPercent.toFixed(1)}% of total stock trapped
+            {report.deadCashPercent.toFixed(1)}% of total stock trapped
           </div>
         </div>
 
@@ -269,7 +274,7 @@ _Generated via Project 1 Engine | Verified Tally Summary_`;
             <TrendingDown className="w-4 h-4 text-rose-500" />
           </div>
           <div className="text-2xl font-bold text-rose-600 dark:text-rose-400 mt-2">
-            {formatCurrency(report.annualHoldingCostBurn, currency)}
+            {formatCurrency(report.annualHoldingBurn, currency)}
           </div>
           <div className="text-xs text-neutral-500 mt-1">
             At {rules.holdingCostPercent}% annual holding cost rate
@@ -282,10 +287,10 @@ _Generated via Project 1 Engine | Verified Tally Summary_`;
             <ShieldCheck className="w-4 h-4 text-emerald-500" />
           </div>
           <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 mt-2">
-            {report.reserveSpareCount} SKUs
+            {optimizerResult.summary.criticalSparesProtectedCount} SKUs
           </div>
           <div className="text-xs text-neutral-500 mt-1">
-            {formatCurrency(report.reserveSpareValuation, currency)} excluded from scrap
+            {formatCurrency(optimizerResult.summary.criticalSparesProtectedValue, currency)} excluded from scrap
           </div>
         </div>
       </div>

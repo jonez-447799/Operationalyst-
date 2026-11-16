@@ -1801,38 +1801,92 @@ async function startServer() {
     }
   });
 
-  // 38. Phase 17 WhatsApp / LinkedIn Social Preview Banner & SEO Routes
+  // 38. Phase 17/19 WhatsApp / LinkedIn Social Preview Banner, Control-Tower Favicon & SEO Routes
+  app.get("/favicon.svg", (_req, res) => {
+    res.setHeader("Content-Type", "image/svg+xml; charset=utf-8");
+    res.setHeader("Cache-Control", "public, max-age=3600");
+    res.send(`<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128" role="img" aria-label="Operationalyst Control-Tower Dark Mode Iceberg Emblem">
+  <rect width="128" height="128" fill="#0B1320" />
+  <circle cx="64" cy="64" r="54" fill="#111C2D" />
+  <circle cx="64" cy="64" r="54" fill="none" stroke="#475569" stroke-width="2" />
+  <polygon points="64,20 35,51 64,51" fill="#F8FAFC" />
+  <polygon points="64,20 64,51 93,51" fill="#E2E8F0" />
+  <rect x="16" y="51" width="96" height="7" fill="#0B1320" />
+  <polygon points="24,58 44,58 50,91 37,83" fill="#F59E0B" />
+  <polygon points="45.6,58 63.2,58 63.2,109 51.6,91" fill="#FBBF24" />
+  <polygon points="64.8,58 82.4,58 76.4,91 64.8,109" fill="#FBBF24" />
+  <polygon points="84,58 104,58 91,83 78,91" fill="#F59E0B" />
+</svg>`);
+  });
+
   app.get("/og-banner.svg", (_req, res) => {
     res.setHeader("Content-Type", "image/svg+xml; charset=utf-8");
     res.setHeader("Cache-Control", "public, max-age=3600");
-    res.send(`<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
-  <rect width="1200" height="630" fill="#020617" />
-  <rect x="36" y="36" width="1128" height="558" rx="24" fill="#0f172a" stroke="#1e293b" stroke-width="2" />
-  <rect x="76" y="76" width="380" height="36" rx="8" fill="#064e3b" stroke="#10b981" stroke-width="1" />
-  <text x="96" y="100" fill="#6ee7b7" font-family="monospace" font-size="15" font-weight="bold">OPERATIONALYST • FACTORY INVENTORY INTELLIGENCE</text>
-  <text x="76" y="176" fill="#ffffff" font-family="sans-serif" font-size="48" font-weight="800">How Much of Your Factory Inventory</text>
-  <text x="76" y="236" fill="#34d399" font-family="sans-serif" font-size="48" font-weight="800">Has Stopped Moving (&gt;180 Days)?</text>
-  <text x="76" y="294" fill="#cbd5e1" font-family="sans-serif" font-size="22">Drop a 5-column Tally Prime, SAP, or Excel CSV export. Get a Free 3-SKU Diagnostic</text>
-  <text x="76" y="328" fill="#cbd5e1" font-family="sans-serif" font-size="22">Teaser (₹0) or unlock the 4-Pillar Plant Audit &amp; 6-Sheet Action Workbook (₹14,999).</text>
-  <g transform="translate(76, 376)">
-    <rect x="0" y="0" width="248" height="118" rx="14" fill="#020617" stroke="#334155" />
-    <text x="20" y="34" fill="#94a3b8" font-family="monospace" font-size="13" font-weight="bold">P1 DEAD STOCK (&gt;180D)</text>
-    <text x="20" y="74" fill="#fb7185" font-family="monospace" font-size="30" font-weight="bold">₹2,23,110</text>
-    <text x="20" y="100" fill="#64748b" font-family="monospace" font-size="12">22% Annual Carrying Burn</text>
-    <rect x="268" y="0" width="248" height="118" rx="14" fill="#020617" stroke="#334155" />
-    <text x="288" y="34" fill="#94a3b8" font-family="monospace" font-size="13" font-weight="bold">P2 GATE OTIF</text>
-    <text x="288" y="74" fill="#38bdf8" font-family="monospace" font-size="30" font-weight="bold">50.0% Pass</text>
-    <text x="288" y="100" fill="#64748b" font-family="monospace" font-size="12">9 of 18 Dispatches On-Time</text>
-    <rect x="536" y="0" width="248" height="118" rx="14" fill="#020617" stroke="#334155" />
-    <text x="556" y="34" fill="#94a3b8" font-family="monospace" font-size="13" font-weight="bold">P3 FREIGHT LEAKAGE</text>
-    <text x="556" y="74" fill="#fbbf24" font-family="monospace" font-size="30" font-weight="bold">₹13,944</text>
-    <text x="556" y="100" fill="#64748b" font-family="monospace" font-size="12">Rate + Detention Audit</text>
-    <rect x="804" y="0" width="244" height="118" rx="14" fill="#020617" stroke="#334155" />
-    <text x="824" y="34" fill="#94a3b8" font-family="monospace" font-size="13" font-weight="bold">P4 BIN VARIANCE</text>
-    <text x="824" y="74" fill="#c084fc" font-family="monospace" font-size="30" font-weight="bold">₹24,800</text>
-    <text x="824" y="100" fill="#64748b" font-family="monospace" font-size="12">60.0% Bin Match Accuracy</text>
+    res.send(`<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-label="Operationalyst Control-Tower Dark Mode Iceberg OG Preview">
+  <rect width="1200" height="630" fill="#0B1320" />
+  <g stroke="#1E293B" stroke-width="1" opacity="0.55">
+    <line x1="0" y1="157" x2="1200" y2="157" />
+    <line x1="0" y1="315" x2="1200" y2="315" />
+    <line x1="0" y1="472" x2="1200" y2="472" />
+    <line x1="300" y1="0" x2="300" y2="630" />
+    <line x1="600" y1="0" x2="600" y2="630" />
+    <line x1="900" y1="0" x2="900" y2="630" />
   </g>
-  <text x="76" y="548" fill="#94a3b8" font-family="monospace" font-size="16">Prepared by C. Jones Snowin · Snowin Ventures, Chennai · Direct UPI: 9080540047@yespop</text>
+  <rect x="36" y="36" width="1128" height="558" rx="20" fill="#111C2D" stroke="#475569" stroke-width="1.5" />
+  <g transform="translate(72, 68)">
+    <circle cx="22" cy="22" r="21" fill="#0B1320" stroke="#475569" stroke-width="1.5" />
+    <polygon points="22,6 11,18 22,18" fill="#F8FAFC" />
+    <polygon points="22,6 22,18 33,18" fill="#E2E8F0" />
+    <rect x="5" y="18" width="34" height="3" fill="#0B1320" />
+    <polygon points="7,21 14.5,21 16.8,32.5 11.8,29.5" fill="#F59E0B" />
+    <polygon points="15.3,21 21.6,21 21.6,39 17.4,32.5" fill="#FBBF24" />
+    <polygon points="22.4,21 28.7,21 26.6,32.5 22.4,39" fill="#FBBF24" />
+    <polygon points="29.5,21 37,21 32.2,29.5 27.2,32.5" fill="#F59E0B" />
+    <text x="56" y="20" fill="#F8FAFC" font-family="'Inter', system-ui, -apple-system, sans-serif" font-size="20" font-weight="800" letter-spacing="0.5">OPERATIONALYST</text>
+    <text x="56" y="39" fill="#F59E0B" font-family="'JetBrains Mono', monospace" font-size="12" font-weight="600" letter-spacing="1.2">CONTROL-TOWER WORKING CAPITAL AUDIT · 4-PILLAR ENGINE</text>
+  </g>
+  <g transform="translate(868, 68)">
+    <rect x="0" y="0" width="256" height="278" rx="16" fill="#0B1320" stroke="#475569" stroke-width="1.5" />
+    <text x="128" y="26" text-anchor="middle" fill="#94A3B8" font-family="'JetBrains Mono', monospace" font-size="10" font-weight="600" letter-spacing="1.4">VISIBLE ERP DATA</text>
+    <g transform="translate(56, 36)">
+      <circle cx="72" cy="72" r="68" fill="#111C2D" stroke="#475569" stroke-width="2" />
+      <polygon points="72,18 35,58 72,58" fill="#F8FAFC" />
+      <polygon points="72,18 72,58 109,58" fill="#E2E8F0" />
+      <rect x="10" y="58" width="124" height="9" fill="#0B1320" />
+      <polygon points="22,67 47,67 54,108 38,98" fill="#F59E0B" />
+      <polygon points="49,67 71,67 71,129 56,108" fill="#FBBF24" />
+      <polygon points="73,67 95,67 88,108 73,129" fill="#FBBF24" />
+      <polygon points="97,67 122,67 106,98 90,108" fill="#F59E0B" />
+    </g>
+    <text x="128" y="206" text-anchor="middle" fill="#FBBF24" font-family="'JetBrains Mono', monospace" font-size="10" font-weight="700" letter-spacing="1.2">HIDDEN CASH LEAKAGE</text>
+    <text x="128" y="226" text-anchor="middle" fill="#F8FAFC" font-family="'JetBrains Mono', monospace" font-size="10">DEAD STOCK · BIN VARIANCE</text>
+    <text x="128" y="244" text-anchor="middle" fill="#94A3B8" font-family="'JetBrains Mono', monospace" font-size="10">OTIF SLA · FREIGHT AUDIT</text>
+  </g>
+  <text x="72" y="180" fill="#F8FAFC" font-family="'Inter', system-ui, -apple-system, sans-serif" font-size="42" font-weight="800" letter-spacing="-0.5">How Much of Your Factory Inventory</text>
+  <text x="72" y="232" fill="#F59E0B" font-family="'Inter', system-ui, -apple-system, sans-serif" font-size="42" font-weight="800" letter-spacing="-0.5">Has Stopped Moving (&gt;180 Days)?</text>
+  <text x="72" y="284" fill="#CBD5E1" font-family="'Inter', system-ui, -apple-system, sans-serif" font-size="20">Drop a 5-column Tally Prime, SAP, or Excel CSV export. Get a Free 3-SKU</text>
+  <text x="72" y="314" fill="#CBD5E1" font-family="'Inter', system-ui, -apple-system, sans-serif" font-size="20">Diagnostic Teaser (₹0) or unlock the 4-Pillar Plant Audit Workbook (₹14,999).</text>
+  <g transform="translate(72, 372)">
+    <rect x="0" y="0" width="248" height="122" rx="14" fill="#0B1320" stroke="#475569" stroke-width="1.2" />
+    <text x="20" y="32" fill="#94A3B8" font-family="'JetBrains Mono', monospace" font-size="12" font-weight="700">P1 • DEAD STOCK (&gt;180D)</text>
+    <text x="20" y="74" fill="#F59E0B" font-family="'JetBrains Mono', monospace" font-size="30" font-weight="700">₹2,23,110</text>
+    <text x="20" y="102" fill="#64748B" font-family="'JetBrains Mono', monospace" font-size="12">22% Annual Carrying Burn</text>
+    <rect x="268" y="0" width="248" height="122" rx="14" fill="#0B1320" stroke="#475569" stroke-width="1.2" />
+    <text x="288" y="32" fill="#94A3B8" font-family="'JetBrains Mono', monospace" font-size="12" font-weight="700">P2 • GATE OTIF</text>
+    <text x="288" y="74" fill="#F8FAFC" font-family="'JetBrains Mono', monospace" font-size="30" font-weight="700">50.0% Pass</text>
+    <text x="288" y="102" fill="#64748B" font-family="'JetBrains Mono', monospace" font-size="12">9 of 18 Dispatches On-Time</text>
+    <rect x="536" y="0" width="248" height="122" rx="14" fill="#0B1320" stroke="#475569" stroke-width="1.2" />
+    <text x="556" y="32" fill="#94A3B8" font-family="'JetBrains Mono', monospace" font-size="12" font-weight="700">P3 • FREIGHT AUDIT</text>
+    <text x="556" y="74" fill="#FBBF24" font-family="'JetBrains Mono', monospace" font-size="30" font-weight="700">₹13,944</text>
+    <text x="556" y="102" fill="#64748B" font-family="'JetBrains Mono', monospace" font-size="12">Rate + Detention Leakage</text>
+    <rect x="804" y="0" width="248" height="122" rx="14" fill="#0B1320" stroke="#475569" stroke-width="1.2" />
+    <text x="824" y="32" fill="#94A3B8" font-family="'JetBrains Mono', monospace" font-size="12" font-weight="700">P4 • BIN VARIANCE</text>
+    <text x="824" y="74" fill="#F8FAFC" font-family="'JetBrains Mono', monospace" font-size="30" font-weight="700">₹24,800</text>
+    <text x="824" y="102" fill="#64748B" font-family="'JetBrains Mono', monospace" font-size="12">60.0% Bin Match Accuracy</text>
+  </g>
+  <text x="72" y="552" fill="#94A3B8" font-family="'JetBrains Mono', monospace" font-size="15">Prepared by C. Jones Snowin · Snowin Ventures, Chennai · Direct UPI: 9080540047@yespop</text>
+  <rect x="920" y="530" width="204" height="32" rx="8" fill="#0B1320" stroke="#F59E0B" stroke-width="1.2" />
+  <text x="1022" y="551" text-anchor="middle" fill="#FBBF24" font-family="'JetBrains Mono', monospace" font-size="13" font-weight="700">₹0 TEASER · ₹14,999 AUDIT</text>
 </svg>`);
   });
 

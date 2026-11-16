@@ -430,21 +430,21 @@ export const InstantAuditDropzone: React.FC<InstantAuditDropzoneProps> = ({
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="bg-slate-950/90 border border-slate-800 rounded-2xl p-6 sm:p-8 shadow-xl space-y-6">
           {/* Header & Value Prop */}
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <div className="space-y-4">
             <div>
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/15 border border-blue-400/30 text-blue-300 text-xs font-bold mb-2">
-                <Sparkles className="w-3.5 h-3.5 text-blue-400" />
-                <span>Instant In-Browser 5-Column CSV Audit Sandbox (100% Local Browser Processing)</span>
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-lg bg-[#111C2D] border border-[#475569]/70 text-[#FBBF24] text-xs font-['JetBrains_Mono',monospace] font-bold mb-2.5">
+                <Sparkles className="w-3.5 h-3.5 text-[#F59E0B] shrink-0" />
+                <span>Instant In-Browser 5-Column CSV Audit Sandbox · 100% Local Processing</span>
               </div>
-              <h2 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
+              <h2 className="text-xl sm:text-2xl font-bold text-[#F8FAFC] tracking-tight">
                 Test the 5-Column Stock Aging Engine Right Now — Zero Sign-Up Required
               </h2>
-              <p className="text-xs sm:text-sm text-slate-300 mt-1">
-                Drop a 5-column CSV (<code className="text-blue-300 font-mono">Part_ID, Part_Description, Closing_Stock_Qty, Unit_Cost_INR, Last_Movement_Date</code>) or load the 20-SKU Ambattur sample to calculate Non-Moving (&gt;180d) exposure and 22% Annual Carrying Burn in milliseconds.
+              <p className="text-xs sm:text-sm text-slate-300 mt-1 max-w-4xl">
+                Drop a 5-column CSV (<code className="text-[#FBBF24] font-mono">Part_ID, Part_Description, Closing_Stock_Qty, Unit_Cost_INR, Last_Movement_Date</code>) or load the 20-SKU Ambattur sample to calculate Non-Moving (&gt;180d) exposure and 22% Annual Carrying Burn in milliseconds.
               </p>
             </div>
 
-            <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+            <div className="flex flex-wrap items-center gap-2.5">
               <button
                 type="button"
                 data-testid="instant-dropzone-load-sample-btn"
