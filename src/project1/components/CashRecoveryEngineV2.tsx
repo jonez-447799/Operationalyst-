@@ -1,5 +1,4 @@
-
-import { exportPrintableRtvClaimLetter } from '../../commercial/TallyCleanerAndClaims';import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Ban,
   TrendingUp,
