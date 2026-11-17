@@ -92,24 +92,24 @@ export const TEN_TEAM_OPERATING_SYSTEM = [
 ];
 
 export const STAKEHOLDER_PERSPECTIVES = [
-  { title: 'Plant CFO / Finance Head', desc: 'Eliminate surprise inventory write-offs before annual audit.' }
+  { id: 'cfo', title: 'Plant CFO / Finance Head', desc: 'Eliminate surprise inventory write-offs before annual audit.' }
 ];
 
 export const ICEBERG_DIMENSIONS = [
-  { dimension: 'Unverified Spares Write-Downs', risk: 'High' },
-  { dimension: 'Unclaimed Vendor Debits', risk: 'Critical' }
+  { id: 'spares', dimension: 'Unverified Spares Write-Downs', risk: 'High' },
+  { id: 'debits', dimension: 'Unclaimed Vendor Debits', risk: 'Critical' }
 ];
 
 export const OBJECTION_MATRIX = [
-  { objection: 'Does this replace our Tally or ERP?', response: 'No, Operationalyst runs as a non-invasive governance layer on top of your existing software.' }
+  { id: 'replace', objection: 'Does this replace our Tally or ERP?', response: 'No, Operationalyst runs as a non-invasive governance layer on top of your existing software.' }
 ];
 
 export const VALUE_PROPOSITIONS = [
-  { title: 'Zero Risk Money Back', desc: 'Reconciled 100% money-back guarantee if no margin leaks found.' }
+  { id: 'zero-risk', title: 'Zero Risk Money Back', desc: 'Reconciled 100% money-back guarantee if no margin leaks found.' }
 ];
 
 export const FAQ_ITEMS = [
-  { question: 'Is GST applicable?', answer: 'No, billed under MSME Bill of Supply (0% GST - UDYAM-TN-02-0444630, SAC 998311).' }
+  { id: 'gst', question: 'Is GST applicable?', answer: 'No, billed under MSME Bill of Supply (0% GST - UDYAM-TN-02-0444630, SAC 998311).' }
 ];
 
 export function getReconciledSampleAuditModes() {
