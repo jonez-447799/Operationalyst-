@@ -10,7 +10,271 @@ import {
 
 export interface HeadlineVariant {
   id: 'A' | 'B' | 'C';
+  badge: string;/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+import {
+  getLiveSandboxReconciledModeMetrics,
+  ILLUSTRATIVE_12400_CASE_METRICS,
+} from '../utils/liveSandboxMetrics.ts';
+
+export interface HeadlineVariant {
+  id: 'A' | 'B' | 'C';
   badge: string;
+  headline: string;
+  subheadline: string;
+}
+
+export const HERO_HEADLINE_VARIANTS: Record<'A' | 'B' | 'C', HeadlineVariant> = {
+  A: {
+    id: 'A',
+    badge: '48-HOUR DIAGNOSTIC AUDIT · P1–P4 ENGINE SUITE',
+    headline: 'How Much of Your Inventory Has Stopped Moving?',
+    subheadline:
+      'Operationalyst line-item engine detects ghost stock, rate-card discrepancies, non-moving materials, and unbilled claims across Tally, Busy, SAP, and custom CSV logs.',
+  },
+  B: {
+    id: 'B',
+    badge: 'COMMERCIAL VARIANCE RECOVERY · ZERO GST BILL OF SUPPLY',
+    headline: 'Plug Hidden Revenue Leaks & Rate-Card Overcharges in 48 Hours',
+    subheadline:
+      'Deterministic reconciliation across stock ledgers, purchase orders, weighbridge logs, and freight rate cards with 100% verifiable row-level audit evidence.',
+  },
+  C: {
+    id: 'C',
+    badge: 'BANK CC DRAWING POWER AUDIT & WORKING CAPITAL OPTIMIZATION',
+    headline: 'Clean Factory Stock & Protect Bank Drawing Power Before Your Next Audit',
+    subheadline:
+      'Auto-segregate raw materials, WIP, FG, critical machine spares, and customer free-issue stock into audit-ready schedules.',
+  },
+};
+
+export const ACTIVE_DEFAULT_VARIANT: HeadlineVariant = HERO_HEADLINE_VARIANTS.A;
+
+export const PROBLEM_QUESTIONS = [
+  {
+    id: 'prob_1',
+    title: 'Are non-moving materials inflating your inventory valuation?',
+    description:
+      'Raw materials and finished goods sitting idle for over 180 days tie up cash flow and risk bank CC drawing power penalties during quarterly statutory audits.',
+  },
+  {
+    id: 'prob_2',
+    title: 'Is your plant paying unverified freight detention & demurrage charges?',
+    description:
+      'Transporter debit notes and detention slips often go unverified against agreed contract rate cards, causing steady monthly capital leakage.',
+  },
+  {
+    id: 'prob_3',
+    title: 'Are vendor return (RTV) debit notes getting delayed or missed?',
+    description:
+      'Rejected or defective materials sitting on the factory floor without structured RTV debit notes result in unrecovered vendor claims.',
+  },
+  {
+    id: 'prob_4',
+    title: 'Are critical machine spares or customer FIM items accidentally scrapped?',
+    description:
+      'Unlabeled machine spares and customer free-issue materials (FIM) risk being misclassified as obsolete inventory without strict quarantine safeguards.',
+  },
+];
+
+export const PROCESS_STEPS = [
+  {
+    step: '01',
+    title: 'Export Unmodified CSV',
+    description: 'Export raw inventory, ledger, or freight logs directly from Tally, Busy, or SAP.',
+  },
+  {
+    step: '02',
+    title: 'In-Browser Sanitization',
+    description: 'Strip PII, party names, and sensitive GSTINs client-side before any diagnostic processing.',
+  },
+  {
+    step: '03',
+    title: '4-Pillar Algorithmic Audit',
+    description: 'Deterministic engines analyze line-item aging, RTV claims, freight rates, and drawing power.',
+  },
+  {
+    step: '04',
+    title: '48-Hour Recovery Schedule',
+    description: 'Receive actionable debit notes, RTV claims, and floor clearance schedules.',
+  },
+  {
+    step: '05',
+    title: 'Bank & Statutory Compliance',
+    description: 'Provide co-branded working papers to statutory auditors and banking partners.',
+  },
+];
+
+export const AUDIT_DELIVERABLES = [
+  { id: 'del_1', title: '180+ Day Dead Stock Clearance Schedule' },
+  { id: 'del_2', title: 'Vendor RTV Debit Note Register' },
+  { id: 'del_3', title: 'Transporter Freight & Demurrage Audit' },
+  { id: 'del_4', title: 'Bank CC Drawing Power Adjustment Report' },
+  { id: 'del_5', title: 'Item 07 Spares & Customer FIM Quarantine Log' },
+  { id: 'del_6', title: 'SHA-256 Data Sanitization & Purge Certificate' },
+  { id: 'del_7', title: 'ICAI-Compliant CA Working Papers' },
+  { id: 'del_8', title: 'Line-Item Discrepancy Heatmap' },
+  { id: 'del_9', title: 'Fortnightly Executive Governance Summary' },
+];
+
+export const METHODOLOGY_STAGES = [
+  { stage: 'Stage 1', title: 'Data Ingestion & Integrity Checks' },
+  { stage: 'Stage 2', title: 'PII & Vendor Masking' },
+  { stage: 'Stage 3', title: 'Deterministic Reconciliation' },
+  { stage: 'Stage 4', title: 'Quarantine & Anomaly Flagging' },
+  { stage: 'Stage 5', title: 'Valuation & Claim Verification' },
+  { stage: 'Stage 6', title: 'Executive Report Generation' },
+];
+
+export const TEN_TEAM_OPERATING_SYSTEM = [
+  { id: 'desk_1', num: '01', name: 'Inbound Freight & Logistics Desk', role: 'Freight Overcharge Prevention', focus: 'Demurrage, Detention & Rate Cards', invariant: 'Zero unverified freight payout', deliverable: 'Transporter Freight Schedule' },
+  { id: 'desk_2', num: '02', name: 'Procurement & Vendor SLA Desk', role: 'SLA Variance Enforcement', focus: 'Lead Time & Price Discrepancies', invariant: '100% PO rate-card compliance', deliverable: 'Vendor Discrepancy Log' },
+  { id: 'desk_3', num: '03', name: 'Accounts Payable & Billing Desk', role: 'Billing Leakage Control', focus: 'Duplicate Vouchers & Discounts', invariant: 'Zero double payment', deliverable: 'Voucher Variance Report' },
+  { id: 'desk_4', num: '04', name: 'Physical Inventory & Bin Desk', role: 'Bin Reconciliation', focus: 'Phantom Stock & Physical Audit', invariant: '100% physical to ledger parity', deliverable: 'Bin Audit Schedule' },
+  { id: 'desk_5', num: '05', name: 'Weighbridge & Inbound Materials Desk', role: 'Weight Discrepancy Control', focus: 'Tare/Gross Variance & Moisture', invariant: 'Zero unmeasured tare loss', deliverable: 'Weighbridge Variance Summary' },
+  { id: 'desk_6', num: '06', name: 'Vendor Rebates & Volume Claims Desk', role: 'Rebate Recovery', focus: 'Unclaimed Volume Discounts', invariant: '100% rebate capture', deliverable: 'Rebate Recovery Log' },
+  { id: 'desk_7', num: '07', name: 'Item 07 Spares & Customer Free-Issue (FIM) Protection Desk', role: 'Inventory Integrity & Capital Trap Prevention', focus: 'Critical Machine Spares & Customer FIM Stock Quarantine', invariant: 'Zero accidental scrap of spares or customer FIM stock', deliverable: 'Spares & FIM Quarantine Protection Ledger' },
+  { id: 'desk_8', num: '08', name: 'Return to Vendor (RTV) Claims Desk', role: 'RTV Claim Enforcement', focus: 'Defective Stock Debit Notes', invariant: '100% vendor claim recovery', deliverable: 'RTV Debit Note Register' },
+  { id: 'desk_9', num: '09', name: 'Bank CC Drawing Power Governance Desk', role: 'Borrowing Base Audit', focus: 'Eligible Stock vs Total Stock', invariant: '100% bank audit compliance', deliverable: 'Drawing Power Report' },
+  { id: 'desk_10', num: '10', name: 'Executive Boardroom Governance Desk', role: 'Capital Leakage Overview', focus: 'Cross-Pillar Variance Tracking', invariant: '100% board transparency', deliverable: 'Boardroom Teaser Report' },
+  { id: 'desk_11', num: '11', name: 'CA Wholesale Working-Paper Workbench', role: 'Statutory Audit Support', focus: 'Co-Branded CA Audit Papers', invariant: '100% ICAI compliance', deliverable: 'Statutory Working Papers' },
+  { id: 'desk_12', num: '12', name: 'SHA-256 Data Purge & Certificate Desk', role: 'Client Data Privacy', focus: 'Local Browser Purge & Certs', invariant: 'Zero data retention', deliverable: 'DELCERT Proof Certificate' },
+  { id: 'desk_13', num: '13', name: 'Subcontracting & Job-Work Sec 143 Desk', role: 'Job-Work Movement Control', focus: 'Section 143 GST Compliance', invariant: '100% 180-day return tracking', deliverable: 'Job-Work Register' },
+  { id: 'desk_14', num: '14', name: 'Continuous Fortnightly Watchdog Desk', role: 'Ongoing Variance Prevention', focus: 'Bi-weekly Automated Audits', invariant: 'Zero recurring leakage', deliverable: 'Watchdog Governance Summary' },
+];
+
+export const DATA_TRUST_ITEMS = [
+  { id: 'dt_1', title: '100% In-Browser Execution', description: 'All CSV parsing and calculations run entirely in your local browser tab.' },
+  { id: 'dt_2', title: 'Zero Cloud Data Upload', description: 'Your raw inventory, party names, and financial data never leave your computer.' },
+  { id: 'dt_3', title: 'Client-Side PII Stripping', description: 'Vendor names, GSTINs, and phone numbers are automatically redacted.' },
+  { id: 'dt_4', title: 'SHA-256 Purge Verification', description: 'Deterministic proof certificate (DELCERT-) generated upon browser tab clear.' },
+  { id: 'dt_5', title: 'MSME Udyam Bill of Supply', description: 'SNOWIN VENTURES is Udyam Registered; ₹0 GST under CGST Act Sec. 22.' },
+  { id: 'dt_6', title: 'ICAI-Compliant CA Working Papers', description: 'Working papers structured specifically for CA statutory and internal auditors.' },
+  { id: 'dt_7', title: 'Full Export Portability', description: 'Download standardized clean CSVs and printable audit debit notes anytime.' },
+];
+
+export const FAQ_ITEMS = [
+  { id: 'faq_1', question: 'How quickly will we receive the full plant audit findings?', answer: 'The preliminary browser teaser renders instantly. The full 48-hour diagnostic report and action plan are delivered within 48 hours of validated CSV receipt.' },
+  { id: 'faq_2', question: 'Does our confidential factory inventory data get uploaded to external servers?', answer: 'No. Operationalyst operates 100% client-side inside your browser. No raw rows, vendor names, or GSTINs are ever transmitted or stored on external servers.' },
+  { id: 'faq_3', question: 'Is GST applicable to Operationalyst diagnostic fees?', answer: 'Operationalyst is provided by SNOWIN VENTURES, an MSME Udyam-registered enterprise exempt under Sec. 22 of the CGST Act. All services are billed via MSME Bill of Supply with ₹0 GST.' },
+  { id: 'faq_4', question: 'How does the ₹2,50,000 100% Refund Guarantee work?', answer: 'Our guarantee covers verifiable row-level capital trap and billing discrepancy discovery within 48 hours of validated CSV receipt. Physical cash collection depends on plant floor execution.' },
+  { id: 'faq_5', question: 'Can our Chartered Accountant or internal audit team use Operationalyst?', answer: 'Yes! We offer a dedicated CA Wholesale Working-Paper License (Tier 4) providing co-branded working papers and statutory stock schedules, 100% compliant with ICAI rules.' },
+  { id: 'faq_6', question: 'What file formats are supported for inventory and ledger ingestion?', answer: 'We support CSV exports from Tally, Busy, SAP, custom ERPs, and Excel spreadsheets.' },
+  { id: 'faq_7', question: 'How are critical machine spares and customer free-issue materials (FIM) handled?', answer: 'Item 07 automatically flags critical machine spares (spindles, PLCs, motors, sensors) and customer FIM stock under Section 143 so they are quarantined and never misclassified as scrap.' },
+  { id: 'faq_8', question: 'What happens when we clear our browser tab?', answer: 'All in-memory data is purged immediately. You can generate a SHA-256 Purge Certificate (DELCERT-) before clearing for your internal data security records.' },
+  { id: 'faq_9', question: 'How do we unlock the complete 48-Hour Plant Audit?', answer: 'Unlocking the complete multi-pillar line-item audit workbook and floor action plan is a single ₹18,000 one-time fee via NEFT/IMPS/UPI (MSME Bill of Supply · ₹0 GST) with zero automatic subscriptions or hidden lock-in fees.' },
+  { id: 'faq_10', question: 'What is included in the Monthly Watchdog subscription?', answer: 'The Monthly Watchdog (₹15,000/mo) provides fortnightly 4-pillar variance audits, continuous slow-mover tracking, and updated transporter rate-card enforcement.' },
+];
+
+export const ICEBERG_DIMENSIONS = [
+  { id: 'dim_1', name: '100% In-Browser Ingestion', pillar: 'Data Privacy', impact: 'Zero cloud upload', status: 'Active' },
+  { id: 'dim_2', name: 'Client-Side PII Stripping', pillar: 'Data Privacy', impact: 'Party names & GSTINs redacted', status: 'Active' },
+  { id: 'dim_3', name: 'RFC-4180 Quoted CSV Parser', pillar: 'Data Integrity', impact: 'Prevents column shifting', status: 'Active' },
+  { id: 'dim_4', name: 'Strict Indian Date Parser', pillar: 'Data Integrity', impact: 'Normalizes DD/MM/YYYY to YYYY-MM-DD', status: 'Active' },
+  { id: 'dim_5', name: 'Negative Stock Isolation', pillar: 'Stock Valuation', impact: 'Quarantines Qty < 0 ledger anomalies', status: 'Active' },
+  { id: 'dim_6', name: '180+ Day Dead Stock Audit', pillar: 'Stock Valuation', impact: 'Identifies non-moving capital traps', status: 'Active' },
+  { id: 'dim_7', name: 'Vendor RTV Claim Engine', pillar: 'Procurement', impact: 'Generates printable RTV debit notes', status: 'Active' },
+  { id: 'dim_8', name: 'Transporter Rate Enforcement', pillar: 'Logistics', impact: 'Audits freight & detention overcharges', status: 'Active' },
+  { id: 'dim_9', name: 'Bank CC Drawing Base Audit', pillar: 'Banking', impact: 'Recalculates bank borrowing base', status: 'Active' },
+  { id: 'dim_10', name: 'Item 07 Spares Protection', pillar: 'Asset Protection', impact: 'Prevents accidental scrap of machine spares', status: 'Active' },
+  { id: 'dim_11', name: 'Customer FIM Hold Quarantine', pillar: 'Asset Protection', impact: 'Quarantines job-work & Section 143 stock', status: 'Active' },
+  { id: 'dim_12', name: 'Free 3-SKU Diagnostic Entry', pillar: 'Commercial', impact: 'Instant preview before full diagnostic', status: 'Active' },
+  { id: 'dim_13', name: 'SHA-256 Purge Verification', pillar: 'Security', impact: 'DELCERT proof certificate generation', status: 'Active' },
+  { id: 'dim_14', name: 'DOM Cap (25 Row Preview)', pillar: 'Performance', impact: 'Prevents browser freeze on 20k+ rows', status: 'Active' },
+  { id: 'dim_15', name: 'MSME Bill of Supply Safeguard', pillar: 'Compliance', impact: '₹0 GST under CGST Act Sec. 22', status: 'Active' },
+  { id: 'dim_16', name: 'ICAI-Compliant CA Workbench', pillar: 'Audit Compliance', impact: 'Co-branded statutory working papers', status: 'Active' },
+  { id: 'dim_17', name: 'CA Wholesale Pricing Model', pillar: 'Audit Compliance', impact: '₹14,400 partner wholesale rate', status: 'Active' },
+  { id: 'dim_18', name: 'Reconciled ₹18L Executive Math', pillar: 'Governance', impact: '100% exact boardroom arithmetic', status: 'Active' },
+  { id: 'dim_19', name: 'Dynamic Working-Day Calendar', pillar: 'UX & Scheduling', impact: 'Auto-advances weekend booking dates', status: 'Active' },
+  { id: 'dim_20', name: 'Control-Tower Emblem Branding', pillar: 'Brand Mark', impact: 'Dark mode SVG iceberg emblem', status: 'Active' },
+  { id: 'dim_21', name: 'WhatsApp & Copy Lead Capture', pillar: 'Lead Protection', impact: 'Direct contact with zero lost leads', status: 'Active' },
+  { id: 'dim_22', name: 'Calendar ICS Invitation', pillar: 'Scheduling', impact: '1-click consultation booking download', status: 'Active' },
+  { id: 'dim_23', name: 'NEFT / UPI Direct Billing', pillar: 'Payments', impact: 'SNOWIN VENTURES Udyam Bill of Supply', status: 'Active' },
+  { id: 'dim_24', name: 'Printable Freight Debit Notes', pillar: 'Vouchers', impact: 'Subject to Accounts verification schedule', status: 'Active' },
+  { id: 'dim_25', name: 'Mobile Fallback Downloads', pillar: 'UX & Portability', impact: 'Popup-blocked browser download fallback', status: 'Active' },
+  { id: 'dim_26', name: '14-Stage Automated Architecture', pillar: 'Architecture', impact: 'Reviewed by Founder C. Jones Snowin', status: 'Active' },
+  { id: 'dim_27', name: '₹2,50,000 Refund Guarantee', pillar: 'Risk Reversal', impact: '48-hr verifiable discovery guarantee', status: 'Active' },
+];
+
+export const COMMERCIAL_TIERS = [
+  {
+    id: 'tier_0_sandbox',
+    name: 'Free 3-SKU Diagnostic Teaser',
+    badge: 'Instant Browser Teaser',
+    price: '₹0',
+    period: 'Free Sandbox',
+    description: 'Instant client-side calculation of non-moving capital, vendor RTV claims, and bank drawing-power leaks.',
+    features: [
+      '3-SKU / 5-Row Instant In-Browser Teaser',
+      'Client-Side PII Redaction',
+      'Preliminary Boardroom Discrepancy Heatmap',
+      'Sample RTV & Freight Overcharge Calculation',
+    ],
+    ctaText: 'Run Free Diagnostic',
+    popular: false,
+  },
+  {
+    id: 'tier_1_diagnostic',
+    name: '48-Hour Full Plant Audit & Action Plan',
+    badge: 'Most Popular · Flagship Audit',
+    price: '₹18,000',
+    period: 'one-time flat',
+    gstNote: 'MSME Bill of Supply · ₹0 GST (Exempt under Sec. 22 CGST Act · Udyam Registered)',
+    description: 'Complete multi-pillar line-item audit workbook, plant floor recovery schedule, and executive presentation.',
+    guarantee: '₹2,50,000 100% Refund Guarantee: Covers verifiable row-level capital trap & billing discrepancy discovery within 48 hours of validated CSV receipt. Physical cash collection depends on plant floor execution.',
+    features: [
+      'Full Multi-Pillar Line-Item Audit (Unlimited Rows)',
+      '180+ Day Dead Stock & Slow-Mover Liquidation Plan',
+      'Vendor RTV Debit Note Register & Transporter Freight Audit',
+      'Bank CC Drawing Power Recalculation Schedule',
+      'Item 07 Spares & Customer FIM Quarantine Verification',
+      'SHA-256 Purge Certificate & Co-Branded CA Working Papers',
+      '48-Hour SLA Delivery Guarantee',
+    ],
+    ctaText: 'Unlock Full Plant Audit',
+    popular: true,
+  },
+  {
+    id: 'tier_2_watchdog',
+    name: 'Monthly Watchdog & Ongoing Governance',
+    badge: 'Continuous Protection',
+    price: '₹15,000',
+    period: 'per month',
+    gstNote: 'MSME Bill of Supply · ₹0 GST (Exempt under Sec. 22 CGST Act · Udyam Registered)',
+    description: 'Recurring fortnightly 4-pillar variance audits, new slow-mover alerts, and transporter rate-card enforcement.',
+    features: [
+      'Fortnightly Automated Line-Item Audits',
+      'Real-Time Rate-Card Breach & Demurrage Alerts',
+      'Quarterly Bank CC Drawing Power Re-Certifications',
+      'Continuous Vendor SLA & RTV Tracking',
+      'Dedicated Priority Audit Support',
+    ],
+    ctaText: 'Deploy Monthly Watchdog',
+    popular: false,
+  },
+  {
+    id: 'tier_ca_partner',
+    name: 'CA Wholesale Working-Paper License',
+    badge: 'Chartered Accountant Workbench',
+    price: '₹14,400',
+    period: 'per audit / ₹12,000/mo Watchdog',
+    gstNote: 'MSME Bill of Supply · ₹0 GST (Exempt under Sec. 22 CGST Act · Udyam Registered)',
+    description: 'Co-branded statutory & bank CC stock audit working-paper workbench for Chartered Accountants and audit firms (100% ICAI compliant · ₹0 onboarding fee).',
+    features: [
+      'CA Wholesale Working-Paper License (₹14,400 / diagnostic)',
+      '₹12,000/mo CA Wholesale Watchdog Rate',
+      'Co-branded statutory & bank CC stock audit working papers',
+      'Item 07 & MatchHealth% audit trail documentation',
+      'Priority 24-hour review support desk',
+    ],
+    ctaText: 'Apply for CA Partner Desk',
+    popular: false,
+  },
+];
+
   headline: string;
   subheadline: string;
 }
