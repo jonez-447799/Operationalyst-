@@ -181,7 +181,7 @@ function buildAlertTitleAndSummary(
   upiId: string
 ): { title: string; summary: string; htmlBody: string; actionUrl: string } {
   const appBaseUrl = getEnvString('APP_URL').replace(/\/+$/, '');
-  const amountFormatted = `₹${(event.amountInr ?? 14999).toLocaleString('en-IN')}`;
+  const amountFormatted = `₹${(event.amountInr ?? 18000).toLocaleString('en-IN')}`;
 
   if (event.eventType === 'UTR_PAYMENT_SUBMITTED' || event.eventType === 'TEST_PAYMENT_ALERT') {
     const actionUrl =

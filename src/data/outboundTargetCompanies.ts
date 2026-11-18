@@ -17,7 +17,7 @@ export type OutboundTargetStatus =
   | 'TEASER_OFFERED'
   | 'CSV_RECEIVED'
   | 'UTR_PENDING'
-  | 'PAID_14999';
+  | 'PAID_18000';
 
 export interface OutboundTargetCompany {
   id: string;
@@ -46,7 +46,7 @@ export const OUTBOUND_STATUS_LABELS: Record<OutboundTargetStatus, string> = {
   TEASER_OFFERED: 'Free Teaser Offered',
   CSV_RECEIVED: '5-Column CSV Received',
   UTR_PENDING: 'UTR Payment Pending',
-  PAID_14999: 'Paid ₹14,999 Audit',
+  PAID_18000: 'Paid ₹18,000 Audit',
 };
 
 const RAW_SEED_COMPANIES: Array<{
@@ -497,7 +497,7 @@ I run Operationalyst (Snowin Ventures, Chennai). We help manufacturing plants in
 You can drop a 5-column Tally Prime / SAP / Excel stock export on our sandbox to generate an *Official 3-SKU Diagnostic Teaser Workspace for ₹0 (Free)* in 60 seconds:
 ${cleanUrl}
 
-If the findings are useful for *${company.companyName}*, the full 4-Pillar Plant Audit & 6-Sheet Action Workbook unlocks for a one-time ₹14,999.
+If the findings are useful for *${company.companyName}*, the full 4-Pillar Plant Audit & 6-Sheet Action Workbook unlocks for a flat ₹18,000 (0% GST · MSME Bill of Supply).
 
 Happy to run a free 3-SKU sample check for your team today.
 — C. Jones Snowin (+91 90805 40047)`;
@@ -590,14 +590,17 @@ function normalizeTargetCompany(
     'TEASER_OFFERED',
     'CSV_RECEIVED',
     'UTR_PENDING',
-    'PAID_14999',
+    'PAID_18000',
   ];
 
   const cluster = validClusters.includes(raw.cluster as OutboundClusterName)
     ? (raw.cluster as OutboundClusterName)
     : 'Ambattur Industrial Estate';
-  const status = validStatuses.includes(raw.status as OutboundTargetStatus)
-    ? (raw.status as OutboundTargetStatus)
+  const rawStatusStr = String(raw.status || '');
+  const migratedStatus =
+    rawStatusStr === 'PAID_14999' ? 'PAID_18000' : (rawStatusStr as OutboundTargetStatus);
+  const status = validStatuses.includes(migratedStatus)
+    ? migratedStatus
     : 'NOT_CONTACTED';
 
   return {

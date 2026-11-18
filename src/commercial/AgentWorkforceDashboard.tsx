@@ -93,7 +93,7 @@ export const AgentWorkforceDashboard: React.FC<AgentWorkforceDashboardProps> = (
     () => readOutboundCrmFromBrowser()
   );
   const [goalInput, setGoalInput] = useState<string>(
-    'Close 5 Paid Plant Audits in Chennai This Month — ₹74,995 Target'
+    'Close 5 Paid Plant Audits in Chennai This Month — ₹90,000 Target'
   );
   const [loading, setLoading] = useState<boolean>(false);
   const [decomposingGoal, setDecomposingGoal] = useState<boolean>(false);
@@ -370,7 +370,7 @@ export const AgentWorkforceDashboard: React.FC<AgentWorkforceDashboardProps> = (
         );
         setNoticeMsg(
           `Confirmed ₹${(
-            data.snapshot.invoiceAmountInr || 14999
+            data.snapshot.invoiceAmountInr || 18000
           ).toLocaleString('en-IN')} bank credit for ${workspaceId}. Client Walkthrough & 6-Sheet .XLSX Action Plan are now FULL_UNLOCKED.`
         );
         await loadWorkforceAndBilling(adminKey);
@@ -451,7 +451,7 @@ export const AgentWorkforceDashboard: React.FC<AgentWorkforceDashboardProps> = (
         saveFounderAlertLogsToBrowser(updatedLogs);
         setNoticeMsg(
           `Test Payment Alert (${data.alertLog.alertId}) dispatched for ₹${(
-            billingConfig.tier2FullAuditPriceInr || 14999
+            billingConfig.tier2FullAuditPriceInr || 18000
           ).toLocaleString('en-IN')} to UPI ${
             billingConfig.upiId || LIVE_FOUNDER_UPI_ID
           } — Status: ${data.alertLog.overallStatus} (Email: ${data.alertLog.emailStatus}, Webhook: ${data.alertLog.webhookStatus}).`
@@ -462,15 +462,15 @@ export const AgentWorkforceDashboard: React.FC<AgentWorkforceDashboardProps> = (
           timestamp: new Date().toISOString(),
           eventType: 'TEST_PAYMENT_ALERT',
           title: `[TEST UTR PAYMENT ALERT] ₹${(
-            billingConfig.tier2FullAuditPriceInr || 14999
+            billingConfig.tier2FullAuditPriceInr || 18000
           ).toLocaleString('en-IN')} Submitted — Ambattur Precision Forge`,
-          summary: `UTR TESTUTR9080540047 submitted for AUDIT-DEMO-P1P4 (₹14,999 to UPI ${
+          summary: `UTR TESTUTR9080540047 submitted for AUDIT-DEMO-P1P4 (₹18,000 to UPI ${
             billingConfig.upiId || LIVE_FOUNDER_UPI_ID
           }).`,
           companyName: 'Ambattur Precision Forge (Founder Test Payment Alert)',
           workspaceId: 'AUDIT-DEMO-P1P4',
           utrNumber: 'TESTUTR9080540047',
-          amountInr: billingConfig.tier2FullAuditPriceInr || 14999,
+          amountInr: billingConfig.tier2FullAuditPriceInr || 18000,
           upiId: billingConfig.upiId || LIVE_FOUNDER_UPI_ID,
           actionUrl: '?view=agent-workforce',
           recipientEmail: billingConfig.founderAlertEmail || 'joneszz2004@gmail.com',
@@ -505,7 +505,7 @@ export const AgentWorkforceDashboard: React.FC<AgentWorkforceDashboardProps> = (
   );
   const sampleUpiUri = buildUpiPaymentUri(
     billingConfig,
-    billingConfig.tier2FullAuditPriceInr || 14999,
+    billingConfig.tier2FullAuditPriceInr || 18000,
     'INV-20261109-DEMO',
     'AmbatturPlant'
   );
@@ -645,7 +645,7 @@ export const AgentWorkforceDashboard: React.FC<AgentWorkforceDashboardProps> = (
               data-testid="ceo-goal-input"
               value={goalInput}
               onChange={(e) => setGoalInput(e.target.value)}
-              placeholder="Enter monthly revenue goal (e.g., Close 5 Paid Plant Audits in Chennai This Month — ₹74,995 Target)"
+              placeholder="Enter monthly revenue goal (e.g., Close 5 Paid Plant Audits in Chennai This Month — ₹90,000 Target)"
               className="flex-1 px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white font-mono text-xs focus:outline-none focus:border-emerald-500"
             />
             <button
@@ -744,7 +744,7 @@ export const AgentWorkforceDashboard: React.FC<AgentWorkforceDashboardProps> = (
             >
               <Unlock className="w-3.5 h-3.5" />
               <span>
-                Confirm ₹14,999 Bank Credit in Account → Unlock Client Audit &amp; Issue Paid Receipt
+                Confirm ₹18,000 Bank Credit in Account → Unlock Client Audit &amp; Issue Paid Receipt
               </span>
             </button>
           </div>
@@ -820,7 +820,7 @@ export const AgentWorkforceDashboard: React.FC<AgentWorkforceDashboardProps> = (
                         <CheckCircle2 className="w-3.5 h-3.5" />
                         <span>
                           {task.taskType === 'UTR_PAYMENT_VERIFICATION'
-                            ? 'Confirm ₹14,999 Bank Credit & Unlock Client Audit'
+                            ? 'Confirm ₹18,000 Bank Credit & Unlock Client Audit'
                             : 'Approve Task'}
                         </span>
                       </button>
@@ -854,7 +854,7 @@ export const AgentWorkforceDashboard: React.FC<AgentWorkforceDashboardProps> = (
                 Founder Bank Account, 0%-Fee UPI ID (`{billingConfig.upiId || LIVE_FOUNDER_UPI_ID}`) &amp; Audit Tier Pricing
               </h2>
               <p className="text-xs text-slate-400">
-                Configure where client payments land when unlocking the ₹14,999 Full 4-Pillar Audit or ₹24,999 Monthly Retainer, plus optional Supabase cloud persistence and instant Resend / Webhook alerts.
+                Configure where client payments land when unlocking the ₹18,000 Full 4-Pillar Audit or ₹15,000/month Watchdog Retainer (MSME Bill of Supply · 0% GST), plus optional Supabase cloud persistence and instant Resend / Webhook alerts.
               </p>
             </div>
 
@@ -983,7 +983,7 @@ export const AgentWorkforceDashboard: React.FC<AgentWorkforceDashboardProps> = (
                   onChange={(e) =>
                     setBillingConfig((prev) => ({
                       ...prev,
-                      tier2FullAuditPriceInr: Number(e.target.value) || 14999,
+                      tier2FullAuditPriceInr: Number(e.target.value) || 18000,
                     }))
                   }
                   className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-white"
@@ -1001,7 +1001,7 @@ export const AgentWorkforceDashboard: React.FC<AgentWorkforceDashboardProps> = (
                   onChange={(e) =>
                     setBillingConfig((prev) => ({
                       ...prev,
-                      tier3MonthlyRetainerInr: Number(e.target.value) || 24999,
+                      tier3MonthlyRetainerInr: Number(e.target.value) || 15000,
                     }))
                   }
                   className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-white"
@@ -1022,7 +1022,7 @@ export const AgentWorkforceDashboard: React.FC<AgentWorkforceDashboardProps> = (
                       udyamMsmeNumber: e.target.value,
                     }))
                   }
-                  placeholder="UDYAM-TN-02-XXXXXXX"
+                  placeholder="UDYAM-TN-02-0444630"
                   className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-white"
                 />
               </div>

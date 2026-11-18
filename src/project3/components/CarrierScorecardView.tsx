@@ -181,10 +181,15 @@ export const CarrierScorecardView: React.FC<CarrierScorecardViewProps> = ({
 
             <div className="flex gap-2">
               <button
+                type="button"
                 onClick={() => {
                   const text = `*NOTICE OF DISALLOWANCE & DEBIT NOTE*\nTo: Siva Transport\nRef: Fortnight Freight Reconciliation\nTotal Billed: ${formatINR(siva?.totalBilled || 23500)}\nRate Overcharge (vs Benchmark): ${formatINR(siva?.totalRateLeak || 7077)}\nUnverified Gate Detention: ${formatINR(siva?.totalDetention || 3100)}\n*Total Deducted from Payment: ${formatINR(siva?.totalWaste || 10177)}*\nNet Approved for Disbursement: ${formatINR((siva?.totalBilled || 23500) - (siva?.totalWaste || 10177))}\nPlease collect reconciliation statement from factory gate accounts.`;
-                  navigator.clipboard.writeText(text);
-                  window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+                  navigator.clipboard?.writeText(text).catch(() => {});
+                  const a = document.createElement('a');
+                  a.href = `https://wa.me/?text=${encodeURIComponent(text)}`;
+                  a.target = '_blank';
+                  a.rel = 'noopener noreferrer';
+                  a.click();
                 }}
                 className="flex-1 py-1.5 text-[11px] font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-lg transition-colors flex items-center justify-center gap-1.5"
               >

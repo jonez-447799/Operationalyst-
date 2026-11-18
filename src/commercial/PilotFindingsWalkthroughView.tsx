@@ -681,7 +681,7 @@ export const PilotFindingsWalkthroughView: React.FC<PilotFindingsWalkthroughView
                     <Lock className="w-3.5 h-3.5" />
                     <span>
                       Unlock 6-Sheet .XLSX (₹
-                      {(proformaInvoice?.amountInr || 14999).toLocaleString('en-IN')})
+                      {(proformaInvoice?.amountInr || 18000).toLocaleString('en-IN')})
                     </span>
                   </button>
                 ) : (
@@ -697,6 +697,7 @@ export const PilotFindingsWalkthroughView: React.FC<PilotFindingsWalkthroughView
               </>
             )}
             <button
+              type="button"
               onClick={onOpenPlatform}
               className="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold cursor-pointer"
             >
@@ -774,7 +775,7 @@ export const PilotFindingsWalkthroughView: React.FC<PilotFindingsWalkthroughView
               <div className="space-y-1">
                 <div className="flex flex-wrap items-center gap-2 font-mono">
                   <span className="px-2.5 py-0.5 rounded bg-amber-500/20 border border-amber-500/40 text-amber-300 font-bold uppercase text-[11px]">
-                    Preview Client Paywall Mode: Free 3-SKU Teaser vs. ₹14,999 Unlocked
+                    Preview Client Paywall Mode: Free 3-SKU Teaser vs. ₹18,000 Unlocked
                   </span>
                   <span
                     data-testid="walkthrough-access-mode-badge"
@@ -796,9 +797,9 @@ export const PilotFindingsWalkthroughView: React.FC<PilotFindingsWalkthroughView
                   </strong>{' '}
                   upfront, with an optional{' '}
                   <strong className="text-white">
-                    ₹{(billingConfig.tier2FullAuditPriceInr || 14999).toLocaleString('en-IN')} Full Plant Audit &amp; 6-Sheet Action Workbook
+                    ₹{(billingConfig.tier2FullAuditPriceInr || 18000).toLocaleString('en-IN')} Full Plant Audit &amp; 6-Sheet Action Workbook
                   </strong>{' '}
-                  unlock via 0%-fee UPI (<code className="text-emerald-300">{billingConfig.upiId || '9080540047@yespop'}</code>) or NEFT/IMPS.
+                  unlock via 0%-fee UPI (<code className="text-emerald-300">{billingConfig.upiId || '9080540047@yespop'}</code>) or NEFT/IMPS (MSME Bill of Supply · 0% GST).
                 </p>
               </div>
 
@@ -840,7 +841,7 @@ export const PilotFindingsWalkthroughView: React.FC<PilotFindingsWalkthroughView
                   }`}
                 >
                   <Unlock className="w-3.5 h-3.5" />
-                  <span>₹14,999 Unlocked (All 20 SKUs)</span>
+                  <span>₹18,000 Unlocked (All 20 SKUs)</span>
                 </button>
               </div>
             </section>
@@ -1575,8 +1576,8 @@ export const PilotFindingsWalkthroughView: React.FC<PilotFindingsWalkthroughView
                       <p className="text-xs text-slate-400">
                         {isPaywallLocked
                           ? `Showing Top 3 Dormant SKUs in Free Executive Teaser Mode. Rows #4–#${snapshot.evaluatedSkus.length} and the 6-Sheet .XLSX Action Workbook are locked behind the ₹${(
-                              proformaInvoice?.amountInr || 14999
-                            ).toLocaleString('en-IN')} Direct Bank/UPI Paywall.`
+                              proformaInvoice?.amountInr || 18000
+                            ).toLocaleString('en-IN')} Direct Bank/UPI Paywall (MSME Bill of Supply · 0% GST).`
                           : 'Sorted by Dead/Slow status and Rupee exposure so shop-floor and procurement teams can act on the highest-impact lines first.'}
                       </p>
                     </div>
@@ -1664,7 +1665,7 @@ export const PilotFindingsWalkthroughView: React.FC<PilotFindingsWalkthroughView
                                 </td>
                                 <td className="py-3 px-4 text-slate-300 font-sans">
                                   {isRowLocked
-                                    ? 'Unlock ₹14,999 Audit to view SKU-level disposition & vendor contra plan'
+                                    ? 'Unlock ₹18,000 Audit to view SKU-level disposition & vendor contra plan'
                                     : sku.action}
                                 </td>
                               </tr>
@@ -1723,7 +1724,7 @@ export const PilotFindingsWalkthroughView: React.FC<PilotFindingsWalkthroughView
                           >
                             <div>Tier 2: Full 4-Pillar Plant Audit</div>
                             <div className="text-sm font-black text-white">
-                              ₹{(billingConfig.tier2FullAuditPriceInr || 14999).toLocaleString('en-IN')} One-Time
+                              ₹{(billingConfig.tier2FullAuditPriceInr || 18000).toLocaleString('en-IN')} One-Time
                             </div>
                           </button>
                           <button
@@ -1737,7 +1738,7 @@ export const PilotFindingsWalkthroughView: React.FC<PilotFindingsWalkthroughView
                           >
                             <div>Tier 3: Monthly Control Tower Retainer</div>
                             <div className="text-sm font-black text-white">
-                              ₹{(billingConfig.tier3MonthlyRetainerInr || 24999).toLocaleString('en-IN')} / Month
+                              ₹{(billingConfig.tier3MonthlyRetainerInr || 15000).toLocaleString('en-IN')} / Month
                             </div>
                           </button>
                         </div>
@@ -2559,7 +2560,7 @@ export const PilotFindingsWalkthroughView: React.FC<PilotFindingsWalkthroughView
                     <strong className="text-slate-200">
                       {proformaInvoice.gstinOptional
                         ? `GSTIN: ${proformaInvoice.gstinOptional}`
-                        : 'MSME Exempt / SAC 998311'}
+                        : 'MSME Bill of Supply · 0% GST (Sec 32 CGST Act) · SAC 998311'}
                     </strong>
                   </div>
                 </div>

@@ -112,9 +112,9 @@ export const CANONICAL_FIVE_AGENTS: AutonomousAgentProfile[] = [
     name: 'Agent 01 — CEO Orchestrator',
     nickname: 'Revenue & Goal Commander',
     roleDescription:
-      'Decomposes founder monthly revenue targets (e.g., ₹74,995 = 5 Paid Plant Audits @ ₹14,999) into deterministic sub-tasks across Agents 02–05 with a strict ₹0.00 token budget cap.',
+      'Decomposes founder monthly revenue targets (e.g., ₹90,000 = 5 Paid Plant Audits @ ₹18,000) into deterministic sub-tasks across Agents 02–05 with a strict ₹0.00 token budget cap.',
     status: 'ACTIVE',
-    activeTaskTitle: 'Orchestrating 5 Paid Plant Audits in Chennai Cluster (₹74,995 Target)',
+    activeTaskTitle: 'Orchestrating 5 Paid Plant Audits in Chennai Cluster (₹90,000 Target)',
     completedTasksCount: 12,
     apiTokenBudgetCapInr: 0,
     computeCostSpentInr: 0,
@@ -166,7 +166,7 @@ export const CANONICAL_FIVE_AGENTS: AutonomousAgentProfile[] = [
     roleDescription:
       'Generates printable Proforma Invoices (INV-...), 0%-fee NPCI UPI deep-links, and queues client-submitted 12-digit UTR bank references for 1-click founder unlock.',
     status: 'AWAITING_FOUNDER_APPROVAL',
-    activeTaskTitle: 'Monitoring Teaser-to-Paid Paywall (₹14,999) & Queuing UTR Bank Verifications',
+    activeTaskTitle: 'Monitoring Teaser-to-Paid Paywall (₹18,000) & Queuing UTR Bank Verifications',
     completedTasksCount: 9,
     apiTokenBudgetCapInr: 0,
     computeCostSpentInr: 0,
@@ -176,7 +176,7 @@ export const CANONICAL_FIVE_AGENTS: AutonomousAgentProfile[] = [
 function buildInitialSeedState(): AgentWorkforceState {
   const nowIso = '2026-11-09T09:00:00.000Z';
   const defaultGoalText =
-    'Close 5 Paid Plant Audits in Chennai This Month — ₹74,995 Target (5 × ₹14,999 Direct Bank / UPI Collection)';
+    'Close 5 Paid Plant Audits in Chennai This Month — ₹90,000 Target (5 × ₹18,000 Direct Bank / UPI Collection)';
   const seedTasks: AgentWorkforceTask[] = [
     {
       taskId: 'TASK-20261109-A01',
@@ -184,14 +184,14 @@ function buildInitialSeedState(): AgentWorkforceState {
       agentId: 'AGENT_01_CEO_ORCHESTRATOR',
       agentCode: 'AGENT_01',
       agentName: 'Agent 01 — CEO Orchestrator',
-      title: 'Decomposed Monthly Revenue Target: ₹74,995 (5 Paid Audits @ ₹14,999)',
+      title: 'Decomposed Monthly Revenue Target: ₹90,000 (5 Paid Audits @ ₹18,000)',
       description:
-        'Mapped 5-plant conversion funnel across Ambattur, Sriperumbudur, and Hosur industrial clusters: 20 outbound/inbound leads → 8 3-SKU Teaser Walkthroughs → 5 Paid ₹14,999 Full Audits.',
+        'Mapped 5-plant conversion funnel across Ambattur, Sriperumbudur, and Hosur industrial clusters: 20 outbound/inbound leads → 8 3-SKU Teaser Walkthroughs → 5 Paid ₹18,000 Full Audits.',
       taskType: 'GOAL_DECOMPOSITION',
       status: 'COMPLETED',
       requiresFounderApproval: false,
       computeCostInr: 0,
-      amountInr: 74995,
+      amountInr: 90000,
       createdAt: nowIso,
       updatedAt: nowIso,
     },
@@ -245,13 +245,13 @@ function buildInitialSeedState(): AgentWorkforceState {
       agentName: 'Agent 04 — 4-Pillar Audit Analyst Agent',
       title: 'Quantified ₹2,23,110 Dead Stock & ₹1,75,257 Target Cash Release (AUDIT-DEMO-P1P4)',
       description:
-        'Isolated Top 3 Dormant SKUs for Free Executive Teaser and locked remaining 17 SKUs + 6-Sheet .XLSX Action Workbook behind ₹14,999 Direct UPI/NEFT Paywall.',
+        'Isolated Top 3 Dormant SKUs for Free Executive Teaser and locked remaining 17 SKUs + 6-Sheet .XLSX Action Workbook behind ₹18,000 Direct UPI/NEFT Paywall.',
       taskType: 'FOUR_PILLAR_QUANTIFICATION',
       status: 'COMPLETED',
       requiresFounderApproval: false,
       computeCostInr: 0,
       linkedWorkspaceId: 'AUDIT-DEMO-P1P4',
-      amountInr: 14999,
+      amountInr: 18000,
       createdAt: nowIso,
       updatedAt: nowIso,
     },
@@ -261,16 +261,16 @@ function buildInitialSeedState(): AgentWorkforceState {
       agentId: 'AGENT_05_COMMERCIAL_CLOSER',
       agentCode: 'AGENT_05',
       agentName: 'Agent 05 — Commercial Closer & Bank Billing Agent',
-      title: 'Issued Proforma Invoice INV-20261012-P1P4 (₹14,999) with 0%-Fee UPI Deep-Link',
+      title: 'Issued Proforma Invoice INV-20261012-P1P4 (₹18,000) with 0%-Fee UPI Deep-Link',
       description:
-        'Generated official B2B Proforma Invoice for Tier 2 Full 4-Pillar Audit (₹14,999) payable via UPI (9080540047@yespop) or NEFT/IMPS with 12-digit UTR verification.',
+        'Generated official B2B Proforma Invoice for Tier 2 Full 4-Pillar Audit (₹18,000) payable via UPI (9080540047@yespop) or NEFT/IMPS with 12-digit UTR verification (MSME Bill of Supply · 0% GST).',
       taskType: 'PROFORMA_INVOICE_GENERATION',
       status: 'COMPLETED',
       requiresFounderApproval: false,
       computeCostInr: 0,
       linkedWorkspaceId: 'AUDIT-DEMO-P1P4',
       linkedInvoiceId: 'INV-20261012-P1P4',
-      amountInr: 14999,
+      amountInr: 18000,
       createdAt: nowIso,
       updatedAt: nowIso,
     },
@@ -280,9 +280,9 @@ function buildInitialSeedState(): AgentWorkforceState {
     activeGoal: {
       goalId: 'GOAL-20261109-INIT',
       goalText: defaultGoalText,
-      targetRevenueInr: 74995,
+      targetRevenueInr: 90000,
       targetPaidAuditsCount: 5,
-      unitAuditPriceInr: 14999,
+      unitAuditPriceInr: 18000,
       apiTokenBudgetCapInr: 0,
       computeCostSpentInr: 0,
       createdAt: nowIso,
@@ -312,9 +312,9 @@ function parseTargetRevenueFromGoalText(goalText: string, explicitTarget?: numbe
   const countMatch = goalText.match(/\b(\d+)\s+(?:paid\s+)?(?:plant\s+)?audits?\b/i);
   if (countMatch && countMatch[1]) {
     const count = Number(countMatch[1]);
-    if (Number.isFinite(count) && count > 0) return count * 14999;
+    if (Number.isFinite(count) && count > 0) return count * 18000;
   }
-  return 74995;
+  return 90000;
 }
 
 export function buildDecomposedGoalTasks(
@@ -324,7 +324,7 @@ export function buildDecomposedGoalTasks(
 ): { goal: FounderRevenueGoalRecord; tasks: AgentWorkforceTask[] } {
   const cleanGoalText =
     (typeof goalText === 'string' && goalText.trim()) ||
-    'Close 5 Paid Plant Audits in Chennai This Month — ₹74,995 Target';
+    'Close 5 Paid Plant Audits in Chennai This Month — ₹90,000 Target';
   const resolvedRevenue = parseTargetRevenueFromGoalText(cleanGoalText, targetRevenueInr);
   const unitPrice = DEFAULT_FOUNDER_BILLING_CONFIG.tier2FullAuditPriceInr;
   const targetAuditsCount = Math.max(1, Math.ceil(resolvedRevenue / unitPrice));
@@ -794,7 +794,7 @@ export async function queueAgentUtrVerificationTask(
   return withSerializedLock(filePath, async () => {
     const current = await readStateNode(filePath);
     const nowIso = new Date().toISOString();
-    const amountInr = tier === 'TIER3_MONTHLY_RETAINER' ? 24999 : 14999;
+    const amountInr = tier === 'TIER3_MONTHLY_RETAINER' ? 15000 : 18000;
     const suffix = snapshot.workspaceId.slice(-4).toUpperCase();
 
     const utrTask: AgentWorkforceTask = {

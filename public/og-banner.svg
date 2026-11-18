@@ -60,7 +60,7 @@
   <text x="72" y="232" fill="#F59E0B" font-family="'Inter', system-ui, -apple-system, sans-serif" font-size="42" font-weight="800" letter-spacing="-0.5">Has Stopped Moving (&gt;180 Days)?</text>
 
   <text x="72" y="284" fill="#CBD5E1" font-family="'Inter', system-ui, -apple-system, sans-serif" font-size="20">Drop a 5-column Tally Prime, SAP, or Excel CSV export. Get a Free 3-SKU</text>
-  <text x="72" y="314" fill="#CBD5E1" font-family="'Inter', system-ui, -apple-system, sans-serif" font-size="20">Diagnostic Teaser (₹0) or unlock the 4-Pillar Plant Audit Workbook (₹14,999).</text>
+  <text x="72" y="314" fill="#CBD5E1" font-family="'Inter', system-ui, -apple-system, sans-serif" font-size="20">Diagnostic Teaser (₹0) or unlock the 4-Pillar Plant Audit Workbook (₹18,000 · 0% GST).</text>
 
   <!-- 4-Pillar Control-Tower Telemetry Cards (#0B1320 recessed inside #111C2D) -->
   <g transform="translate(72, 372)">
@@ -86,7 +86,7 @@
   </g>
 
   <!-- Footer Signature Bar -->
-  <text x="72" y="552" fill="#94A3B8" font-family="'JetBrains Mono', monospace" font-size="15">Prepared by C. Jones Snowin · Snowin Ventures, Chennai · Direct UPI: 9080540047@yespop</text>
+  <text x="72" y="552" fill="#94A3B8" font-family="'JetBrains Mono', monospace" font-size="15">Prepared by C. Jones Snowin · Snowin Ventures, Chennai · MSME: UDYAM-TN-02-0444630 (0% GST)</text>
   <rect x="920" y="530" width="204" height="32" rx="8" fill="#0B1320" stroke="#F59E0B" stroke-width="1.2" />
-  <text x="1022" y="551" text-anchor="middle" fill="#FBBF24" font-family="'JetBrains Mono', monospace" font-size="13" font-weight="700">₹0 TEASER · ₹14,999 AUDIT</text>
+  <text x="1022" y="551" text-anchor="middle" fill="#FBBF24" font-family="'JetBrains Mono', monospace" font-size="13" font-weight="700">₹0 TEASER · ₹18,000 AUDIT</text>
 </svg>

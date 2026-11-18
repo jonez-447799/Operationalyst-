@@ -297,5 +297,45 @@
     "metadata": {
       "sourceSection": "commercial_home"
     }
+  },
+  {
+    "eventId": "FNLEVT-20261117-E6F4",
+    "timestamp": "2026-11-17T03:45:06.356Z",
+    "eventType": "LANDING_PAGE_VIEW",
+    "metadata": {
+      "sourceSection": "commercial_landing"
+    }
+  },
+  {
+    "eventId": "FNLEVT-20261117-4C39",
+    "timestamp": "2026-11-17T03:46:41.094Z",
+    "eventType": "LANDING_PAGE_VIEW",
+    "metadata": {
+      "sourceSection": "commercial_landing"
+    }
+  },
+  {
+    "eventId": "FNLEVT-20261117-6FF2",
+    "timestamp": "2026-11-17T03:46:49.756Z",
+    "eventType": "LANDING_PAGE_VIEW",
+    "metadata": {
+      "sourceSection": "commercial_landing"
+    }
+  },
+  {
+    "eventId": "FNLEVT-20261117-BE87",
+    "timestamp": "2026-11-17T03:46:59.390Z",
+    "eventType": "SAMPLE_REPORT_CLICKED",
+    "metadata": {
+      "sourceSection": "dedicated_sample_audit_route"
+    }
+  },
+  {
+    "eventId": "FNLEVT-20261117-6E64",
+    "timestamp": "2026-11-17T03:47:48.924Z",
+    "eventType": "LANDING_PAGE_VIEW",
+    "metadata": {
+      "sourceSection": "commercial_landing"
+    }
   }
 ]

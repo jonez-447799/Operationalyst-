@@ -337,7 +337,7 @@ export const FAQ_ITEMS: FaqItem[] = [
   {
     id: 'faq_9',
     q: 'Is the pilot free or paid?',
-    a: 'Every plant begins with our Free 3-SKU Diagnostic Teaser & Executive Exposure Summary (₹0) directly from your CSV upload. Unlocking the complete multi-pillar line-item audit workbook and floor action plan is a single ₹14,999 one-time unlock via UPI (9080540047@yespop) or NEFT/IMPS—with zero automatic subscriptions or hidden lock-in fees.',
+    a: 'Every plant begins with our Free 3-SKU Diagnostic Teaser & Executive Exposure Summary (₹0) directly from your CSV upload. Unlocking the complete multi-pillar line-item audit workbook and floor action plan is a single ₹18,000 one-time unlock via UPI or NEFT/IMPS under MSME Bill of Supply (0% GST — Snowin Ventures Udyam Reg: UDYAM-TN-02-0444630, SAC 998311)—with zero automatic subscriptions or hidden lock-in fees.',
   },
   {
     id: 'faq_10',
@@ -525,7 +525,7 @@ export const OBJECTION_MATRIX: ObjectionItem[] = [
     evidenceAndMechanism:
       'Operationalyst delivers the exact 6-sheet working papers, aging splits, and physical-vs-book bin schedules that CAs use to sign off inventory valuation faster.',
     institutionalGuarantee:
-      'Includes an optional 20% CA & Stock Auditor Partner Desk with co-branded executive workbooks.',
+      'Includes an optional CA Wholesale Working-Paper Licensing Desk (₹14,400 Partner Diagnostic / ₹12,000/mo Partner Watchdog vs. ₹18,000 / ₹15,000 Direct) with co-branded executive workbooks.',
     verificationStep:
       'Download or print the 2-Page Executive PDF Briefing to share with your CA.',
   },
@@ -592,7 +592,7 @@ const RAW_ICEBERG_DIMENSIONS: Array<{
   preventativeMechanism: string;
   metric: string;
 }> = [
-  { num: '01', name: 'Loss Aversion Framing', category: 'Decision Science', scope: 'Quantifies active 22% carrying burn rather than vague upside promises.', symptom: 'Teams postpone stock cleanups because idle racks feel sunk cost.', underlyingCause: 'Losses loom larger than theoretical efficiency gains.', financialImpact: '₹4.9L+ annual OD interest drag per ₹22L dormant pile.', preventativeMechanism: 'Daily rupee carrying-burn visibility.', metric: '22% p.a. Burn Baseline' },
+  { num: '01', name: 'Carrying-Cost Risk Framing', category: 'Decision Science', scope: 'Quantifies active 22% carrying burn rather than vague upside promises.', symptom: 'Teams postpone stock cleanups because idle racks feel sunk cost.', underlyingCause: 'Capital bleed stays invisible until cashflow tightens.', financialImpact: '₹4.9L+ annual OD interest drag per ₹22L dormant pile.', preventativeMechanism: 'Daily rupee carrying-burn visibility.', metric: '22% p.a. Burn Baseline' },
   { num: '02', name: 'Zero-Write ERP Isolation', category: 'Trust Architecture', scope: 'Read-only 5-column CSV workflow removes IT friction and data-loss fear.', symptom: 'IT blocks SaaS pilots requiring ERP database connectors.', underlyingCause: 'Status-quo bias protects production ERP stability.', financialImpact: '6-month delayed audit starts.', preventativeMechanism: 'Offline CSV/XLSX template intake.', metric: '0 ERP Write Permissions' },
   { num: '03', name: 'Pareto 80/20 Cognitive Offload', category: 'Cognitive Load', scope: 'Ranks top stagnant rupees first instead of dumping 12,000 unranked rows.', symptom: 'Stores teams freeze when handed massive ERP stock dumps.', underlyingCause: 'Choice overload stalls Monday action.', financialImpact: '80% of locked capital sits unaddressed.', preventativeMechanism: 'Descending rupee rank + top-18 priority cut.', metric: 'Top 20% = 76–80% Value' },
   { num: '04', name: 'Item 07 Reserve Spares Shield', category: 'Engineering Safety', scope: 'Protects insurance CNC spares from blind liquidation rules.', symptom: 'Plant Heads reject financial cleanups that endanger uptime.', underlyingCause: 'Blanket aging rules ignore critical maintenance spares.', financialImpact: 'Line stoppage risks up to ₹8,500/hr.', preventativeMechanism: 'Dedicated Item 07 reserve exclusion gate.', metric: '100% Critical Uptime Lock' },
@@ -603,7 +603,7 @@ const RAW_ICEBERG_DIMENSIONS: Array<{
   { num: '09', name: 'Cryptographic Deletion Proof', category: 'Governance', scope: '14-day automatic purge backed by verifiable DELCERT-... certificates.', symptom: 'Finance controllers demand written data destruction proof.', underlyingCause: 'Enterprise audit compliance policies.', financialImpact: 'Blocked pilot approvals by legal/finance.', preventativeMechanism: 'Multi-store purge sweep + DELCERT receipt.', metric: '14-Day Auto Purge' },
   { num: '10', name: 'Deterministic Formula Parity', category: 'Reproducibility', scope: '100% spreadsheet-verifiable equations with zero probabilistic hallucinations.', symptom: 'CFOs challenge black-box AI inventory estimates.', underlyingCause: 'Statutory audits demand exact line-item arithmetic.', financialImpact: 'Claims rejected during CA review.', preventativeMechanism: 'Published 6-stage formula specification.', metric: '100% Math Parity' },
   { num: '11', name: 'Contractual Guarantee Anchor', category: 'Risk Reversal', scope: '₹2,50,000 minimum leak discovery guarantee or 100% fee refund.', symptom: 'Upfront audit fees stall SME discretionary spend.', underlyingCause: 'Asymmetric downside risk for first-time buyers.', financialImpact: 'Unclaimed cash leaks persist quarter over quarter.', preventativeMechanism: 'Written refund covenant in diagnostic scope.', metric: '₹2.5L Leak Guarantee' },
-  { num: '12', name: 'Free 3-SKU Diagnostic Entry', category: 'Foot-in-the-Door', scope: 'Prove real rupee traps on your own file at ₹0 before paying ₹14,999.', symptom: 'Cold buyers doubt generic industry benchmarks.', underlyingCause: 'High skepticism toward generic B2B ROI claims.', financialImpact: 'Slow enterprise sales cycles.', preventativeMechanism: 'Instant CSV sandbox + ₹0 Teaser Workspace.', metric: '₹0 Zero-Risk Entry' },
+  { num: '12', name: 'Free 3-SKU Diagnostic Entry', category: 'Zero-Friction Entry', scope: 'Prove real rupee traps on your own file at ₹0 before paying ₹18,000.', symptom: 'Cold buyers doubt generic industry benchmarks.', underlyingCause: 'High skepticism toward generic B2B ROI claims.', financialImpact: 'Slow enterprise sales cycles.', preventativeMechanism: 'Instant CSV sandbox + ₹0 Teaser Workspace.', metric: '₹0 Zero-Risk Entry' },
   { num: '13', name: 'Multi-Stakeholder Alignment', category: 'JTBD Architecture', scope: 'Prepares tailored metrics for Owner, Plant Head, Stores, and CA separately.', symptom: 'One skeptical department head vetoes cross-functional tools.', underlyingCause: 'Different jobs-to-be-done across factory seats.', financialImpact: 'Stalled cross-department sign-offs.', preventativeMechanism: '4-Role Lens switcher & shared workbook.', metric: '4 Plant Lenses Aligned' },
   { num: '14', name: 'Dual-Mode Sample Verification', category: 'Evidence Anchoring', scope: 'Compare 12,400-SKU plant scale alongside 20-SKU exact sandbox totals.', symptom: 'Buyers test if headline metrics reconcile to sample tables.', underlyingCause: 'Financial analysts spot mismatched numbers immediately.', financialImpact: 'Loss of credibility when numbers diverge.', preventativeMechanism: 'Engine-computed Mode A & Mode B reconciliation.', metric: '0 Reconciliation Drift' },
   { num: '15', name: 'Threshold Sensitivity Modeling', category: 'Scenario Control', scope: 'Toggle Strict CFO (120d) vs Standard (180d) vs Lenient (270d) cutoffs.', symptom: 'Departments argue over what qualifies as truly dead stock.', underlyingCause: 'Fixed thresholds feel arbitrary across product lines.', financialImpact: 'Analysis paralysis in review meetings.', preventativeMechanism: 'Live CFO policy slider + row reclassification.', metric: '3 Instant Policy Presets' },
@@ -613,9 +613,9 @@ const RAW_ICEBERG_DIMENSIONS: Array<{
   { num: '19', name: 'Disposition Path Clarity', category: 'Execution Design', scope: 'Assigns Scrap vs Vendor Contra vs Re-machine vs Reorder Freeze per SKU.', symptom: 'Identified dead stock remains sitting for another 6 months.', underlyingCause: 'Lack of concrete liquidation playbook.', financialImpact: 'Zero realized cash recovery despite audits.', preventativeMechanism: 'Line-item CAPA disposition tracker.', metric: '4 Disposition Paths' },
   { num: '20', name: 'ECN Revision Trap Detection', category: 'Engineering Sync', scope: 'Flags old revision blanks still sitting idle after drawing upgrades.', symptom: 'Engineering updates CAD revisions without freezing old raw buys.', underlyingCause: 'Siloed QA ECN logs and stores replenishment.', financialImpact: 'Permanent obsolescence write-downs.', preventativeMechanism: 'Revision-linked aging velocity alerts.', metric: 'ECN Risk Flagged' },
   { num: '21', name: 'MOQ Over-Ordering Detector', category: 'Procurement Discipline', scope: 'Balances apparent 8% bulk discounts against 22% multi-year holding drain.', symptom: 'Buyers purchase 24-month supply for small unit price cuts.', underlyingCause: 'Procurement KPI rewards unit rate over cash cycle.', financialImpact: 'Net negative ROI after 6 months storage.', preventativeMechanism: 'Months-of-cover vs discount payback check.', metric: 'Holding vs Rebate Math' },
-  { num: '22', name: 'CA-Ready Proforma & Udyam Flow', category: 'Commercial Trust', scope: 'Generates SAC 998311 B2B invoices with MSME Udyam registration.', symptom: 'Accounts payable stalls non-compliant vendor invoices.', underlyingCause: 'Missing statutory tax/MSME classifications.', financialImpact: 'Delayed procurement clearance.', preventativeMechanism: 'Auto INV-... Proforma + RCPT-... Paid Receipt.', metric: 'SAC 998311 Compliant' },
-  { num: '23', name: 'Frictionless UPI / NEFT Settlement', category: 'Payment UX', scope: 'Scannable NPCI UPI QR code (9080540047@yespop) plus 12-digit UTR unlock.', symptom: 'Corporate card limits fail mid-checkout for SME owners.', underlyingCause: 'B2B SMEs prefer instant UPI or NEFT bank transfer.', financialImpact: 'Abandoned checkouts.', preventativeMechanism: 'Live NPCI SVG QR + instant UTR audit trail.', metric: '9080540047@yespop Direct' },
-  { num: '24', name: 'Non-Coercive Teaser Transparency', category: 'Ethical Persuasion', scope: 'Zero fake urgency timers or inflated social proof—pure ledger math.', symptom: 'Manufacturing directors ignore hyped SaaS countdown banners.', underlyingCause: 'High B2B skepticism toward consumer marketing tactics.', financialImpact: 'Brand erosion in industrial clusters.', preventativeMechanism: 'Real sample math + transparent pricing FAQ.', metric: '0 Artificial Timers' },
+  { num: '22', name: 'CA-Ready Proforma & Udyam Flow', category: 'Commercial Trust', scope: 'Generates SAC 998311 B2B Bills of Supply (0% GST) with Udyam Reg: UDYAM-TN-02-0444630.', symptom: 'Accounts payable stalls non-compliant vendor invoices.', underlyingCause: 'Missing statutory tax/MSME classifications.', financialImpact: 'Delayed procurement clearance.', preventativeMechanism: 'Auto INV-... Proforma + RCPT-... Paid Receipt.', metric: 'SAC 998311 · 0% GST' },
+  { num: '23', name: 'Frictionless UPI / NEFT Settlement', category: 'Payment UX', scope: 'Scannable NPCI UPI QR code checkout inside your private proforma workspace plus 12-digit UTR unlock.', symptom: 'Corporate card limits fail mid-checkout for SME owners.', underlyingCause: 'B2B SMEs prefer instant UPI or NEFT bank transfer.', financialImpact: 'Abandoned checkouts.', preventativeMechanism: 'Live NPCI SVG QR + instant UTR audit trail.', metric: '0%-Fee UPI / NEFT Direct' },
+  { num: '24', name: 'Transparent Teaser Math', category: 'Operational Clarity', scope: 'Zero fake urgency timers or inflated social proof—pure ledger math.', symptom: 'Manufacturing directors ignore hyped SaaS countdown banners.', underlyingCause: 'High B2B skepticism toward consumer marketing tactics.', financialImpact: 'Brand erosion in industrial clusters.', preventativeMechanism: 'Real sample math + transparent pricing FAQ.', metric: '0 Artificial Timers' },
   { num: '25', name: 'Header Alias Auto-Tolerance', category: 'Onboarding Ease', scope: 'Accepts MATNR, Stock Item Name, Qty On Hand, and VERPR automatically.', symptom: 'Every plant formats Excel column titles differently.', underlyingCause: 'Diverse ERP versions across clusters.', financialImpact: 'High CSV upload rejection frustration.', preventativeMechanism: 'Multi-ERP alias dictionary resolver.', metric: 'Tally / SAP / Busy Ready' },
   { num: '26', name: '15-Minute Calendar Lock (.ICS)', category: 'Commitment Ladder', scope: 'Lets buyers lock a 15-min review call via WhatsApp or .ICS download.', symptom: 'Unscheduled email leads go cold over 48 hours.', underlyingCause: 'Context switching between shop floor and inbox.', financialImpact: 'Drop-off between upload and review.', preventativeMechanism: 'Instant WhatsApp deep-link + .ICS invite.', metric: '15-Min Walkthrough Slot' },
   { num: '27', name: 'Verified Proof Hash Continuity', category: 'Audit Lineage', scope: 'Retains SHA-256 dataset prefix even after raw rows purge on day 14.', symptom: 'Clients want proof of past findings after raw data deletion.', underlyingCause: 'Tension between confidentiality purge and audit history.', financialImpact: 'Loss of historical baseline comparison.', preventativeMechanism: 'Pre-purge summary hash preservation.', metric: 'SHA-256 Lineage Lock' },
@@ -752,15 +752,16 @@ export const COMMERCIAL_TIERS: CommercialTier[] = [
     id: 'tier_18k_diagnostic',
     name: 'Full 4-Pillar Line-Item Unlock',
     badge: '₹2,50,000 Leak Discovery Guarantee',
-    price: '₹14,999',
-    period: 'one-time unlock',
+    price: '₹18,000',
+    period: 'one-time unlock · 0% GST (MSME Bill of Supply)',
     description:
       'Complete line-by-line 4-Pillar audit unlock, 6-sheet Excel workbook, and direct 48-Hr Founder Walkthrough.',
-    guarantee: '100% Money-Back Refund if < ₹2,50,000 identified',
+    guarantee:
+      '100% Fee Refund Guarantee if our 48-hour audit identifies less than ₹2,50,000 in verifiable ledger/rate leaks; actual cash realization depends on plant floor execution.',
     features: [
       'Full 5-column ERP ledger teardown & Pareto hitlist',
       'P2 Gate OTIF, P3 Freight & P4 Bin Variance reconciliation',
-      'SAC 998311 B2B Proforma & Official Paid Receipt',
+      'MSME Bill of Supply (UDYAM-TN-02-0444630 · SAC 998311 · 0% GST)',
       'Direct walkthrough with Founder C. Jones Snowin',
       '14-Day Auto Purge + DELCERT Cryptographic Certificate',
     ],
@@ -771,12 +772,12 @@ export const COMMERCIAL_TIERS: CommercialTier[] = [
     id: 'tier_15k_watchdog',
     name: 'Monthly ERP Watchdog Retainer',
     badge: 'Continuous Drift Protection',
-    price: '₹24,999',
-    period: 'per month',
+    price: '₹15,000',
+    period: 'per month · 0% GST (MSME Bill of Supply)',
     description:
-      'Recurring fortnightly 4-pillar variance audits, new slow-mover alerts, and transporter rate-card enforcement.',
+      'Recurring monthly 4-pillar variance audits, new slow-mover alerts, and transporter rate-card enforcement.',
     features: [
-      'Fortnightly automated CSV variance audit runs',
+      'Monthly automated CSV variance audit runs',
       'Real-time slow-mover & reorder freeze alerts',
       'Transporter corridor overcharge & detention watchdog',
       'Multi-plant comparison across SIPCOT & Ambattur units',
@@ -786,14 +787,15 @@ export const COMMERCIAL_TIERS: CommercialTier[] = [
   },
   {
     id: 'tier_ca_partner',
-    name: '20% CA & Stock Auditor Partner Desk',
-    badge: 'Chartered Accountant Workbench',
-    price: '20% Share',
+    name: 'CA & Auditor Wholesale Licensing Desk',
+    badge: 'ICAI-Compliant Working-Paper Licensing',
+    price: '₹14,400',
+    period: 'Partner Diagnostic (₹12,000/mo Watchdog)',
     description:
-      'Revenue share & co-branded working-paper workbench for Chartered Accountants and industrial audit firms.',
+      'Arm’s-length wholesale working-paper licensing for Chartered Accountants and industrial audit firms (vs. ₹18,000 / ₹15,000 Direct).',
     features: [
-      '20% Revenue share on referred plant diagnostics',
-      'Co-branded executive audit workbooks & dossiers',
+      'Wholesale Partner Rate: ₹14,400 Diagnostic (vs ₹18,000 Direct) & ₹12,000/mo Watchdog',
+      'Co-branded executive audit working papers for statutory & internal stock audits',
       'Item 07 & MatchHealth% audit trail documentation',
       'Priority 24-hour review support desk',
     ],

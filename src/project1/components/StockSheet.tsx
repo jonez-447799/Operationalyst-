@@ -802,10 +802,15 @@ export const StockSheet: React.FC<StockSheetProps> = ({
                     <td className="py-2 px-2 text-center">
                       <div className="flex items-center justify-center gap-1">
                         <button
+                          type="button"
                           onClick={() => {
                             const text = `*DEAD STOCK RECOVERY ALERT*\nItem: ${item.itemName} (${item.itemCode})\nCategory: ${item.category}\nIdle Days: ${item.daysIdle} days\nClosing Value: ₹${(item.closingValue || 0).toLocaleString('en-IN')}\nStatus: ${item.status} | ABC: ${item.abcClass}\nRecommendation: ${item.action}\nAs of date: ${rules.asOfDate}`;
-                            navigator.clipboard.writeText(text);
-                            window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+                            navigator.clipboard?.writeText(text).catch(() => {});
+                            const a = document.createElement('a');
+                            a.href = `https://wa.me/?text=${encodeURIComponent(text)}`;
+                            a.target = '_blank';
+                            a.rel = 'noopener noreferrer';
+                            a.click();
                           }}
                           className="text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 p-1 rounded hover:bg-emerald-50 dark:hover:bg-emerald-950/40 transition-colors"
                           title="Share SKU WhatsApp Alert / Quote"
@@ -814,6 +819,7 @@ export const StockSheet: React.FC<StockSheetProps> = ({
                           <MessageSquare className="w-3.5 h-3.5" />
                         </button>
                         <button
+                          type="button"
                           onClick={() => onDeleteItem(item.id)}
                           className="text-neutral-400 hover:text-rose-500 p-1 rounded transition-colors"
                           title="Delete SKU row"

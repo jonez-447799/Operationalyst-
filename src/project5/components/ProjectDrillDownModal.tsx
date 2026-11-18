@@ -599,11 +599,16 @@ export const ProjectDrillDownModal: React.FC<ProjectDrillDownModalProps> = ({
                         <td className="py-2.5 px-3 text-right font-bold text-white">{formatINR(bill.amountRupees)}</td>
                         <td className="py-2.5 px-3 font-sans">
                           <button
+                            type="button"
                             onClick={() => {
                               const msg = encodeURIComponent(
                                 `Dear ${bill.customerName}, gentle reminder regarding Invoice ${bill.invoiceNo} for ${formatINR(bill.amountRupees)} (overdue by ${bill.daysOverdue} days past normal credit). Kindly share UTR / NEFT confirmation today.`
                               );
-                              window.open(`https://wa.me/?text=${msg}`, '_blank');
+                              const a = document.createElement('a');
+                              a.href = `https://wa.me/?text=${msg}`;
+                              a.target = '_blank';
+                              a.rel = 'noopener noreferrer';
+                              a.click();
                             }}
                             className="px-2 py-1 text-[11px] font-medium rounded bg-emerald-600/20 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-600/30 flex items-center gap-1 cursor-pointer"
                           >

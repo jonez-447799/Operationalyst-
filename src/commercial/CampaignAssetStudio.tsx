@@ -78,7 +78,7 @@ export const CampaignAssetStudio: React.FC<CampaignAssetStudioProps> = ({
       headline: 'How Much of Your Inventory Hasn’t Moved?',
       body: 'Your total inventory value doesn’t show which individual items may have been inactive for months.\n\nOperationalyst helps turn existing inventory data into clear review priorities.',
       cta: 'Request Factory Audit →',
-      psychologicalFrame: 'Loss Aversion (Prospect Theory)',
+      psychologicalFrame: 'Carrying-Cost Exposure Framing',
       targetRole: 'Owner / Managing Director / Plant Head',
       destinationPath: '/audit?frame=loss',
       visualConcept: 'Close-up of high warehouse racking followed by a highlighted spreadsheet showing a ₹14.8L part inactive for 240 days.',
@@ -144,7 +144,7 @@ export const CampaignAssetStudio: React.FC<CampaignAssetStudioProps> = ({
   const LINKEDIN_POSTS = [
     {
       id: 'li_post_1',
-      title: 'Post 1: The Gross Inventory Illusion (Loss Aversion)',
+      title: 'Post 1: The Gross Inventory Illusion (Carrying-Cost Exposure)',
       hook: 'Most manufacturing CEOs know their total inventory figure to the rupee. Almost none know which 15 SKUs have been dead for 180 days.',
       body: `Most manufacturing CEOs know their total inventory figure to the rupee.
 

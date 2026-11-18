@@ -3,25 +3,23 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   ShieldAlert,
   Download,
   Calendar,
-  Lock,
   MessageCircle,
   Copy,
   Check,
   FileSpreadsheet,
   Upload,
   UserCheck,
-  Eye,
   FileText,
-  Clock,
   Send,
-  Building2
+  ShieldCheck,
 } from 'lucide-react';
 import { BEHAVIORAL_ICEBERG_DIMENSIONS } from './homepageConfig';
+import { parseCsvLineRFC, maskOemBrandNames } from './TallyCleanerAndClaims';
 
 interface SampleLeakRow {
   rowNum: number;
@@ -62,16 +60,45 @@ export const IcebergControlSystems: React.FC = () => {
   const [selectedSlot, setSelectedSlot] = useState<string>('11:00 AM IST');
   const [companyName, setCompanyName] = useState<string>('');
   const [userRole, setUserRole] = useState<string>('Plant Head / Operations Director');
+  const [delcertHash, setDelcertHash] = useState<string>('DELCERT-E3B0C44298FC1C14');
+  const [slotCopiedNotice, setSlotCopiedNotice] = useState<boolean>(false);
+
+  useEffect(() => {
+    let active = true;
+    const seed = `${sanitizerFileName}|${sanitizedRows.length}|operationalyst`;
+    if (typeof crypto !== 'undefined' && crypto.subtle && typeof TextEncoder !== 'undefined') {
+      const data = new TextEncoder().encode(seed);
+      crypto.subtle
+        .digest('SHA-256', data)
+        .then((buf) => {
+          if (!active) return;
+          const hex = Array.from(new Uint8Array(buf))
+            .map((b) => b.toString(16).padStart(2, '0'))
+            .join('')
+            .toUpperCase()
+            .slice(0, 16);
+          setDelcertHash(`DELCERT-${hex}`);
+        })
+        .catch(() => {});
+    }
+    return () => {
+      active = false;
+    };
+  }, [sanitizerFileName, sanitizedRows.length]);
 
   const handleCopyPhone = () => {
-    navigator.clipboard.writeText(officialPhone);
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(officialPhone).catch(() => {});
+    }
     setCopiedPhone(true);
     setTimeout(() => setCopiedPhone(false), 2000);
   };
 
   const handleCopyEmail = () => {
-    const scopeText = `Operationalyst Audit Scope Request\nContact: ${officialEmail}\nPhone: ${officialPhone}\nGuarantee: ₹18,000 48-Hour Diagnostic (100% Refund if < ₹2.5L Leak Found)`;
-    navigator.clipboard.writeText(scopeText);
+    const scopeText = `Operationalyst Audit Scope Request\nContact: ${officialEmail}\nPhone: ${officialPhone}\nTerms: ₹18,000 48-Hour Diagnostic (MSME Bill of Supply, 0% GST — 100% Fee Refund if < ₹2.5L Verifiable Leaks Found)`;
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(scopeText).catch(() => {});
+    }
     setCopiedEmail(true);
     setTimeout(() => setCopiedEmail(false), 2000);
   };
@@ -85,11 +112,12 @@ export const IcebergControlSystems: React.FC = () => {
     reader.onload = (evt) => {
       const text = evt.target?.result as string;
       if (!text) return;
-      const lines = text.split(/\r\n|\n/).filter(line => line.trim() !== '');
+      const lines = text.split(/\r\n|\n/).filter((line) => line.trim() !== '');
       if (lines.length < 2) return;
 
-      const headers = lines[0].split(',').map(h => h.trim().replace(/^"(.*)"$/, '$1'));
-      const sensitivePattern = /party|vendor|supplier|customer|buyer|gstin|phone|mobile|contact|address|company/i;
+      const headers = parseCsvLineRFC(lines[0]);
+      const sensitivePattern =
+        /party|vendor|supplier|customer|buyer|gstin|phone|mobile|contact|address|company/i;
 
       const keptHeaderIndices: number[] = [];
       const removed: string[] = [];
@@ -102,15 +130,18 @@ export const IcebergControlSystems: React.FC = () => {
         }
       });
 
-      setStrippedColumns(removed.length > 0 ? removed : ['(No sensitive vendor/party headers detected)']);
+      setStrippedColumns(
+        removed.length > 0 ? removed : ['(No sensitive vendor/party headers detected)']
+      );
 
       const parsedRows: Array<Record<string, string>> = [];
       lines.slice(1, 6).forEach((line, rowIdx) => {
-        const cols = line.split(',').map(c => c.trim().replace(/^"(.*)"$/, '$1'));
+        const cols = parseCsvLineRFC(line);
         const rowObj: Record<string, string> = { Row: (rowIdx + 1).toString() };
         keptHeaderIndices.slice(0, 4).forEach((colIdx, idx) => {
           const colName = headers[colIdx] || `Col_${idx + 1}`;
-          rowObj[colName] = cols[colIdx] || '-';
+          const { masked } = maskOemBrandNames(cols[colIdx] || '-');
+          rowObj[colName] = masked;
         });
         parsedRows.push(rowObj);
       });
@@ -124,7 +155,9 @@ export const IcebergControlSystems: React.FC = () => {
     if (sanitizedRows.length === 0) return;
     const keys = Object.keys(sanitizedRows[0]);
     const headerRow = keys.join(',');
-    const dataRows = sanitizedRows.map(r => keys.map(k => `"${(r[k] || '').replace(/"/g, '""')}"`).join(','));
+    const dataRows = sanitizedRows.map((r) =>
+      keys.map((k) => `"${(r[k] || '').replace(/"/g, '""')}"`).join(',')
+    );
     const csvContent = [headerRow, ...dataRows].join('\n');
 
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -138,10 +171,15 @@ export const IcebergControlSystems: React.FC = () => {
     URL.revokeObjectURL(url);
   };
 
-  const handleConfirmWhatsAppSlot = () => {
-    const msg = `Hello C. Jones Snowin,\nI would like to lock a 15-Minute Factory Leak Review slot:\n• Date: ${selectedDate}\n• Time: ${selectedSlot}\n• Company/Plant: ${companyName || 'Not specified'}\n• Role: ${userRole}\n\nPlease confirm availability for the ₹18,000 Diagnostic review.`;
-    const waUrl = `https://wa.me/${rawPhone}?text=${encodeURIComponent(msg)}`;
-    window.open(waUrl, '_blank');
+  const slotWhatsAppMessage = `Hello C. Jones Snowin,\nI would like to lock a 15-Minute Factory Leak Review slot:\n• Date: ${selectedDate}\n• Time: ${selectedSlot}\n• Company/Plant: ${companyName || 'Not specified'}\n• Role: ${userRole}\n\nPlease confirm availability for the ₹18,000 Diagnostic review (MSME Bill of Supply, 0% GST).`;
+  const slotWhatsAppUrl = `https://wa.me/${rawPhone}?text=${encodeURIComponent(slotWhatsAppMessage)}`;
+
+  const handleCopySlotSummary = () => {
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(slotWhatsAppMessage).catch(() => {});
+    }
+    setSlotCopiedNotice(true);
+    setTimeout(() => setSlotCopiedNotice(false), 2500);
   };
 
   const handleDownloadICS = () => {
@@ -341,15 +379,17 @@ export const IcebergControlSystems: React.FC = () => {
                 <MessageCircle className="w-5 h-5 fill-current" /> Open WhatsApp (+91 90805 40047)
               </a>
               <button
+                type="button"
                 onClick={handleCopyPhone}
-                className="px-4 py-3 bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold rounded-xl transition flex items-center justify-center gap-2 border border-slate-700"
+                className="px-4 py-3 bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold rounded-xl transition flex items-center justify-center gap-2 border border-slate-700 cursor-pointer"
               >
                 {copiedPhone ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
                 {copiedPhone ? 'Copied Number!' : 'Copy WhatsApp'}
               </button>
               <button
+                type="button"
                 onClick={handleCopyEmail}
-                className="px-4 py-3 bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold rounded-xl transition flex items-center justify-center gap-2 border border-slate-700"
+                className="px-4 py-3 bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold rounded-xl transition flex items-center justify-center gap-2 border border-slate-700 cursor-pointer"
               >
                 {copiedEmail ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
                 {copiedEmail ? 'Copied Scope!' : 'Copy Scope / Email'}
@@ -364,19 +404,24 @@ export const IcebergControlSystems: React.FC = () => {
               <div className="flex items-center gap-2 text-emerald-400 font-semibold text-xs uppercase tracking-wider mb-1">
                 <FileSpreadsheet className="w-4 h-4" /> 100% In-Browser Privacy Protection
               </div>
-              <h3 className="text-xl font-bold text-white">Client-Side CSV Party & Vendor Name Stripper</h3>
+              <h3 className="text-xl font-bold text-white">Client-Side CSV Party &amp; Vendor Name Stripper</h3>
               <p className="text-slate-400 text-sm">
-                Sanitizes sensitive vendor names, GSTINs, and buyer details before sharing dumps. Data never leaves your browser.
+                Sanitizes sensitive vendor names, GSTINs, OEM buyer tags, and buyer details before sharing dumps. Data never leaves your browser.
               </p>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="px-2.5 py-1.5 rounded-md bg-slate-950 border border-emerald-500/30 text-[11px] font-mono text-emerald-300 inline-flex items-center gap-1.5">
+                <ShieldCheck className="w-3.5 h-3.5" />
+                <span>{delcertHash}</span>
+              </span>
               <label className="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-sm font-semibold rounded-lg transition cursor-pointer flex items-center gap-2 border border-slate-700">
                 <Upload className="w-4 h-4 text-emerald-400" /> Upload CSV File
                 <input type="file" accept=".csv" onChange={handleCSVUpload} className="hidden" />
               </label>
               <button
+                type="button"
                 onClick={handleDownloadSanitizedCSV}
-                className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold rounded-lg shadow-lg transition flex items-center gap-2 border border-emerald-500/30"
+                className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold rounded-lg shadow-lg transition flex items-center gap-2 border border-emerald-500/30 cursor-pointer"
               >
                 <Download className="w-4 h-4" /> Download Sanitized 5-Column CSV
               </button>
@@ -485,15 +530,26 @@ export const IcebergControlSystems: React.FC = () => {
             </div>
 
             <div className="pt-4 flex flex-col sm:flex-row items-center gap-3">
-              <button
-                onClick={handleConfirmWhatsAppSlot}
+              <a
+                href={slotWhatsAppUrl}
+                target="_blank"
+                rel="noopener noreferrer"
                 className="w-full sm:w-auto flex-1 px-4 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl transition flex items-center justify-center gap-2 border border-emerald-500/30"
               >
                 <Send className="w-4 h-4" /> Confirm Slot on WhatsApp (+91 90805 40047)
+              </a>
+              <button
+                type="button"
+                onClick={handleCopySlotSummary}
+                className="w-full sm:w-auto px-4 py-3 bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold rounded-xl transition flex items-center justify-center gap-2 border border-slate-700 cursor-pointer"
+              >
+                {slotCopiedNotice ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+                {slotCopiedNotice ? 'Copied Slot Summary' : 'Copy Slot Note'}
               </button>
               <button
+                type="button"
                 onClick={handleDownloadICS}
-                className="w-full sm:w-auto px-4 py-3 bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold rounded-xl transition flex items-center justify-center gap-2 border border-slate-700"
+                className="w-full sm:w-auto px-4 py-3 bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold rounded-xl transition flex items-center justify-center gap-2 border border-slate-700 cursor-pointer"
               >
                 <Calendar className="w-4 h-4 text-emerald-400" /> Download Calendar (.ics)
               </button>
@@ -532,8 +588,9 @@ export const IcebergControlSystems: React.FC = () => {
 
             <div className="pt-4">
               <button
+                type="button"
                 onClick={handleDownloadTeaserReport}
-                className="w-full px-5 py-3.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl shadow-lg transition flex items-center justify-center gap-2 border border-emerald-500/30"
+                className="w-full px-5 py-3.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl shadow-lg transition flex items-center justify-center gap-2 border border-emerald-500/30 cursor-pointer"
               >
                 <Download className="w-5 h-5" /> Download Boardroom Teaser HTML Report
               </button>

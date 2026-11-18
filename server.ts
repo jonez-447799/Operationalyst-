@@ -1391,7 +1391,7 @@ async function startServer() {
     const goalText =
       typeof body.goalText === "string" && body.goalText.trim()
         ? body.goalText.trim()
-        : "Close 5 Paid Plant Audits in Chennai This Month — ₹74,995 Target";
+        : "Close 5 Paid Plant Audits in Chennai This Month — ₹90,000 Target";
     const targetRevenueInr =
       typeof body.targetRevenueInr === "number" ? body.targetRevenueInr : undefined;
 
@@ -1571,7 +1571,7 @@ async function startServer() {
         workspaceId: "AUDIT-DEMO-P1P4",
         invoiceId: "INV-20261012-P1P4",
         utrNumber: testUtr,
-        amountInr: config.tier2FullAuditPriceInr || 14999,
+        amountInr: config.tier2FullAuditPriceInr || 18000,
         upiId: config.upiId || LIVE_FOUNDER_UPI_ID,
         tier: "TIER2_FULL_AUDIT",
         contactEmailOrPhone: config.founderAlertEmail || "joneszz2004@gmail.com",
@@ -1659,7 +1659,7 @@ async function startServer() {
         workspaceId: result.snapshot.workspaceId,
         invoiceId: result.snapshot.invoiceId,
         utrNumber: result.snapshot.submittedUtrNumber || utrNumber,
-        amountInr: result.snapshot.invoiceAmountInr || 14999,
+        amountInr: result.snapshot.invoiceAmountInr || 18000,
         tier,
         contactEmailOrPhone: paidByEmail,
         actionUrl: "?view=agent-workforce",
@@ -1669,7 +1669,7 @@ async function startServer() {
         actor: paidByEmail || `${result.snapshot.companyName} (Walkthrough Client)`,
         category: "PILOT_WALKTHROUGH",
         action: "UTR_PAYMENT_SUBMITTED",
-        details: `Submitted UTR ${result.snapshot.submittedUtrNumber} for workspace ${result.snapshot.workspaceId} (${tier} · ₹${result.snapshot.invoiceAmountInr || 14999})`,
+        details: `Submitted UTR ${result.snapshot.submittedUtrNumber} for workspace ${result.snapshot.workspaceId} (${tier} · ₹${result.snapshot.invoiceAmountInr || 18000})`,
       }).catch(() => {});
 
       return res.json({
@@ -1865,7 +1865,7 @@ async function startServer() {
   <text x="72" y="180" fill="#F8FAFC" font-family="'Inter', system-ui, -apple-system, sans-serif" font-size="42" font-weight="800" letter-spacing="-0.5">How Much of Your Factory Inventory</text>
   <text x="72" y="232" fill="#F59E0B" font-family="'Inter', system-ui, -apple-system, sans-serif" font-size="42" font-weight="800" letter-spacing="-0.5">Has Stopped Moving (&gt;180 Days)?</text>
   <text x="72" y="284" fill="#CBD5E1" font-family="'Inter', system-ui, -apple-system, sans-serif" font-size="20">Drop a 5-column Tally Prime, SAP, or Excel CSV export. Get a Free 3-SKU</text>
-  <text x="72" y="314" fill="#CBD5E1" font-family="'Inter', system-ui, -apple-system, sans-serif" font-size="20">Diagnostic Teaser (₹0) or unlock the 4-Pillar Plant Audit Workbook (₹14,999).</text>
+  <text x="72" y="314" fill="#CBD5E1" font-family="'Inter', system-ui, -apple-system, sans-serif" font-size="20">Diagnostic Teaser (₹0) or unlock the 4-Pillar Plant Audit Workbook (₹18,000 · 0% GST).</text>
   <g transform="translate(72, 372)">
     <rect x="0" y="0" width="248" height="122" rx="14" fill="#0B1320" stroke="#475569" stroke-width="1.2" />
     <text x="20" y="32" fill="#94A3B8" font-family="'JetBrains Mono', monospace" font-size="12" font-weight="700">P1 • DEAD STOCK (&gt;180D)</text>
@@ -1884,9 +1884,9 @@ async function startServer() {
     <text x="824" y="74" fill="#F8FAFC" font-family="'JetBrains Mono', monospace" font-size="30" font-weight="700">₹24,800</text>
     <text x="824" y="102" fill="#64748B" font-family="'JetBrains Mono', monospace" font-size="12">60.0% Bin Match Accuracy</text>
   </g>
-  <text x="72" y="552" fill="#94A3B8" font-family="'JetBrains Mono', monospace" font-size="15">Prepared by C. Jones Snowin · Snowin Ventures, Chennai · Direct UPI: 9080540047@yespop</text>
+  <text x="72" y="552" fill="#94A3B8" font-family="'JetBrains Mono', monospace" font-size="15">Prepared by C. Jones Snowin · Snowin Ventures, Chennai · MSME: UDYAM-TN-02-0444630 (0% GST)</text>
   <rect x="920" y="530" width="204" height="32" rx="8" fill="#0B1320" stroke="#F59E0B" stroke-width="1.2" />
-  <text x="1022" y="551" text-anchor="middle" fill="#FBBF24" font-family="'JetBrains Mono', monospace" font-size="13" font-weight="700">₹0 TEASER · ₹14,999 AUDIT</text>
+  <text x="1022" y="551" text-anchor="middle" fill="#FBBF24" font-family="'JetBrains Mono', monospace" font-size="13" font-weight="700">₹0 TEASER · ₹18,000 AUDIT</text>
 </svg>`);
   });
 

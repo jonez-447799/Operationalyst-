@@ -3919,7 +3919,7 @@ test('Phase 14 Landing Page Red-Flag Removal & Executive Founder Sign-Off Guard:
 // Teaser-to-Paid Walkthrough Paywall (₹14,999 / ₹24,999), and 1-Click UTR Payment Unlock
 // ============================================================================
 
-test('Phase 15 UPI Deep-Link & Billing Config Store: buildUpiPaymentUri generates valid NPCI UPI payment links with ₹14,999 / ₹24,999 amounts and founder beneficiary details', async () => {
+test('Phase 15 UPI Deep-Link & Billing Config Store: buildUpiPaymentUri generates valid NPCI UPI payment links with ₹18,000 / ₹15,000 amounts and founder beneficiary details', async () => {
   const fs = await import('fs/promises');
   const path = await import('path');
   const os = await import('os');
@@ -3932,30 +3932,31 @@ test('Phase 15 UPI Deep-Link & Billing Config Store: buildUpiPaymentUri generate
 
   const uriTier2 = buildUpiPaymentUri(
     DEFAULT_FOUNDER_BILLING_CONFIG,
-    14999,
+    18000,
     'INV-20261109-4410',
     'Ambattur Fabrication Sample Plant'
   );
 
   assert.ok(uriTier2.startsWith('upi://pay?pa=9080540047@yespop&pn='));
   assert.ok(uriTier2.includes('C.%20Jones%20Snowin'));
-  assert.ok(uriTier2.includes('&am=14999&cu=INR&tn=INV-20261109-4410-Ambattur_Fabrication_Sample_Plant'));
+  assert.ok(uriTier2.includes('&am=18000&cu=INR&tn=INV-20261109-4410-Ambattur_Fabrication_Sample_Plant'));
 
   const uriTier3 = buildUpiPaymentUri(
     DEFAULT_FOUNDER_BILLING_CONFIG,
-    24999,
+    15000,
     'INV-20261109-9902',
     'Hosur Auto Components'
   );
-  assert.ok(uriTier3.includes('&am=24999&cu=INR&tn=INV-20261109-9902-Hosur_Auto_Components'));
+  assert.ok(uriTier3.includes('&am=15000&cu=INR&tn=INV-20261109-9902-Hosur_Auto_Components'));
 
   const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'op-billing-test-'));
   const billingFile = path.join(tmpDir, 'founder_billing.json');
   try {
     const initial = await getFounderBillingConfig(billingFile);
     assert.equal(initial.upiId, '9080540047@yespop');
-    assert.equal(initial.tier2FullAuditPriceInr, 14999);
-    assert.equal(initial.tier3MonthlyRetainerInr, 24999);
+    assert.equal(initial.tier2FullAuditPriceInr, 18000);
+    assert.equal(initial.tier3MonthlyRetainerInr, 15000);
+    assert.equal(initial.udyamMsmeNumber, 'UDYAM-TN-02-0444630');
 
     const updated = await updateFounderBillingConfig(
       {
@@ -3996,18 +3997,18 @@ test('Phase 15 Proforma Invoice Generation (INV-YYYYMMDD-XXXX): generateProforma
   );
 
   assert.match(invTier2.invoiceId, /^INV-\d{8}-[A-Z0-9]{4}$/);
-  assert.equal(invTier2.amountInr, 14999);
+  assert.equal(invTier2.amountInr, 18000);
   assert.equal(invTier2.currency, 'INR');
   assert.equal(invTier2.paymentStatus, 'UNPAID_PROFORMA');
   assert.equal(invTier2.lineItems.length, 1);
   assert.equal(invTier2.lineItems[0].hsnSacCode, '998311');
-  assert.equal(invTier2.lineItems[0].lineTotalInr, 14999);
+  assert.equal(invTier2.lineItems[0].lineTotalInr, 18000);
   assert.equal(
     invTier2.neftImpsInstructions.beneficiaryName,
     'C. Jones Snowin (Operationalyst / Snowin Ventures)'
   );
   assert.equal(invTier2.neftImpsInstructions.upiId, '9080540047@yespop');
-  assert.ok(invTier2.upiPaymentUri.includes('am=14999'));
+  assert.ok(invTier2.upiPaymentUri.includes('am=18000'));
 });
 
 test('Phase 15 Teaser-to-Paid Paywall & UTR Payment Unlock: Creating a workspace in TEASER_LOCKED mode, submitting a 12-digit UTR number transitions it to UTR_PENDING_VERIFICATION, and founder verification transitions it to FULL_UNLOCKED', async () => {
@@ -4036,7 +4037,7 @@ test('Phase 15 Teaser-to-Paid Paywall & UTR Payment Unlock: Creating a workspace
     );
 
     assert.equal(created.commercialAccessMode, 'TEASER_LOCKED');
-    assert.equal(created.invoiceAmountInr, 14999);
+    assert.equal(created.invoiceAmountInr, 18000);
     assert.match(created.invoiceId || '', /^INV-\d{8}-[A-Z0-9]{4}$/);
 
     // Reject invalid short UTR
@@ -4109,13 +4110,13 @@ test('Phase 15 Paperclip 5-Agent Workforce Engine & Zero-Cost Guardrail: decompo
 
   try {
     const res = await decomposeFounderRevenueGoal(
-      'Close 5 Paid Plant Audits in Chennai This Month — ₹74,995 Target',
+      'Close 5 Paid Plant Audits in Chennai This Month — ₹90,000 Target',
       undefined,
       wfFile
     );
 
     assert.equal(res.ok, true);
-    assert.equal(res.goal.targetRevenueInr, 74995);
+    assert.equal(res.goal.targetRevenueInr, 90000);
     assert.equal(res.goal.targetPaidAuditsCount, 5);
     assert.equal(res.goal.apiTokenBudgetCapInr, 0);
     assert.equal(res.goal.computeCostSpentInr, 0);
@@ -4189,9 +4190,11 @@ test('Phase 16 Live Founder UPI Migration & Public Endpoint Secret Masking: getF
       'utf-8'
     );
 
-    // Reading should automatically migrate 'cjonessnowin@okaxis' -> '9080540047@yespop' and persist to disk
+    // Reading should automatically migrate 'cjonessnowin@okaxis' -> '9080540047@yespop' and ₹14,999 -> ₹18,000
     const migrated = await getFounderBillingConfig(billingFile);
     assert.equal(migrated.upiId, '9080540047@yespop');
+    assert.equal(migrated.tier2FullAuditPriceInr, 18000);
+    assert.equal(migrated.tier3MonthlyRetainerInr, 15000);
 
     const persistedRaw = JSON.parse(await fs.readFile(billingFile, 'utf-8'));
     assert.equal(persistedRaw.config.upiId, '9080540047@yespop');
@@ -4294,14 +4297,14 @@ test('Phase 16 Instant Founder Alert Notifier & Last-20 Delivery Log: dispatchFo
         workspaceId: 'AUDIT-20261109-8811',
         invoiceId: 'INV-20261109-8811',
         utrNumber: '431298765432',
-        amountInr: 14999,
+        amountInr: 18000,
         tier: 'TIER2_FULL_AUDIT',
       },
       { logFilePath: logFile, billingFilePath: billingFile }
     );
     assert.equal(utrAlert.eventType, 'UTR_PAYMENT_SUBMITTED');
     assert.equal(utrAlert.utrNumber, '431298765432');
-    assert.equal(utrAlert.amountInr, 14999);
+    assert.equal(utrAlert.amountInr, 18000);
     assert.ok(utrAlert.summary.includes('9080540047@yespop'));
 
     const logs = await listFounderAlertLogs(logFile);
@@ -4363,7 +4366,7 @@ test('Phase 17 Scannable NPCI UPI QR Code Generator: generateUpiQrCodeSvg produc
 
   const upiUri = buildUpiPaymentUri(
     DEFAULT_FOUNDER_BILLING_CONFIG,
-    14999,
+    18000,
     'INV-20261110-P1P4',
     'AmbatturPlant'
   );
@@ -4486,13 +4489,13 @@ test('Phase 17 Udyam MSME Proforma & Official Paid Receipt Generator: generatePr
   assert.equal(receipt.receiptId, 'RCPT-20261110-99AA');
   assert.equal(receipt.invoiceId, 'INV-20261110-99AA');
   assert.equal(receipt.utrNumber, '431298765432');
-  assert.equal(receipt.amountPaidInr, 14999);
+  assert.equal(receipt.amountPaidInr, 18000);
   assert.equal(receipt.stamp, 'PAID & VERIFIED');
   assert.equal(receipt.udyamMsmeNumber, 'UDYAM-TN-02-0192837');
   assert.equal(receipt.verifiedBy, 'C. Jones Snowin');
 });
 
-test('Phase 17 FAQ #9 Pricing Clarity & WhatsApp/LinkedIn SEO Meta Previews: Verifies Free 3-SKU Teaser (₹0) + ₹14,999 one-time unlock in FAQ #9 and OpenGraph/JSON-LD/og-banner.svg assets', async () => {
+test('Phase 17 FAQ #9 Pricing Clarity & WhatsApp/LinkedIn SEO Meta Previews: Verifies Free 3-SKU Teaser (₹0) + ₹18,000 MSME Bill of Supply one-time unlock in FAQ #9 and OpenGraph/JSON-LD/og-banner.svg assets', async () => {
   const fs = await import('fs/promises');
   const path = await import('path');
   const { FAQ_ITEMS } = await import('../commercial/homepageConfig');
@@ -4504,7 +4507,10 @@ test('Phase 17 FAQ #9 Pricing Clarity & WhatsApp/LinkedIn SEO Meta Previews: Ver
       'Free 3-SKU Diagnostic Teaser & Executive Exposure Summary (₹0)'
     )
   );
-  assert.ok(faq9!.a.includes('₹14,999 one-time unlock'));
+  assert.ok(faq9!.a.includes('₹18,000 one-time unlock'));
+  assert.ok(faq9!.a.includes('UDYAM-TN-02-0444630'));
+  assert.ok(faq9!.a.includes('0% GST'));
+  assert.ok(!faq9!.a.includes('9080540047@yespop'));
   assert.ok(faq9!.a.includes('zero automatic subscriptions'));
 
   const indexHtml = await fs.readFile(path.join(process.cwd(), 'index.html'), 'utf-8');
@@ -4512,13 +4518,16 @@ test('Phase 17 FAQ #9 Pricing Clarity & WhatsApp/LinkedIn SEO Meta Previews: Ver
   assert.ok(indexHtml.includes('name="twitter:image" content="/og-banner.svg"'));
   assert.ok(indexHtml.includes('"@type": "SoftwareApplication"'));
   assert.ok(indexHtml.includes('"@type": "FAQPage"'));
+  assert.ok(indexHtml.includes('₹18,000'));
 
   const ogSvg = await fs.readFile(
     path.join(process.cwd(), 'public/og-banner.svg'),
     'utf-8'
   );
   assert.ok(ogSvg.includes('<svg'));
-  assert.ok(ogSvg.includes('9080540047@yespop'));
+  assert.ok(ogSvg.includes('UDYAM-TN-02-0444630'));
+  assert.ok(ogSvg.includes('₹18,000'));
+  assert.equal(ogSvg.includes('9080540047@yespop'), false);
 
   const robotsTxt = await fs.readFile(
     path.join(process.cwd(), 'public/robots.txt'),
@@ -4606,7 +4615,8 @@ test('Phase 18 LinkedIn <300-Char Note, X-Ray Search URL & WhatsApp Pitch Genera
   );
   assert.ok(pitch.includes('Autotech Industries India Pvt Ltd'));
   assert.ok(pitch.includes('Ambattur Industrial Estate'));
-  assert.ok(pitch.includes('₹14,999'));
+  assert.ok(pitch.includes('₹18,000'));
+  assert.ok(pitch.includes('0% GST'));
   assert.ok(pitch.includes('https://operationalyst.in'));
 
   const waUrl = buildWhatsAppLaunchUrl('+91 90805 40047', pitch);
@@ -4726,6 +4736,54 @@ test('Control-Tower Dark Mode Iceberg Brand Mark (70-22-8 Palette): Verifies pub
   assert.ok(landingSrc.includes("font-['Inter',system-ui,sans-serif]"));
   assert.ok(landingSrc.includes("font-['JetBrains_Mono',monospace]"));
 });
+
+test('Remediation Audit — CSV Hardening, MSME Bill of Supply Compliance, ICAI CA Wholesale Model & Zero window.open Guard', async () => {
+  const fs = await import('fs/promises');
+  const path = await import('path');
+  const { parseAndEvaluateFiveColumnCsv } = await import('../commercial/InstantAuditDropzone');
+  const { COMMERCIAL_TIERS, OBJECTION_MATRIX } = await import('../commercial/homepageConfig');
+  const { maskOemBrandNames, normalizeIndianDateCell } = await import('../commercial/TallyCleanerAndClaims');
+
+  // 1. Hardened CSV parsing: quoted commas, D-before-M Indian dates, decimal qtys, OEM masking, and negative/₹0 job-work quarantine
+  const dirtyCsv = [
+    'Part_ID,Part_Description,Closing_Stock_Qty,Unit_Cost_INR,Last_Movement_Date',
+    'SKU-01,"Flange Housing, 304 SS (TVS Motors)",125.5,1400,15-05-2024',
+    'SKU-02,"Job Work Blank (Maruti Suzuki)",40,0,10/08/2025',
+    'SKU-03,"Negative Stock Adjustment",-12,500,12-01-2026',
+  ].join('\n');
+
+  const evaluated = parseAndEvaluateFiveColumnCsv(dirtyCsv, { useDatasetMaxDateAsOf: false });
+  assert.equal(evaluated.totalSkus, 1);
+  assert.equal(evaluated.quarantinedCount, 2);
+  assert.equal(evaluated.oemMaskedCount, 2);
+  assert.equal(evaluated.topNonMovingRows[0].partId, 'SKU-01');
+  assert.equal(evaluated.topNonMovingRows[0].closingStockQty, 125.5);
+  assert.ok(!evaluated.topNonMovingRows[0].partDescription.includes('TVS'));
+  assert.equal(normalizeIndianDateCell('15-05-2024'), '2024-05-15');
+  assert.equal(maskOemBrandNames('Gear Assy Maruti Suzuki').count, 1);
+
+  // 2. MSME Bill of Supply 0% GST & ICAI-compliant CA Wholesale Licensing pricing check
+  const tierDiagnostic = COMMERCIAL_TIERS.find((t) => t.id === 'tier_18k_diagnostic');
+  const tierWatchdog = COMMERCIAL_TIERS.find((t) => t.id === 'tier_15k_watchdog');
+  const tierCa = COMMERCIAL_TIERS.find((t) => t.id === 'tier_ca_partner');
+  assert.equal(tierDiagnostic?.price, '₹18,000');
+  assert.ok(tierDiagnostic?.period?.includes('0% GST'));
+  assert.equal(tierWatchdog?.price, '₹15,000');
+  assert.equal(tierCa?.price, '₹14,400');
+  assert.ok(tierCa?.features.some((f) => f.includes('₹14,400 Diagnostic')));
+  const caObj = OBJECTION_MATRIX.find((o) => o.id === 'ca_alignment');
+  assert.ok(caObj?.institutionalGuarantee.includes('CA Wholesale Working-Paper Licensing Desk'));
+
+  // 3. Zero remaining legacy pricing, revenue-share wording, or window.open across key files
+  const landingSrc = await fs.readFile(path.join(process.cwd(), 'src/commercial/CommercialLandingPage.tsx'), 'utf-8');
+  assert.ok(!landingSrc.includes('14 Specialized'));
+  assert.ok(!landingSrc.includes('14 Institutional'));
+  assert.ok(!landingSrc.includes('14,999'));
+  assert.ok(!landingSrc.includes('24,999'));
+  assert.ok(!landingSrc.includes('9080540047@yespop'));
+  assert.ok(landingSrc.includes('14-Stage Automated Audit &amp; Governance Architecture'));
+});
+
 
 
 

@@ -58,7 +58,11 @@ export const MondayNoteCard: React.FC<MondayNoteCardProps> = ({
 
   const handleWhatsAppSend = () => {
     const encoded = encodeURIComponent(noteText);
-    window.open(`https://wa.me/?text=${encoded}`, '_blank');
+    const a = document.createElement('a');
+    a.href = `https://wa.me/?text=${encoded}`;
+    a.target = '_blank';
+    a.rel = 'noopener noreferrer';
+    a.click();
   };
 
   return (

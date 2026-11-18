@@ -455,7 +455,7 @@ export const BehavioralIcebergModal: React.FC<BehavioralIcebergModalProps> = ({
                   : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200'
               }`}
             >
-              <div className="text-[10px] text-emerald-400 uppercase">Variant A: Loss Aversion</div>
+              <div className="text-[10px] text-emerald-400 uppercase">Variant A: Carrying-Cost Risk Framing</div>
               <div className="text-[11px] mt-1 text-slate-200">“How Much of Your Inventory Has Stopped Moving?”</div>
             </button>
 

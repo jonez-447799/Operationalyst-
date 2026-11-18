@@ -22,6 +22,11 @@ import {
   downloadPilotDataKitXlsx,
 } from '../utils/pilotDataKitExporter';
 import { trackEvent } from '../utils/analytics';
+import {
+  parseCsvLineRFC,
+  normalizeIndianDateCell,
+  maskOemBrandNames,
+} from './TallyCleanerAndClaims';
 
 export interface InstantCsvAuditRow {
   partId: string;
@@ -32,6 +37,12 @@ export interface InstantCsvAuditRow {
   totalValueInr: number;
   daysIdle: number;
   bucket: 'NON_MOVING_180D' | 'SLOW_MOVING_90_179D' | 'ACTIVE_UNDER_90D';
+}
+
+export interface QuarantinedCsvRow {
+  lineNum: number;
+  partId: string;
+  reason: string;
 }
 
 export interface InstantCsvAuditSummary {
@@ -50,6 +61,11 @@ export interface InstantCsvAuditSummary {
   carryingCostPct: number;
   annualCarryingBurnInr: number;
   annualCarryingBurnFormatted: string;
+  asOfDateUsed: string;
+  quarantinedRows: QuarantinedCsvRow[];
+  quarantinedCount: number;
+  rateCorrectionCount: number;
+  oemMaskedCount: number;
   rows: InstantCsvAuditRow[];
   topNonMovingRows: InstantCsvAuditRow[];
 }
@@ -94,12 +110,23 @@ function splitCsvLine(line: string): string[] {
 
 /**
  * Pure, deterministic 5-column CSV parser & evaluator (100% local in-browser).
- * Uses canonical P1 evaluateStockEngine so all Ambattur 20-SKU totals match 100%.
+ * Supports RFC-4180 quoted commas, Indian D-before-M dates, decimal quantities,
+ * OEM brand masking, Total-Value-vs-Unit-Cost guard, and negative/₹0 job-work quarantine.
  */
 export function parseAndEvaluateFiveColumnCsv(
   csvText: string,
-  asOfDate: string = DEFAULT_RULES.asOfDate
+  asOfDateOrOptions:
+    | string
+    | { asOfDate?: string; useDatasetMaxDateAsOf?: boolean } = DEFAULT_RULES.asOfDate
 ): InstantCsvAuditSummary {
+  const opts =
+    typeof asOfDateOrOptions === 'string'
+      ? { asOfDate: asOfDateOrOptions, useDatasetMaxDateAsOf: false }
+      : {
+          asOfDate: asOfDateOrOptions?.asOfDate || DEFAULT_RULES.asOfDate,
+          useDatasetMaxDateAsOf: Boolean(asOfDateOrOptions?.useDatasetMaxDateAsOf),
+        };
+
   const rawLines = (csvText || '')
     .split(/\r?\n/)
     .map((l) => l.trim())
@@ -122,12 +149,17 @@ export function parseAndEvaluateFiveColumnCsv(
       carryingCostPct: 22,
       annualCarryingBurnInr: 0,
       annualCarryingBurnFormatted: '₹0',
+      asOfDateUsed: opts.asOfDate || DEFAULT_RULES.asOfDate,
+      quarantinedRows: [],
+      quarantinedCount: 0,
+      rateCorrectionCount: 0,
+      oemMaskedCount: 0,
       rows: [],
       topNonMovingRows: [],
     };
   }
 
-  const headerCells = splitCsvLine(rawLines[0]).map((h) =>
+  const headerCells = parseCsvLineRFC(rawLines[0]).map((h) =>
     h.toLowerCase().replace(/[^a-z0-9]/g, '')
   );
 
@@ -158,10 +190,24 @@ export function parseAndEvaluateFiveColumnCsv(
     ['closingstockqty', 'qty', 'closingbalance', 'closingqty', 'labst', 'quantity', 'qtyonhand'],
     2
   );
-  const costIdx = findColIdx(
-    ['unitcostinr', 'rate', 'unitprice', 'standardprice', 'verpr', 'cost', 'costrate'],
-    3
-  );
+  const unitCostHeaderIdx = hasHeader
+    ? headerCells.findIndex((h) =>
+        ['unitcostinr', 'rate', 'unitprice', 'standardprice', 'verpr', 'cost', 'costrate'].includes(h)
+      )
+    : -1;
+  const totalValHeaderIdx = hasHeader
+    ? headerCells.findIndex((h) =>
+        ['totalvalue', 'closingvalue', 'amount', 'stockvalue', 'value', 'totalvalueinr'].includes(h)
+      )
+    : -1;
+  const costIdx =
+    unitCostHeaderIdx >= 0
+      ? unitCostHeaderIdx
+      : totalValHeaderIdx >= 0
+      ? totalValHeaderIdx
+      : 3;
+  const isTotalValueColumnMapped = unitCostHeaderIdx < 0 && totalValHeaderIdx >= 0;
+
   const dateIdx = findColIdx(
     ['lastmovementdate', 'lastissue', 'lasttxn', 'lastused', 'budat', 'lastmovement'],
     4
@@ -169,18 +215,74 @@ export function parseAndEvaluateFiveColumnCsv(
 
   const dataLines = hasHeader ? rawLines.slice(1) : rawLines;
   const stockItems: StockItem[] = [];
+  const quarantinedRows: QuarantinedCsvRow[] = [];
+  let rateCorrectionCount = 0;
+  let oemMaskedCount = 0;
+  let maxMovementIso = '';
 
   dataLines.forEach((line, index) => {
-    const cols = splitCsvLine(line);
-    if (cols.length < 3) return;
-    const partId = (cols[partIdIdx] || `SKU-${index + 1}`).trim();
-    const partDescription = (cols[descIdx] || partId).trim();
-    const rawQty = Number(String(cols[qtyIdx] || '0').replace(/[^0-9.-]/g, ''));
-    const rawCost = Number(String(cols[costIdx] || '0').replace(/[^0-9.-]/g, ''));
-    const lastMovement = (cols[dateIdx] || '2026-01-01').trim();
-
-    if (!Number.isFinite(rawQty) || !Number.isFinite(rawCost) || rawQty < 0 || rawCost < 0) {
+    const lineNum = index + (hasHeader ? 2 : 1);
+    const cols = parseCsvLineRFC(line);
+    if (cols.length < 3) {
+      quarantinedRows.push({
+        lineNum,
+        partId: (cols[0] || `ROW-${lineNum}`).trim(),
+        reason: 'Fewer than 3 columns detected',
+      });
       return;
+    }
+
+    const partId = (cols[partIdIdx] || `SKU-${index + 1}`).trim();
+    const rawDesc = (cols[descIdx] || partId).trim();
+    const maskResult = maskOemBrandNames(rawDesc);
+    const partDescription = maskResult.masked;
+    if (maskResult.count > 0) {
+      oemMaskedCount += maskResult.count;
+    }
+
+    const rawQty = Number(String(cols[qtyIdx] || '').replace(/[^0-9.-]/g, ''));
+    const rawCostCell = Number(String(cols[costIdx] || '').replace(/[^0-9.-]/g, ''));
+    const rawDateCell = (cols[dateIdx] || '').trim();
+    const parsedDate = normalizeIndianDateCell(rawDateCell);
+
+    if (!Number.isFinite(rawQty) || rawQty < 0) {
+      quarantinedRows.push({
+        lineNum,
+        partId,
+        reason: `Negative or invalid stock quantity (${cols[qtyIdx] || 'blank'})`,
+      });
+      return;
+    }
+
+    if (!Number.isFinite(rawCostCell) || rawCostCell <= 0) {
+      quarantinedRows.push({
+        lineNum,
+        partId,
+        reason:
+          rawCostCell === 0
+            ? 'Zero unit cost / customer free-issue job-work material excluded from working capital valuation'
+            : `Negative or invalid cost rate (${cols[costIdx] || 'blank'})`,
+      });
+      return;
+    }
+
+    if (!parsedDate) {
+      quarantinedRows.push({
+        lineNum,
+        partId,
+        reason: `Invalid or missing Last_Movement_Date (${rawDateCell || 'blank'})`,
+      });
+      return;
+    }
+
+    let unitCostInr = rawCostCell;
+    if (isTotalValueColumnMapped && rawQty > 0) {
+      unitCostInr = Math.round((rawCostCell / rawQty) * 100) / 100;
+      rateCorrectionCount++;
+    }
+
+    if (!maxMovementIso || parsedDate > maxMovementIso) {
+      maxMovementIso = parsedDate;
     }
 
     stockItems.push({
@@ -189,14 +291,19 @@ export function parseAndEvaluateFiveColumnCsv(
       itemName: partDescription,
       category: 'Raw Material',
       qtyOnHand: rawQty,
-      costRate: rawCost,
-      lastMovement,
+      costRate: unitCostInr,
+      lastMovement: parsedDate,
     });
   });
 
+  const effectiveAsOfDate =
+    opts.useDatasetMaxDateAsOf && maxMovementIso
+      ? maxMovementIso
+      : opts.asOfDate || DEFAULT_RULES.asOfDate;
+
   const evaluated = evaluateStockEngine(stockItems, {
     ...DEFAULT_RULES,
-    asOfDate,
+    asOfDate: effectiveAsOfDate,
     holdingCostPercent: 22,
   });
 
@@ -265,6 +372,11 @@ export function parseAndEvaluateFiveColumnCsv(
     carryingCostPct,
     annualCarryingBurnInr,
     annualCarryingBurnFormatted: formatINR(annualCarryingBurnInr),
+    asOfDateUsed: effectiveAsOfDate,
+    quarantinedRows,
+    quarantinedCount: quarantinedRows.length,
+    rateCorrectionCount,
+    oemMaskedCount,
     rows,
     topNonMovingRows,
   };
@@ -302,7 +414,7 @@ export const InstantAuditDropzone: React.FC<InstantAuditDropzoneProps> = ({
 
   const handleFileText = (text: string, fileName: string) => {
     trackEvent('import_validation_completed', { source: 'instant_dropzone_upload' });
-    const summary = parseAndEvaluateFiveColumnCsv(text);
+    const summary = parseAndEvaluateFiveColumnCsv(text, { useDatasetMaxDateAsOf: true });
     setAuditResult(summary);
     setShowAllRows(false);
     setSelfServeError(null);
@@ -548,9 +660,21 @@ export const InstantAuditDropzone: React.FC<InstantAuditDropzoneProps> = ({
                     Instant Audit Computed: {activeSourceName} ({auditResult.totalSkus} SKUs Evaluated)
                   </span>
                 </div>
-                <span className="text-xs font-mono text-emerald-300 bg-emerald-950/60 border border-emerald-500/30 px-2.5 py-1 rounded">
-                  P1 Engine Verified · 22% Annual Carrying Rate
-                </span>
+                <div className="flex flex-wrap items-center gap-2">
+                  {auditResult.quarantinedCount > 0 && (
+                    <span className="text-xs font-mono text-amber-300 bg-amber-950/60 border border-amber-500/40 px-2.5 py-1 rounded">
+                      {auditResult.quarantinedCount} Quarantine Row(s) Isolated
+                    </span>
+                  )}
+                  {auditResult.oemMaskedCount > 0 && (
+                    <span className="text-xs font-mono text-sky-300 bg-sky-950/60 border border-sky-500/40 px-2.5 py-1 rounded">
+                      {auditResult.oemMaskedCount} OEM Tag(s) Masked Locally
+                    </span>
+                  )}
+                  <span className="text-xs font-mono text-emerald-300 bg-emerald-950/60 border border-emerald-500/30 px-2.5 py-1 rounded">
+                    P1 Engine Verified · As-Of {auditResult.asOfDateUsed} · 22% Annual Carrying Rate
+                  </span>
+                </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5">
@@ -707,7 +831,7 @@ export const InstantAuditDropzone: React.FC<InstantAuditDropzoneProps> = ({
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div>
                     <div className="text-[11px] font-mono font-bold text-emerald-400 uppercase">
-                      24/7 ZERO-TOUCH AUDIT GENERATOR • FREE 3-SKU EXECUTIVE TEASER + ₹14,999 FULL UNLOCK
+                      24/7 ZERO-TOUCH AUDIT GENERATOR • FREE 3-SKU EXECUTIVE TEASER + ₹18,000 FULL UNLOCK (0% GST MSME)
                     </div>
                     <h3 className="text-sm sm:text-base font-bold text-white mt-0.5">
                       Want the Full 4-Pillar Plant Audit &amp; 6-Sheet Action Workbook? Generate Your Official Executive Teaser Workspace Instantly

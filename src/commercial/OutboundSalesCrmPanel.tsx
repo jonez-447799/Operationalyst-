@@ -116,8 +116,8 @@ export const OutboundSalesCrmPanel: React.FC<OutboundSalesCrmPanelProps> = ({
     const teaserOffered = companies.filter((c) => c.status === 'TEASER_OFFERED').length;
     const csvReceived = companies.filter((c) => c.status === 'CSV_RECEIVED').length;
     const utrPending = companies.filter((c) => c.status === 'UTR_PENDING').length;
-    const paid14999 = companies.filter((c) => c.status === 'PAID_14999').length;
-    const closedRevenueInr = paid14999 * 14999;
+    const paid18000 = companies.filter((c) => c.status === 'PAID_18000').length;
+    const closedRevenueInr = paid18000 * 18000;
 
     return {
       total,
@@ -126,7 +126,7 @@ export const OutboundSalesCrmPanel: React.FC<OutboundSalesCrmPanelProps> = ({
       teaserOffered,
       csvReceived,
       utrPending,
-      paid14999,
+      paid18000,
       closedRevenueInr,
     };
   }, [companies]);
@@ -396,7 +396,7 @@ export const OutboundSalesCrmPanel: React.FC<OutboundSalesCrmPanelProps> = ({
             Outbound 50-Plant Sales CRM (Chennai &amp; Hosur) &amp; 1-Click LinkedIn / WhatsApp Pitch Launcher
           </h2>
           <p className="text-xs text-slate-400 max-w-3xl">
-            Pre-loaded with 50 real mid-sized discrete manufacturing targets across Ambattur, Guindy/Thirumudivakkam, Sriperumbudur/Oragadam, and SIPCOT Hosur. Run 10 plants/day (Days 1–5) to book Free 3-SKU Diagnostic Teasers and close ₹14,999 4-Pillar Plant Audits.
+            Pre-loaded with 50 real mid-sized discrete manufacturing targets across Ambattur, Guindy/Thirumudivakkam, Sriperumbudur/Oragadam, and SIPCOT Hosur. Run 10 plants/day (Days 1–5) to book Free 3-SKU Diagnostic Teasers and close ₹18,000 4-Pillar Plant Audits (0% GST MSME).
           </p>
         </div>
 
@@ -480,9 +480,9 @@ export const OutboundSalesCrmPanel: React.FC<OutboundSalesCrmPanelProps> = ({
         </div>
 
         <div className="p-3 rounded-xl bg-emerald-950/30 border border-emerald-500/40">
-          <div className="text-[10px] text-emerald-400 uppercase">Paid ₹14,999</div>
+          <div className="text-[10px] text-emerald-400 uppercase">Paid ₹18,000</div>
           <div className="text-lg font-bold text-emerald-300 mt-0.5">
-            {kpiMetrics.paid14999}{' '}
+            {kpiMetrics.paid18000}{' '}
             <span className="text-xs font-normal text-emerald-400">
               (₹{kpiMetrics.closedRevenueInr.toLocaleString('en-IN')})
             </span>
@@ -845,7 +845,7 @@ export const OutboundSalesCrmPanel: React.FC<OutboundSalesCrmPanelProps> = ({
                       )
                     }
                     className={`px-3 py-1.5 rounded-lg font-mono text-xs font-bold border cursor-pointer ${
-                      company.status === 'PAID_14999'
+                      company.status === 'PAID_18000'
                         ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-300'
                         : company.status === 'UTR_PENDING'
                         ? 'bg-purple-500/20 border-purple-500/50 text-purple-300'

@@ -479,7 +479,7 @@ export const FactoryAuditModal: React.FC<FactoryAuditModalProps> = ({
               data-testid="modal-teaser-pricing-clarity"
               className="text-[11px] font-mono text-emerald-300 pt-0.5"
             >
-              Every approved submission receives a <strong>Free 3-SKU Diagnostic Teaser &amp; Executive Exposure Summary</strong> upfront, with an optional <strong>₹14,999 Full Plant Audit &amp; 6-Sheet Action Workbook</strong> unlock.
+              Every approved submission receives a <strong>Free 3-SKU Diagnostic Teaser &amp; Executive Exposure Summary</strong> upfront, with an optional <strong>₹18,000 Full Plant Audit &amp; 6-Sheet Action Workbook</strong> unlock (MSME Bill of Supply · 0% GST).
             </p>
           </div>
 

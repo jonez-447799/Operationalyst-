@@ -821,8 +821,8 @@ export function normalizeWorkspaceRetentionSnapshot(
     typeof raw.invoiceAmountInr === 'number' && raw.invoiceAmountInr > 0
       ? Math.round(raw.invoiceAmountInr)
       : paymentTier === 'TIER3_MONTHLY_RETAINER'
-      ? 24999
-      : 14999;
+      ? 15000
+      : 18000;
 
   return {
     ...raw,
@@ -1369,7 +1369,7 @@ export async function submitPilotWorkspacePaymentUtr(
       submittedUtrNumber: cleanUtr,
       ...(cleanEmail ? { paidByEmail: cleanEmail } : {}),
       paymentTier: tier,
-      invoiceAmountInr: tier === 'TIER3_MONTHLY_RETAINER' ? 24999 : 14999,
+      invoiceAmountInr: tier === 'TIER3_MONTHLY_RETAINER' ? 15000 : 18000,
     });
 
     records[idx] = updatedSnapshot;

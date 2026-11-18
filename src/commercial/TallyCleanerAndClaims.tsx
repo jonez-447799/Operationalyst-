@@ -6,13 +6,110 @@ export interface CleanResult {
   bannerFooterRowsRemoved: number;
   drCrRupeeNormalized: number;
   confidentialColsStripped: number;
+  oemBrandsMasked: number;
   cleanAuditRowsReady: number;
 }
 
-const CONFIDENTIAL_COL_REGEX = /^(party|vendor|supplier|customer|buyer|gstin|phone|mobile|contact|address|company)$/i;
+const CONFIDENTIAL_COL_REGEX =
+  /^(party|vendor|supplier|customer|buyer|gstin|phone|mobile|contact|address|company|vendorname|partyname|buyername|customername)$/i;
+
+const OEM_BRAND_REGEX =
+  /\b(Lucas\s+TVS(?:\s+Ltd)?|TVS(?:\s+Logistics|\s+Motor|\s+Motors)?|Maruti\s+Suzuki(?:\s+India)?|Ashok\s+Leyland(?:\s+Unit-\d+)?|Hyundai(?:\s+Motor)?|Mahindra(?:\s+&\s+Mahindra|\s+Auto)?|Tata\s+Motors?|Hero\s+MotoCorp|Bajaj\s+Auto|Bosch(?:\s+India)?|Royal\s+Enfield|Yamaha(?:\s+India)?|Brakes\s+India(?:\s+Ltd)?|Sundram\s+Fasteners)\b/gi;
+
+const MONTH_MAP: Record<string, string> = {
+  jan: '01',
+  feb: '02',
+  mar: '03',
+  apr: '04',
+  may: '05',
+  jun: '06',
+  jul: '07',
+  aug: '08',
+  sep: '09',
+  oct: '10',
+  nov: '11',
+  dec: '12',
+};
+
+export function maskOemBrandNames(text: string): { masked: string; count: number } {
+  let count = 0;
+  const masked = text.replace(OEM_BRAND_REGEX, () => {
+    count++;
+    return '[OEM-BUYER]';
+  });
+  return { masked, count };
+}
+
+export function normalizeIndianDateCell(rawCell: string): string | null {
+  const trimmed = rawCell.trim();
+  if (!trimmed) return null;
+
+  const isoMatch = /^(\d{4})[-/](\d{1,2})[-/](\d{1,2})$/.exec(trimmed);
+  if (isoMatch) {
+    const [, yyyy, mm, dd] = isoMatch;
+    const m = Number(mm);
+    const d = Number(dd);
+    if (m >= 1 && m <= 12 && d >= 1 && d <= 31) {
+      return `${yyyy}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    }
+  }
+
+  const dmyAlpha = /^(\d{1,2})[-\s/](Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[-\s/](\d{2,4})$/i.exec(
+    trimmed
+  );
+  if (dmyAlpha) {
+    const day = Number(dmyAlpha[1]);
+    const mon = MONTH_MAP[dmyAlpha[2].toLowerCase()];
+    const rawYear = dmyAlpha[3];
+    const year = rawYear.length === 2 ? `20${rawYear}` : rawYear;
+    if (day >= 1 && day <= 31 && mon) {
+      return `${year}-${mon}-${String(day).padStart(2, '0')}`;
+    }
+  }
+
+  const dmyNum = /^(\d{1,2})[./-](\d{1,2})[./-](\d{2,4})$/.exec(trimmed);
+  if (dmyNum) {
+    const day = Number(dmyNum[1]);
+    const month = Number(dmyNum[2]);
+    const rawYear = dmyNum[3];
+    const year = rawYear.length === 2 ? `20${rawYear}` : rawYear;
+    if (day >= 1 && day <= 31 && month >= 1 && month <= 12) {
+      return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    }
+  }
+
+  return null;
+}
+
+export function parseCsvLineRFC(line: string): string[] {
+  const result: string[] = [];
+  let cur = '';
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+    if (char === '"') {
+      if (inQuotes && line[i + 1] === '"') {
+        cur += '"';
+        i++;
+      } else {
+        inQuotes = !inQuotes;
+      }
+    } else if (char === ',' && !inQuotes) {
+      result.push(cur.trim());
+      cur = '';
+    } else {
+      cur += char;
+    }
+  }
+  result.push(cur.trim());
+  return result;
+}
 
 export function cleanMessyTallyCsv(rawCsvText: string): CleanResult {
-  const lines = rawCsvText.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
+  const lines = rawCsvText
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter((l) => l.length > 0 && !/^-+$/.test(l));
   if (lines.length === 0) {
     return {
       headers: ['Col 1', 'Col 2', 'Col 3', 'Col 4', 'Col 5'],
@@ -20,36 +117,22 @@ export function cleanMessyTallyCsv(rawCsvText: string): CleanResult {
       bannerFooterRowsRemoved: 0,
       drCrRupeeNormalized: 0,
       confidentialColsStripped: 0,
-      cleanAuditRowsReady: 0
+      oemBrandsMasked: 0,
+      cleanAuditRowsReady: 0,
     };
   }
 
-  const parseRow = (line: string): string[] => {
-    const result: string[] = [];
-    let cur = '';
-    let inQuotes = false;
-    for (let i = 0; i < line.length; i++) {
-      const char = line[i];
-      if (char === '"') {
-        inQuotes = !inQuotes;
-      } else if (char === ',' && !inQuotes) {
-        result.push(cur.trim().replace(/^"(.*)"$/, '$1'));
-        cur = '';
-      } else {
-        cur += char;
-      }
-    }
-    result.push(cur.trim().replace(/^"(.*)"$/, '$1'));
-    return result;
-  };
-
-  const rawRows = lines.map(parseRow);
+  const rawRows = lines.map(parseCsvLineRFC);
 
   let headerIndex = 0;
   for (let i = 0; i < rawRows.length; i++) {
     const row = rawRows[i];
-    const nonEntries = row.filter(cell => cell.length > 0);
-    const hasHeaderKeywords = row.some(cell => /item|sku|part|date|voucher|qty|quantity|amount|rate|val|price|particulars/i.test(cell));
+    const nonEntries = row.filter((cell) => cell.length > 0);
+    const hasHeaderKeywords = row.some((cell) =>
+      /item|sku|part|date|voucher|qty|quantity|amount|rate|val|price|particulars|description/i.test(
+        cell
+      )
+    );
     if (nonEntries.length >= 3 && (hasHeaderKeywords || i >= 2)) {
       headerIndex = i;
       break;
@@ -65,11 +148,15 @@ export function cleanMessyTallyCsv(rawCsvText: string): CleanResult {
   for (const row of rawDataRows) {
     const firstCell = (row[0] || '').toLowerCase();
     const joinedRow = row.join(' ').toLowerCase();
-    if (joinedRow.includes('total') || joinedRow.includes('grand total') || firstCell.startsWith('total')) {
+    if (
+      firstCell.startsWith('total') ||
+      firstCell.startsWith('grand total') ||
+      joinedRow.includes('grand total')
+    ) {
       footerCount++;
       continue;
     }
-    if (row.every(cell => cell === '')) {
+    if (row.every((cell) => cell === '')) {
       continue;
     }
     validDataRows.push(row);
@@ -87,31 +174,48 @@ export function cleanMessyTallyCsv(rawCsvText: string): CleanResult {
   const filteredHeaders = rawHeader.filter((_, idx) => !confidentialIndices.has(idx));
 
   let drCrRupeeNormalizedCount = 0;
+  let oemBrandsMasked = 0;
 
-  const normalizedRows = validDataRows.map(row => {
-    return row.filter((_, idx) => !confidentialIndices.has(idx)).map(cell => {
-      const originalCell = cell;
-      let cleaned = cell;
+  const normalizedRows = validDataRows.map((row) => {
+    return row
+      .filter((_, idx) => !confidentialIndices.has(idx))
+      .map((cell) => {
+        const originalCell = cell;
+        let cleaned = cell;
 
-      if (/₹|Dr|Cr|Nos|PCS|Kg|Mtr/i.test(cell)) {
-        cleaned = cleaned.replace(/₹/g, '').trim();
-        cleaned = cleaned.replace(/\s*(Dr|Cr)\s*/i, '').trim();
-        cleaned = cleaned.replace(/\s*(Nos|PCS|Kg|Mtr)\s*/i, '').trim();
-        if (/^[\d,]+\.?\d*$/.test(cleaned)) {
-          cleaned = cleaned.replace(/,/g, '');
+        // Normalize strict Indian D-before-M date strings
+        const normalizedDate = normalizeIndianDateCell(cleaned);
+        if (normalizedDate) {
+          if (normalizedDate !== cleaned) drCrRupeeNormalizedCount++;
+          return normalizedDate;
         }
-        if (cleaned !== originalCell) {
-          drCrRupeeNormalizedCount++;
+
+        // Mask OEM buyer names if embedded in part description
+        const { masked, count } = maskOemBrandNames(cleaned);
+        if (count > 0) {
+          cleaned = masked;
+          oemBrandsMasked += count;
         }
-      } else if (/^[\d,]+\.\d+$/.test(cleaned) || /^[\d,]+$/.test(cleaned)) {
-        const noComma = cleaned.replace(/,/g, '');
-        if (noComma !== cleaned) {
-          cleaned = noComma;
-          drCrRupeeNormalizedCount++;
+
+        if (/₹|\b(Dr|Cr|Nos|PCS|Pcs|Kg|Mtr|Set)\b/i.test(cleaned)) {
+          cleaned = cleaned.replace(/₹/g, '').trim();
+          cleaned = cleaned.replace(/\s*\b(Dr|Cr)\b\s*/gi, '').trim();
+          cleaned = cleaned.replace(/\s*\b(Nos|PCS|Kg|Mtr|Set)\b\.?\s*/gi, '').trim();
+          if (/^-?[\d,]+\.?\d*$/.test(cleaned)) {
+            cleaned = cleaned.replace(/,/g, '');
+          }
+          if (cleaned !== originalCell) {
+            drCrRupeeNormalizedCount++;
+          }
+        } else if (/^-?[\d,]+\.\d+$/.test(cleaned) || /^-?[\d,]+$/.test(cleaned)) {
+          const noComma = cleaned.replace(/,/g, '');
+          if (noComma !== cleaned) {
+            cleaned = noComma;
+            drCrRupeeNormalizedCount++;
+          }
         }
-      }
-      return cleaned;
-    });
+        return cleaned;
+      });
   });
 
   let finalHeaders = filteredHeaders;
@@ -119,12 +223,12 @@ export function cleanMessyTallyCsv(rawCsvText: string): CleanResult {
 
   if (finalHeaders.length > 5) {
     finalHeaders = finalHeaders.slice(0, 5);
-    finalRows = finalRows.map(r => r.slice(0, 5));
+    finalRows = finalRows.map((r) => r.slice(0, 5));
   } else {
     while (finalHeaders.length < 5) {
       const nextIdx = finalHeaders.length + 1;
       finalHeaders.push(`Attr ${nextIdx}`);
-      finalRows = finalRows.map(r => {
+      finalRows = finalRows.map((r) => {
         const copy = [...r];
         while (copy.length < finalHeaders.length) copy.push('-');
         return copy;
@@ -138,22 +242,21 @@ export function cleanMessyTallyCsv(rawCsvText: string): CleanResult {
     bannerFooterRowsRemoved: bannerCount + footerCount,
     drCrRupeeNormalized: drCrRupeeNormalizedCount,
     confidentialColsStripped,
-    cleanAuditRowsReady: finalRows.length
+    oemBrandsMasked,
+    cleanAuditRowsReady: finalRows.length,
   };
 }
 
 export const SAMPLE_MESSY_TALLY_CSV = `M/S BHARAT AUTO COMPONENTS PVT LTD
 Unit 4 Oragadam Industrial Corridor Chennai Tamil Nadu - 600028
 Tally Prime Export - Inventory & Debit Note Audit Schedule (01-Apr-2025 to 31-Mar-2026)
------------------------------------------------------------------------------------------
 Date, Voucher No, Item Description, Vendor Name, GSTIN, Qty, Rate, Amount (INR)
-02-May-2025, VN-8841, High-Pressure Fuel Pipe Assembly, TVS Logistics, 33AAACT9812K1Z5, 180 Nos, ₹ 850.00, ₹ 1,53,000.00 Dr
-14-Jun-2025, VN-8902, Brake Disc Rotor Casting 240mm, Sundram Fasteners, 33AABCS4412J1Z2, 450 PCS, ₹ 1,200.00, ₹ 5,40,000.00 Dr
-29-Aug-2025, VN-9104, Engine Control Module Bracket, Ashok Leyland Unit-2, 33AABCA1209M1Z9, 320 Nos, ₹ 450.00, ₹ 1,44,000.00 Dr
-11-Nov-2025, VN-9411, Heavy Duty Axle Coupling Flange, Brakes India Ltd, 33AAACB8841P1Z3, 95 Kg, ₹ 2,800.00, ₹ 2,66,000.00 Dr
-20-Jan-2026, VN-9850, Transmission Housing Alloy Sleeve, Lucas TVS Ltd, 33AAACL1102Q1Z4, 210 Mtr, ₹ 1,150.00, ₹ 2,41,500.00 Dr
------------------------------------------------------------------------------------------
-Grand Total, , , , , , , ₹ 13,44,500.00`;
+04-Aug-2025, VN-8841, "Bracket, Fuel Pipe Assembly (TVS Spec)", TVS Logistics, 33AAACT9812K1Z5, 180.5 Nos, ₹ 850.00, ₹ 1,53,425.00 Dr
+14-Sep-2025, VN-8902, "Brake Disc Rotor Casting, 240mm", Sundram Fasteners, 33AABCS4412J1Z2, 450 PCS, ₹ 1,200.00, ₹ 5,40,000.00 Dr
+29-Oct-2025, VN-9104, "Engine Control Bracket — Ashok Leyland", Ashok Leyland Unit-2, 33AABCA1209M1Z9, 320 Nos, ₹ 450.00, ₹ 1,44,000.00 Dr
+11-Nov-2025, VN-9411, "Heavy Duty Axle Coupling Flange", Brakes India Ltd, 33AAACB8841P1Z3, 95.25 Kg, ₹ 2,800.00, ₹ 2,66,700.00 Dr
+20-Jan-2026, VN-9850, "Transmission Housing Alloy Sleeve", Lucas TVS Ltd, 33AAACL1102Q1Z4, 210 Mtr, ₹ 1,150.00, ₹ 2,41,500.00 Dr
+Grand Total, , , , , , , ₹ 13,45,625.00`;
 
 export function TallyCleanerDesk() {
   const [inputText, setInputText] = useState<string>('');
@@ -183,7 +286,7 @@ export function TallyCleanerDesk() {
     if (!cleanResult) return;
     const csvContent = [
       cleanResult.headers.join(','),
-      ...cleanResult.rows.map(r => r.map(c => `"${c.replace(/"/g, '""')}"`).join(','))
+      ...cleanResult.rows.map((r) => r.map((c) => `"${c.replace(/"/g, '""')}"`).join(',')),
     ].join('\n');
 
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -194,6 +297,7 @@ export function TallyCleanerDesk() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   return (
@@ -201,16 +305,17 @@ export function TallyCleanerDesk() {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-4">
         <div>
           <h2 className="text-xl font-bold text-emerald-400 flex items-center gap-2">
-            <span>⚡ Messy Tally / Busy Excel Auto-Cleaner Desk</span>
+            <span>Messy Tally / Busy Excel Auto-Cleaner Desk</span>
           </h2>
           <p className="text-slate-400 text-sm">
-            100% Client-Side Indian ERP Export Sanitizer (Strips Banners, GSTIN/Party Cols, Cr/Dr &amp; ₹ Formatting)
+            100% Client-Side Indian ERP Sanitizer (Strips Banners, GSTIN/Party Cols, Masks OEM Brands, Normalizes DD-MM-YYYY &amp; Cr/Dr ₹)
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
           <button
+            type="button"
             onClick={() => handleProcess(SAMPLE_MESSY_TALLY_CSV)}
-            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-sm rounded-lg transition-colors shadow"
+            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-sm rounded-lg transition-colors shadow cursor-pointer"
           >
             Load Sample Messy Tally Sheet
           </button>
@@ -233,22 +338,36 @@ export function TallyCleanerDesk() {
 
       {cleanResult && (
         <div className="space-y-4">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
             <div className="bg-slate-900/80 p-3 rounded-lg border border-slate-700/60">
-              <div className="text-slate-400 text-xs">Banner/Footer Rows Stripped</div>
-              <div className="text-xl font-bold text-amber-400">{cleanResult.bannerFooterRowsRemoved}</div>
+              <div className="text-slate-400 text-xs">Banner/Footer Stripped</div>
+              <div className="text-xl font-bold text-amber-400">
+                {cleanResult.bannerFooterRowsRemoved}
+              </div>
             </div>
             <div className="bg-slate-900/80 p-3 rounded-lg border border-slate-700/60">
-              <div className="text-slate-400 text-xs">Dr/Cr &amp; ₹ Cells Normalized</div>
-              <div className="text-xl font-bold text-emerald-400">{cleanResult.drCrRupeeNormalized}</div>
+              <div className="text-slate-400 text-xs">Dates &amp; ₹ Normalized</div>
+              <div className="text-xl font-bold text-emerald-400">
+                {cleanResult.drCrRupeeNormalized}
+              </div>
             </div>
             <div className="bg-slate-900/80 p-3 rounded-lg border border-slate-700/60">
-              <div className="text-slate-400 text-xs">Confidential Party Cols Stripped</div>
-              <div className="text-xl font-bold text-rose-400">{cleanResult.confidentialColsStripped}</div>
+              <div className="text-slate-400 text-xs">Party/GSTIN Cols Stripped</div>
+              <div className="text-xl font-bold text-rose-400">
+                {cleanResult.confidentialColsStripped}
+              </div>
+            </div>
+            <div className="bg-slate-900/80 p-3 rounded-lg border border-slate-700/60">
+              <div className="text-slate-400 text-xs">OEM Brands Masked</div>
+              <div className="text-xl font-bold text-sky-400">
+                {cleanResult.oemBrandsMasked}
+              </div>
             </div>
             <div className="bg-slate-900/80 p-3 rounded-lg border border-slate-700/60">
               <div className="text-slate-400 text-xs">Clean Audit Rows Ready</div>
-              <div className="text-xl font-bold text-blue-400">{cleanResult.cleanAuditRowsReady}</div>
+              <div className="text-xl font-bold text-blue-400">
+                {cleanResult.cleanAuditRowsReady}
+              </div>
             </div>
           </div>
 
@@ -257,7 +376,9 @@ export function TallyCleanerDesk() {
               <thead className="bg-slate-900 text-emerald-400 uppercase font-semibold">
                 <tr>
                   {cleanResult.headers.map((h, idx) => (
-                    <th key={idx} className="p-2.5 border-b border-slate-700">{h}</th>
+                    <th key={idx} className="p-2.5 border-b border-slate-700">
+                      {h}
+                    </th>
                   ))}
                 </tr>
               </thead>
@@ -265,7 +386,9 @@ export function TallyCleanerDesk() {
                 {cleanResult.rows.map((row, rIdx) => (
                   <tr key={rIdx} className="hover:bg-slate-750">
                     {row.map((cell, cIdx) => (
-                      <td key={cIdx} className="p-2.5 font-mono">{cell}</td>
+                      <td key={cIdx} className="p-2.5 font-mono">
+                        {cell}
+                      </td>
                     ))}
                   </tr>
                 ))}
@@ -275,10 +398,11 @@ export function TallyCleanerDesk() {
 
           <div className="flex justify-end">
             <button
+              type="button"
               onClick={handleDownloadCsv}
-              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-sm rounded-lg shadow transition-colors flex items-center gap-2"
+              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-sm rounded-lg shadow transition-colors flex items-center gap-2 cursor-pointer"
             >
-              📥 Download Clean 5-Column Audit CSV
+              Download Clean 5-Column Audit CSV
             </button>
           </div>
         </div>
@@ -308,6 +432,19 @@ export interface RtvClaimLetterData {
   totalCashRelease: number;
 }
 
+function triggerHtmlFileDownload(htmlContent: string, filename: string): void {
+  if (typeof document === 'undefined') return;
+  const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.setAttribute('href', url);
+  link.setAttribute('download', filename);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
 export function exportPrintableRtvClaimLetter(data: RtvClaimLetterData): void {
   const refNo = data.referenceNo || `RTV-${Date.now().toString().slice(-6)}`;
   const docDate = data.date || new Date().toLocaleDateString('en-IN');
@@ -317,13 +454,14 @@ export function exportPrintableRtvClaimLetter(data: RtvClaimLetterData): void {
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>RTV & Scrap Claim Letter - ${refNo}</title>
+  <title>RTV &amp; Scrap Claim Letter - ${refNo}</title>
   <style>
     @page { size: A4; margin: 15mm; }
     body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #1e293b; line-height: 1.5; margin: 0; padding: 20px; }
-    .header { border-bottom: 3px solid #0f766e; padding-bottom: 12px; margin-bottom: 20px; }
+    .header { border-bottom: 3px solid #0f766e; padding-bottom: 12px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
     .title { font-size: 20px; font-weight: bold; color: #0f766e; text-transform: uppercase; }
     .subtitle { font-size: 13px; color: #64748b; }
+    .print-btn { background: #0f766e; color: white; border: none; padding: 8px 14px; border-radius: 6px; font-weight: 600; cursor: pointer; }
     .meta-grid { display: flex; justify-content: space-between; margin-bottom: 20px; font-size: 13px; background: #f8fafc; padding: 12px; border-radius: 6px; border: 1px solid #e2e8f0; }
     .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 20px; }
     .kpi-card { background: #f1f5f9; padding: 10px; border-radius: 6px; text-align: center; border: 1px solid #cbd5e1; }
@@ -342,8 +480,11 @@ export function exportPrintableRtvClaimLetter(data: RtvClaimLetterData): void {
 </head>
 <body>
   <div class="header">
-    <div class="title">Official Return-to-Vendor (RTV) & Scrap Authorization Schedule</div>
-    <div class="subtitle">Engine P1 Stagnant &gt;180-Day Working Capital Recovery Protocol</div>
+    <div>
+      <div class="title">Official Return-to-Vendor (RTV) &amp; Scrap Authorization Schedule</div>
+      <div class="subtitle">Engine P1 Stagnant &gt;180-Day Working Capital Recovery Protocol</div>
+    </div>
+    <button type="button" class="print-btn no-print" onclick="window.print()">Print / Save as PDF</button>
   </div>
 
   <div class="meta-grid">
@@ -384,7 +525,9 @@ export function exportPrintableRtvClaimLetter(data: RtvClaimLetterData): void {
       </tr>
     </thead>
     <tbody>
-      ${data.items.map(item => `
+      ${data.items
+        .map(
+          (item) => `
         <tr>
           <td><strong>${item.partNumber}</strong></td>
           <td>${item.description}</td>
@@ -394,7 +537,9 @@ export function exportPrintableRtvClaimLetter(data: RtvClaimLetterData): void {
           <td>₹ ${item.totalValue.toLocaleString('en-IN')}</td>
           <td><strong>${item.recommendedAction}</strong></td>
         </tr>
-      `).join('')}
+      `
+        )
+        .join('')}
     </tbody>
   </table>
 
@@ -403,29 +548,10 @@ export function exportPrintableRtvClaimLetter(data: RtvClaimLetterData): void {
     <div class="sign-box">Plant Head</div>
     <div class="sign-box">CFO / Statutory Auditor</div>
   </div>
-
-  <script>
-    window.onload = function() {
-      window.print();
-    };
-  </script>
 </body>
 </html>`;
 
-  const win = window.open('', '_blank');
-  if (win) {
-    win.document.write(htmlContent);
-    win.document.close();
-  } else {
-    const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.setAttribute('href', url);
-    link.setAttribute('download', `RTV_Claim_Letter_${refNo}.html`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  }
+  triggerHtmlFileDownload(htmlContent, `RTV_Claim_Letter_${refNo}.html`);
 }
 
 export interface TransporterDiscrepancy {
@@ -463,9 +589,10 @@ export function exportPrintableTransporterDebitNote(data: TransporterDebitNoteDa
   <style>
     @page { size: A4; margin: 15mm; }
     body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #1e293b; line-height: 1.5; margin: 0; padding: 20px; }
-    .header { border-bottom: 3px solid #b91c1c; padding-bottom: 12px; margin-bottom: 20px; }
+    .header { border-bottom: 3px solid #b91c1c; padding-bottom: 12px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
     .title { font-size: 20px; font-weight: bold; color: #b91c1c; text-transform: uppercase; }
     .subtitle { font-size: 13px; color: #64748b; }
+    .print-btn { background: #b91c1c; color: white; border: none; padding: 8px 14px; border-radius: 6px; font-weight: 600; cursor: pointer; }
     .meta-grid { display: flex; justify-content: space-between; margin-bottom: 20px; font-size: 13px; background: #fef2f2; padding: 12px; border-radius: 6px; border: 1px solid #fecaca; }
     .kpi-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 20px; }
     .kpi-card { background: #f8fafc; padding: 12px; border-radius: 6px; text-align: center; border: 1px solid #cbd5e1; }
@@ -484,8 +611,11 @@ export function exportPrintableTransporterDebitNote(data: TransporterDebitNoteDa
 </head>
 <body>
   <div class="header">
-    <div class="title">Official Transporter Freight & Detention Debit Note Voucher</div>
-    <div class="subtitle">Engine P3 Logistics Freight Leakage & Gate Detention Recovery Protocol</div>
+    <div>
+      <div class="title">Official Transporter Freight &amp; Detention Debit Note Voucher</div>
+      <div class="subtitle">Engine P3 Logistics Freight Leakage &amp; Gate Detention Recovery Protocol</div>
+    </div>
+    <button type="button" class="print-btn no-print" onclick="window.print()">Print / Save as PDF</button>
   </div>
 
   <div class="meta-grid">
@@ -522,7 +652,9 @@ export function exportPrintableTransporterDebitNote(data: TransporterDebitNoteDa
       </tr>
     </thead>
     <tbody>
-      ${data.discrepancies.map(item => `
+      ${data.discrepancies
+        .map(
+          (item) => `
         <tr>
           <td><strong>${item.lrNumber}</strong></td>
           <td>${item.route}</td>
@@ -531,7 +663,9 @@ export function exportPrintableTransporterDebitNote(data: TransporterDebitNoteDa
           <td><strong>₹ ${item.netDebit.toLocaleString('en-IN')}</strong></td>
           <td><span style="color: #b91c1c; font-weight: bold;">${item.status}</span></td>
         </tr>
-      `).join('')}
+      `
+        )
+        .join('')}
     </tbody>
   </table>
 
@@ -540,27 +674,9 @@ export function exportPrintableTransporterDebitNote(data: TransporterDebitNoteDa
     <div class="sign-box">Logistics Head</div>
     <div class="sign-box">CFO Authorization</div>
   </div>
-
-  <script>
-    window.onload = function() {
-      window.print();
-    };
-  </script>
 </body>
 </html>`;
 
-  const win = window.open('', '_blank');
-  if (win) {
-    win.document.write(htmlContent);
-    win.document.close();
-  } else {
-    const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.setAttribute('href', url);
-    link.setAttribute('download', `Transporter_Debit_Note_${voucherNo}.html`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  }
+  triggerHtmlFileDownload(htmlContent, `Transporter_Debit_Note_${voucherNo}.html`);
 }
+

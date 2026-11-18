@@ -168,13 +168,13 @@ export const DEFAULT_FOUNDER_BILLING_CONFIG: FounderBillingConfig = {
   bankName: 'HDFC / ICICI / Indian Bank (Configure in Agent Workforce Billing Settings)',
   accountNumber: '00001234567890 (Configure in Billing Settings)',
   ifscCode: 'HDFC0000123 (Configure in Billing Settings)',
-  udyamMsmeNumber: 'UDYAM-TN-02-XXXXXXX (Configure in Billing Settings)',
+  udyamMsmeNumber: 'UDYAM-TN-02-0444630',
   gstinOptional: '',
   razorpayPaymentLinkTier2: 'https://razorpay.me/@operationalyst',
   razorpayPaymentLinkTier3: 'https://razorpay.me/@operationalyst',
   tier1PriceInr: 0,
-  tier2FullAuditPriceInr: 14999,
-  tier3MonthlyRetainerInr: 24999,
+  tier2FullAuditPriceInr: 18000,
+  tier3MonthlyRetainerInr: 15000,
   founderAlertEmail: getEnvString('FOUNDER_ALERT_EMAIL') || 'joneszz2004@gmail.com',
   founderWebhookUrl:
     getEnvString('FOUNDER_WEBHOOK_URL') ||
@@ -241,6 +241,24 @@ export function normalizeFounderBillingConfig(
       ? LIVE_FOUNDER_UPI_ID
       : rawUpi.slice(0, 100);
 
+  const rawUdyam = typeof raw.udyamMsmeNumber === 'string' ? raw.udyamMsmeNumber.trim() : '';
+  const migratedUdyam =
+    !rawUdyam || rawUdyam.includes('UDYAM-TN-02-XXXXXXX')
+      ? 'UDYAM-TN-02-0444630'
+      : rawUdyam.slice(0, 100);
+
+  const rawTier2 = sanitizePositivePrice(
+    raw.tier2FullAuditPriceInr,
+    DEFAULT_FOUNDER_BILLING_CONFIG.tier2FullAuditPriceInr
+  );
+  const migratedTier2 = rawTier2 === 14999 ? 18000 : rawTier2;
+
+  const rawTier3 = sanitizePositivePrice(
+    raw.tier3MonthlyRetainerInr,
+    DEFAULT_FOUNDER_BILLING_CONFIG.tier3MonthlyRetainerInr
+  );
+  const migratedTier3 = rawTier3 === 24999 ? 15000 : rawTier3;
+
   return {
     beneficiaryName: sanitizeText(
       raw.beneficiaryName,
@@ -255,11 +273,7 @@ export function normalizeFounderBillingConfig(
       80
     ),
     ifscCode: sanitizeText(raw.ifscCode, DEFAULT_FOUNDER_BILLING_CONFIG.ifscCode, 40),
-    udyamMsmeNumber: sanitizeText(
-      raw.udyamMsmeNumber,
-      DEFAULT_FOUNDER_BILLING_CONFIG.udyamMsmeNumber,
-      100
-    ),
+    udyamMsmeNumber: migratedUdyam,
     gstinOptional: sanitizeOptionalSecret(
       raw.gstinOptional !== undefined
         ? raw.gstinOptional
@@ -278,14 +292,8 @@ export function normalizeFounderBillingConfig(
       240
     ),
     tier1PriceInr: 0,
-    tier2FullAuditPriceInr: sanitizePositivePrice(
-      raw.tier2FullAuditPriceInr,
-      DEFAULT_FOUNDER_BILLING_CONFIG.tier2FullAuditPriceInr
-    ),
-    tier3MonthlyRetainerInr: sanitizePositivePrice(
-      raw.tier3MonthlyRetainerInr,
-      DEFAULT_FOUNDER_BILLING_CONFIG.tier3MonthlyRetainerInr
-    ),
+    tier2FullAuditPriceInr: migratedTier2,
+    tier3MonthlyRetainerInr: migratedTier3,
     founderAlertEmail: sanitizeText(
       raw.founderAlertEmail,
       getEnvString('FOUNDER_ALERT_EMAIL') ||
@@ -547,7 +555,7 @@ export async function generateUpiQrCodeSvg(upiUri: string): Promise<string> {
   const safeUri =
     typeof upiUri === 'string' && upiUri.trim().startsWith('upi://pay')
       ? upiUri.trim()
-      : buildUpiPaymentUri(DEFAULT_FOUNDER_BILLING_CONFIG, 14999, 'INV-20261110-P1P4');
+      : buildUpiPaymentUri(DEFAULT_FOUNDER_BILLING_CONFIG, 18000, 'INV-20261110-P1P4');
   return QRCode.toString(safeUri, {
     type: 'svg',
     margin: 1,
