@@ -1,0 +1,8 @@
+description = "Validate a 5-column stock CSV and run the P1-P4 deterministic 6-sheet audit check"
+prompt = """
+Inspect the stock export file `{{args}}` (first 20 lines and row count below) against Operationalyst's 5-column contract (`Part_ID`, `Part_Description`, `Closing_Stock_Qty`, `Unit_Cost_INR`, `Last_Movement_Date`):
+!{head -n 20 {{args}} && wc -l {{args}}}
+
+1. Flag any missing required columns, date format issues (`YYYY-MM-DD` vs `DD/MM/YYYY`), or forbidden supplier PII columns.
+2. Execute or generate the deterministic 6-sheet reconciliation (`01_Health` through `06_Spares_Guard`) using exact Decimal INR math and the 22.0%/yr carrying burn breakdown.
+"""
