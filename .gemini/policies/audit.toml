@@ -1,0 +1,48 @@
+# Gemini CLI v0.71+ Policy Engine Rules for Operationalyst
+# Windows install: New-Item -ItemType Directory -Force "$HOME\.gemini\policies"; Copy-Item .gemini\policies\audit.toml "$HOME\.gemini\policies\audit.toml"
+# Headless enforcement: gemini --admin-policy .gemini/policies/audit.toml -p "..."
+
+[[rule]]
+toolName = "web_fetch"
+interactive = false
+decision = "deny"
+priority = 950
+
+[[rule]]
+toolName = "google_web_search"
+interactive = false
+decision = "deny"
+priority = 950
+
+[[rule]]
+toolName = "run_shell_command"
+commandRegex = "^(curl|wget|scp|rsync|nc|ssh|Invoke-WebRequest)$"
+decision = "deny"
+priority = 990
+
+[[rule]]
+toolName = "run_shell_command"
+commandPrefix = "rm"
+argsPattern = "-[a-zA-Z]*r[a-zA-Z]*f"
+decision = "deny"
+priority = 990
+
+[[rule]]
+toolName = "run_shell_command"
+commandRegex = "^(python|python3|pytest)$"
+decision = "allow"
+priority = 400
+
+[[rule]]
+toolName = "run_shell_command"
+commandPrefix = "git"
+argsPattern = "\"command\"\\s*:\\s*\"git\\s+(status|diff|log)"
+decision = "allow"
+priority = 400
+
+[[rule]]
+toolName = "run_shell_command"
+commandPrefix = "git"
+argsPattern = "\"command\"\\s*:\\s*\"git\\s+(push|reset|clean|checkout)"
+decision = "ask_user"
+priority = 800
