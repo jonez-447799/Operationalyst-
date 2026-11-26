@@ -1,0 +1,42 @@
+{
+  "general": {
+    "checkpointing": {
+      "enabled": true
+    }
+  },
+  "tools": {
+    "shell": {
+      "enableInteractiveShell": true
+    }
+  },
+  "hooks": {
+    "BeforeTool": [
+      {
+        "matcher": "write_file|replace",
+        "sequential": true,
+        "hooks": [
+          {
+            "name": "operationalyst-audit-gate",
+            "type": "command",
+            "command": "python3 .gemini/hooks/operationalyst_gate.py",
+            "timeout": 15000,
+            "description": "Enforces Decimal INR math, 6-sheet structure, and supplier PII exclusion"
+          }
+        ]
+      }
+    ],
+    "AfterAgent": [
+      {
+        "hooks": [
+          {
+            "name": "reconciliation-completeness-check",
+            "type": "command",
+            "command": "python3 .gemini/hooks/operationalyst_gate.py",
+            "timeout": 15000,
+            "description": "Blocks unfinished TODO/TBD placeholders in audit outputs"
+          }
+        ]
+      }
+    ]
+  }
+}
