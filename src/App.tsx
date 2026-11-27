@@ -1,806 +1,940 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from 'react';
+import * as XLSX from 'xlsx';
+import {
+  ShieldCheck,
+  TrendingDown,
+  FileSpreadsheet,
+  Printer,
+  Building2,
+  CheckCircle2,
+  AlertTriangle,
+  FileText,
+  Layers,
+  Download,
+  Upload,
+  DollarSign,
+  Calculator,
+  RefreshCw,
+  ArrowRight,
+  Lock,
+  ShieldAlert,
+  Info,
+  Phone,
+  Mail,
+  MapPin,
+  Award,
+  Search,
+  Sliders
+} from 'lucide-react';
 
-type RoomId = "home" | "sandbox" | "sample" | "pricing";
-type TabId = "01_Exec_Health" | "02_Idle_180d_Hitlist" | "03_CARO_Bank_DP" | "04_AS2_NRV_Ageing" | "05_Freight_Audit" | "06_Spares_Guard" | "07_Reorder_Cap" | "08_Audit_Trail";
+const HEADER_FOOTER_CREDENTIALS = "C. Jones Snowin · Founder, Operationalyst (Snowin Ventures, Chennai) · B.Com (Loyola College, Chennai) · MBA (Supply Chain & Finance) · Govt. of India Udyam MSME UDYAM-TN-02-0444630 · 0% GST MSME Bill of Supply · jonessnowin@operationalyst.com · +91 90805 40047 · Zero ERP Login · NDA Clean-Room Ready.";
+
+interface SKUItem {
+  partId: string;
+  desc: string;
+  daysIdle: number;
+  qty: number;
+  unitCost: number;
+  bookValue: number;
+  dailyBleed?: number;
+  routing?: string;
+  isShielded?: boolean;
+}
+
+const PRELOADED_10_COHORT: SKUItem[] = [
+  { partId: "PRG-4402-SS", desc: "Flange Housing SS316L Machined Component", daysIdle: 378, qty: 440, unitCost: 4200, bookValue: 1848000 },
+  { partId: "HSG-910-ALU", desc: "Die-Cast Transmission Cover Rev-A (ECN Orphan)", daysIdle: 294, qty: 770, unitCost: 1900, bookValue: 1462000 },
+  { partId: "SHF-208-EN24", desc: "Induction Hardened Drive Shaft Blank EN24", daysIdle: 431, qty: 351, unitCost: 3400, bookValue: 1193500 },
+  { partId: "BLK-774-SG", desc: "Ductile Iron Hydraulic Manifold Block SG", daysIdle: 362, qty: 210, unitCost: 5200, bookValue: 1092000 },
+  { partId: "GER-512-20M", desc: "Helical Pinion Gear Blank Forging 20MnCr5", daysIdle: 409, qty: 360, unitCost: 2880, bookValue: 1036800 },
+  { partId: "BRG-6209-ZZ-P4", desc: "Mazak 5-Axis VMC Spindle Bearing Precision", daysIdle: 356, qty: 12, unitCost: 12000, bookValue: 144000 },
+  { partId: "SER-881-FANUC", desc: "Fanuc AC Servo Motor Controller Module", daysIdle: 280, qty: 4, unitCost: 185000, bookValue: 740000 },
+  { partId: "BAL-902-THK", desc: "THK High-Precision Ballscrew Assembly 40mm", daysIdle: 310, qty: 8, unitCost: 65000, bookValue: 520000 },
+  { partId: "ENC-104-HEID", desc: "Heidenhain Linear Glass Scale Encoder", daysIdle: 215, qty: 6, unitCost: 48000, bookValue: 288000 },
+  { partId: "VLV-330-HYD", desc: "Yuken Proportional Hydraulic Control Valve", daysIdle: 195, qty: 15, unitCost: 22000, bookValue: 330000 }
+];
+
+const BENCHMARK_ITEMS = [
+  { partId: "PRG-4402-SS", desc: "Flange Housing SS316L", daysIdle: 378, value: "₹18,48,000", bleed: "₹1,318/d", action: "Vendor Credit Swap (82% PO Offset)", type: "normal" },
+  { partId: "HSG-910-ALU", desc: "Die-Cast Transmission Cover Rev-A (ECN Orphan)", daysIdle: 294, value: "₹14,62,000", bleed: "₹1,043/d", action: "OEM ECN Obsolescence Claim", type: "normal" },
+  { partId: "SHF-208-EN24", desc: "Induction Hardened Drive Shaft Blank", daysIdle: 431, value: "₹11,93,500", bleed: "₹851/d", action: "Alternate BOM Turn-Down Re-Machine", type: "normal" },
+  { partId: "BLK-774-SG", desc: "Ductile Iron Hydraulic Manifold", daysIdle: 362, value: "₹10,92,000", bleed: "₹779/d", action: "Vendor Credit Swap vs Active PO", type: "normal" },
+  { partId: "GER-512-20M", desc: "Helical Pinion Gear Blank Forging", daysIdle: 409, value: "₹10,36,800", bleed: "₹739/d", action: "Alternate BOM Re-Machining", type: "normal" },
+  { partId: "BRG-6209-ZZ-P4", desc: "Mazak 5-Axis VMC Spindle Bearing", daysIdle: 356, value: "₹1,44,000", bleed: "SHIELDED", action: "LOCKED SAFE — Saves ₹40.3L VMC Outage", type: "shielded" }
+];
+
+export function generateInstitutionalXLSX() {
+  const wb = XLSX.utils.book_new();
+
+  // 01_Exec_Capital_Bridge
+  const ws1_data = [
+    ["OPERATIONALYST INSTITUTIONAL CAPITAL DIAGNOSTIC — EXECUTIVE BRIDGE"],
+    ["Plant Corridor", "Oragadam / Hosur Discrete Manufacturing Cluster"],
+    ["Reconciled Plant Stock", "₹6,42,80,000", "420 SKUs", "Variance < 0.8%"],
+    ["Actionable Dead Stock (>180d)", "₹1,06,60,000", "54 SKUs", "OD Bleed: ₹7,820/day"],
+    ["CNC Breakdown Spares Shielded", "₹41,60,000", "47 SKUs", "Downtime Value Protected: ₹18,000/hr"],
+    ["30-Day Recovery Hitlist", "₹68,40,000", "Zero Reduction in Bank DP Limit"],
+    [],
+    ["Metric Breakdown", "Value (INR)", "Percentage", "Audit Note"],
+    ["Total Book Value", 64280000, "100.0%", "Physical count verified"],
+    ["Active Production Stock (<90d)", 41220000, "64.1%", "Normal operating cycle"],
+    ["Slow-Moving Stock (91-180d)", 12400000, "19.3%", "Monitored buffer"],
+    ["Non-Moving Idle (>180d)", 10660000, "16.6%", "Actionable carrying cost bleed"],
+    ["Critical CNC Spares Exempt", 4160000, "6.5%", "Mathematically shielded under AS-10"]
+  ];
+  const ws1 = XLSX.utils.aoa_to_sheet(ws1_data);
+  XLSX.utils.book_append_sheet(wb, ws1, "01_Exec_Capital_Bridge");
+
+  // 02_Idle_180d_365d_Hitlist
+  const ws2_data = [
+    ["Part_ID", "Description", "Days_Idle", "Qty", "Unit_Cost_INR", "Book_Value_INR", "Daily_Bleed_INR", "Action_Routing"],
+    ["PRG-4402-SS", "Flange Housing SS316L", 378, 440, 4200, 1848000, 1318, "Vendor Credit Swap (82% PO Offset)"],
+    ["HSG-910-ALU", "Die-Cast Transmission Cover Rev-A", 294, 770, 1900, 1462000, 1043, "OEM ECN Obsolescence Claim"],
+    ["SHF-208-EN24", "Induction Hardened Drive Shaft Blank", 431, 351, 3400, 1193500, 851, "Alternate BOM Turn-Down Re-Machine"],
+    ["BLK-774-SG", "Ductile Iron Hydraulic Manifold", 362, 210, 5200, 1092000, 779, "Vendor Credit Swap vs Active PO"],
+    ["GER-512-20M", "Helical Pinion Gear Blank Forging", 409, 360, 2880, 1036800, 739, "Alternate BOM Re-Machining"]
+  ];
+  const ws2 = XLSX.utils.aoa_to_sheet(ws2_data);
+  XLSX.utils.book_append_sheet(wb, ws2, "02_Idle_180d_365d_Hitlist");
+
+  // 03_Action_Routing_Matrix
+  const ws3_data = [
+    ["Routing Mechanism", "Target Value (INR)", "SKU Count", "Execution Partner / Method", "Expected Cash Realization Timeline"],
+    ["Vendor Credit Swap", 3240000, 14, "Active PO Offset with Tier-1 Suppliers", "14 Days"],
+    ["OEM ECN Claim", 2150000, 8, "Engineering Change Notice Back-charge", "30 Days"],
+    ["Alternate BOM Re-Machine", 1850000, 9, "In-house CNC Resizing & Turning", "21 Days"],
+    ["Grade-Sorted Alloy Auction", 1600000, 17, "Certified Metallurgical Bidding", "10 Days"],
+    ["LOCKED SAFE — CNC Spares", 4160000, 47, "Shielded Breakdown Maintenance Vault", "Permanent Lockout"]
+  ];
+  const ws3 = XLSX.utils.aoa_to_sheet(ws3_data);
+  XLSX.utils.book_append_sheet(wb, ws3, "03_Action_Routing_Matrix");
+
+  // 04_AS2_CARO_Audit_Schedule
+  const ws4_data = [
+    ["AS-2 & CARO 2020 CLAUSE 3(ii) NRV & DP RECONCILIATION"],
+    ["Parameter", "Amount (INR)", "Regulatory Impact", "Compliance Note"],
+    ["Total Inventory Book Value", 64280000, "CARO 3(ii)(a)", "Physical verification within 0.8% variance"],
+    ["AS-2 Net Realizable Value Provision", 3447000, "Balance Sheet NRV", "Non-linear decay & obsolete ECNs"],
+    ["Bank Drawing Power (DP) Base", 64280000, "Bank CC Limit", "Zero DP shock strategy implemented"],
+    ["Exempted CNC Spares", 4160000, "AS-10 Capital Asset", "Maintained at cost; exempt from AS-2 write-down"]
+  ];
+  const ws4 = XLSX.utils.aoa_to_sheet(ws4_data);
+  XLSX.utils.book_append_sheet(wb, ws4, "04_AS2_CARO_Audit_Schedule");
+
+  // 05_BOM_Whiplash_MOQ_Leaks
+  const ws5_data = [
+    ["Part_ID", "BOM Code", "MOQ Excess Qty", "Excess Value (INR)", "Root Cause"],
+    ["HSG-910-ALU", "BOM-REV-A", 500, 950000, "Supplier MOQ 750 vs Run Requirement 250"],
+    ["PRG-4402-SS", "BOM-FLG-02", 200, 840000, "ECN Update without Inventory Scrap Hold"],
+    ["GER-512-20M", "BOM-GEAR-11", 180, 518400, "Forecast Over-ordering for Volume Discount"]
+  ];
+  const ws5 = XLSX.utils.aoa_to_sheet(ws5_data);
+  XLSX.utils.book_append_sheet(wb, ws5, "05_BOM_Whiplash_MOQ_Leaks");
+
+  // 06_CNC_Spares_Vault
+  const ws6_data = [
+    ["Part_ID", "Spare Description", "Machine Tag", "Unit Cost (INR)", "Downtime Avoided Value (INR)", "Status"],
+    ["BRG-6209-ZZ-P4", "Mazak 5-Axis VMC Spindle Bearing", "VMC-01/02", 144000, 4030000, "SHIELDED / LOCKED SAFE"],
+    ["SER-881-FANUC", "Fanuc AC Servo Motor Controller", "HMC-04", 185000, 5200000, "SHIELDED / LOCKED SAFE"],
+    ["BAL-902-THK", "THK High-Precision Ballscrew 40mm", "VMC-03", 65000, 2800000, "SHIELDED / LOCKED SAFE"],
+    ["ENC-104-HEID", "Heidenhain Linear Glass Scale Encoder", "VMC-01", 48000, 1900000, "SHIELDED / LOCKED SAFE"]
+  ];
+  const ws6 = XLSX.utils.aoa_to_sheet(ws6_data);
+  XLSX.utils.book_append_sheet(wb, ws6, "06_CNC_Spares_Vault");
+
+  // 07_Subcontract_Freight_Leaks
+  const ws7_data = [
+    ["Challan No", "Subcontractor / Job-Worker", "Days Out", "Material Value (INR)", "Sec 143 GST Risk (INR)", "Status"],
+    ["JW-AMB-2419", "Ambattur Heat Treaters Pvt Ltd", 412, 680000, 122400, "OVERDUE (>365d) — Immediate Recall"],
+    ["JW-HOS-1882", "Hosur Surface Finishers", 385, 445000, 80100, "OVERDUE (>365d) — Immediate Recall"]
+  ];
+  const ws7 = XLSX.utils.aoa_to_sheet(ws7_data);
+  XLSX.utils.book_append_sheet(wb, ws7, "07_Subcontract_Freight_Leaks");
+
+  // 08_30_60_90_Floor_Tracker
+  const ws8_data = [
+    ["Phase", "Days", "Milestone Target", "Target Cash Released (INR)", "Responsible Lead"],
+    ["Phase 1", "Days 1–7", "Spares Shielding & Top-5 Vendor Swap Setup", "₹18,48,000", "CFO & Plant Head"],
+    ["Phase 2", "Days 8–15", "OEM ECN Obsolescence Recovery Submissions", "₹14,62,000", "Supply Chain Lead"],
+    ["Phase 3", "Days 16–24", "In-House BOM Re-Machining Execution", "₹11,93,500", "Production Manager"],
+    ["Phase 4", "Days 25–30", "Certified Grade Alloy Bidding & Clearing", "₹23,36,500", "Commercial Head"]
+  ];
+  const ws8 = XLSX.utils.aoa_to_sheet(ws8_data);
+  XLSX.utils.book_append_sheet(wb, ws8, "08_30_60_90_Floor_Tracker");
+
+  XLSX.writeFile(wb, "Operationalyst_Institutional_Benchmark_420SKU.xlsx");
+}
 
 export default function App() {
-  const [activeRoom, setActiveRoom] = useState<RoomId>("home");
-  const [activeTab, setActiveTab] = useState<TabId>("01_Exec_Health");
-  
-  const [sandboxCsvText, setSandboxCsvText] = useState<string>(
-    `Part_ID,Part_Description,Closing_Stock_Qty,Unit_Cost_INR,Last_Movement_Date,Location_Rack
-RM-SS316-FLG-4402,Forged Flange Blank SS316 (RM),370,4000,2025-11-10,RACK-A01
-RM-EN353-CRB-112,Case-Hardening Alloy Bar 65mm (RM),430,3000,2025-12-20,RACK-A04
-RM-CUETP-BUS-309,Electrolytic Copper Busbar Strip (RM),240,4937,2026-04-12,RACK-B02
-FG-ALU-HSG-910A,Die-Cast Gearbox Cover Rev-A (FG),400,2400,2026-02-24,RACK-C05
-WIP-EN24-SHF-208,Turned Drive Shaft Batch #14 (WIP),190,3394,2025-10-12,RACK-W03
-MRO-SIEM-PLC-840D,Sinumerik 840D sl NCU Control Card (CRITICAL SPARE),2,270000,2025-03-25,MRO-CAB-01
-MRO-FANUC-SRV-09,CNC Alpha Spindle Drive Module (CRITICAL SPARE),5,97000,2025-06-24,MRO-CAB-04`
-  );
-  const [strippedVendorCount, setStrippedVendorCount] = useState<number>(1420);
+  const [activeTab, setActiveTab] = useState<'overview' | 'sandbox' | 'brief' | 'pricing'>('overview');
+  const [activeBenchmarkTab, setActiveBenchmarkTab] = useState<string>('02_Idle_Hitlist');
 
-  const handleDownloadXlsx = () => {
-    const csvContent = "data:text/csv;charset=utf-8," 
-      + "Tab,SKU_Code,Description,Category,Days_Idle,Book_Value_INR,NRV_Floor_INR,Action_Recommendation\n"
-      + "01_Exec_Health,SUMMARY,Reconciled Stock Register,ALL,0,68500000,7435000,CFO Command Brief Reconciled\n"
-      + "02_Idle_180d_Hitlist,RM-SS316-FLG-4402,Forged Flange Blank SS316 (RM),RM,384,1480000,1140000,Mill Credit Swap (Q3 PO)\n"
-      + "02_Idle_180d_Hitlist,RM-EN353-CRB-112,Case-Hardening Alloy Bar 65mm (RM),RM,342,1290000,1020000,Dealer Buyback / Inter-Plant Transfer\n"
-      + "02_Idle_180d_Hitlist,RM-CUETP-BUS-309,Electrolytic Copper Busbar Strip (RM),RM,229,1185000,1090000,Spot Metal Index Liquidation\n"
-      + "02_Idle_180d_Hitlist,FG-ALU-HSG-910A,Die-Cast Gearbox Cover Rev-A (FG),FG,276,960000,385000,OEM ECN Obsolescence Claim + Remelt\n"
-      + "02_Idle_180d_Hitlist,WIP-EN24-SHF-208,Turned Drive Shaft Batch #14 (WIP),WIP,412,645000,597000,Re-Machine OD to Rev-B Active SKU\n"
-      + "03_CARO_Bank_DP,CARO-3IIA-RECON,Clause 3(ii)(a) Discrepancy Engine,ALL,0,68500000,0,RM 2.55% WIP 3.04% FG 1.91% MRO 1.62% Compliant\n"
-      + "03_CARO_Bank_DP,CARO-3IIB-DP,Clause 3(ii)(b) Bank Drawing Power Shield,ALL,0,8850000,0,DP Haircut Risk Mitigated at 75% Advance Rate\n"
-      + "04_AS2_NRV_Ageing,AS2-AGEING,Ind AS 2 Lower of Cost or NRV Schedule,ALL,180+,14250000,4895000,AS-2 Write-down ₹48.95L Item-by-Item\n"
-      + "05_Freight_Audit,FRT-HOS-ORG-L04,Hosur -> Oragadam Milk-Run 9T FTL,LOG,90,1820000,235000,Reset 9T FTL Slab + 6-Hr Halting Cap\n"
-      + "05_Freight_Audit,FRT-PUN-CHN-L09,Chakan (Pune) -> Chennai Inbound,LOG,90,1640000,302000,Match Billing to E-Way Bill Net Weight\n"
-      + "05_Freight_Audit,FRT-AMB-SRP-L01,Ambattur -> Sriperumbudur Shuttle,LOG,90,940000,216000,Eliminate Empty-Return Trip Billing\n"
-      + "05_Freight_Audit,FRT-ORG-PRT-L12,Oragadam -> Ennore Port Shuttle,LOG,90,890000,187000,Recover Pre-Cutoff Weekend Detention\n"
-      + "06_Spares_Guard,MRO-SIEM-PLC-840D,Sinumerik 840D sl NCU Control Card,MRO,610,540000,0,SHIELDED — DO NOT SCRAP (₹4.5L/day loss avoided)\n"
-      + "06_Spares_Guard,MRO-FANUC-SRV-09,CNC Alpha Spindle Drive Module,MRO,518,485000,0,SHIELDED — DO NOT SCRAP (₹4.2L/day loss avoided)\n"
-      + "06_Spares_Guard,MRO-INDUCT-SCR-12,Induction Hardening Thyristor Stack,MRO,475,312000,0,SHIELDED — DO NOT SCRAP\n"
-      + "06_Spares_Guard,MRO-NSK-7018-CTY,Matched Angular Spindle Bearing Pair,MRO,392,218000,0,SHIELDED — DO NOT SCRAP\n"
-      + "07_Reorder_Cap,REORDER-CAP-01,ERP Min-Max & EOQ Reset Rules,PO,0,1950000,0,Blocked Open Auto-Replenishment POs in Tally/SAP\n"
-      + "08_Audit_Trail,AUDIT-PURGE-01,SHA-256 Vendor Stripping & Purge Log,LOG,0,0,0,Client-side SHA-256 Stripped 48 Dup Merges 7-Day Purge SLA";
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", "Operationalyst_8Sheet_Benchmark_6.85Cr.csv");
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const [bankRate, setBankRate] = useState<number>(14.5);
+  const [decayRate, setDecayRate] = useState<number>(9.0);
+  const [csvText, setCsvText] = useState<string>("");
+  const [skuList, setSkuList] = useState<SKUItem[]>(PRELOADED_10_COHORT);
+
+  const handleParseCsv = (text: string) => {
+    const lines = text.trim().split('\n');
+    const parsed: SKUItem[] = [];
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (!line || (i === 0 && line.toLowerCase().includes('part_id'))) continue;
+      const parts = line.split(',').map(s => s.trim().replace(/^"/, '').replace(/"$/, ''));
+      if (parts.length >= 5) {
+        const partId = parts[0];
+        const desc = parts[1];
+        const daysIdle = parseFloat(parts[2]) || 0;
+        const qty = parseFloat(parts[3]) || 0;
+        const unitCost = parseFloat(parts[4]) || 0;
+        const bookValue = qty * unitCost;
+        parsed.push({ partId, desc, daysIdle, qty, unitCost, bookValue });
+      }
+    }
+    if (parsed.length > 0) {
+      setSkuList(parsed);
+    }
   };
 
-  const founderSignOffText = "Reviewed & Signed Off by C.JONES SNOWIN · Founder & Project Lead | Operationalyst (A Snowin Ventures Platform, Chennai) · B.Com (Loyola College) · MBA (Supply Chain & Finance) · Udyam MSME: UDYAM-TN-02-0444630 · 0% GST Bill of Supply · jonessnowin@operationalyst.com · +91 90805 40047";
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (evt) => {
+        const text = evt.target?.result as string;
+        if (text) {
+          setCsvText(text);
+          handleParseCsv(text);
+        }
+      };
+      reader.readAsText(file);
+    }
+  };
+
+  const downloadSampleCsv = () => {
+    const sample = `Part_ID,Description,Days_Idle,Qty,Unit_Cost
+PRG-4402-SS,Flange Housing SS316L,378,440,4200
+HSG-910-ALU,Die-Cast Transmission Cover Rev-A,294,770,1900
+SHF-208-EN24,Induction Hardened Drive Shaft Blank,431,351,3400
+BLK-774-SG,Ductile Iron Hydraulic Manifold,362,210,5200
+GER-512-20M,Helical Pinion Gear Blank Forging,409,360,2880
+BRG-6209-ZZ-P4,Mazak 5-Axis VMC Spindle Bearing,356,12,12000
+SER-881-FANUC,Fanuc AC Servo Motor Controller,280,4,185000
+BAL-902-THK,THK High-Precision Ballscrew Assembly,310,8,65000
+ENC-104-HEID,Heidenhain Linear Glass Scale Encoder,215,6,48000
+VLV-330-HYD,Yuken Proportional Hydraulic Control Valve,195,15,22000`;
+    const blob = new Blob([sample], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = "Operationalyst_Sample_5Col_Stock.csv";
+    a.click();
+  };
+
+  const processedSkus = useMemo(() => {
+    const totalAnnualRate = (bankRate + decayRate) / 100;
+    const dailyRate = totalAnnualRate / 365;
+
+    return skuList.map(item => {
+      const isShielded = /spindle|fanuc|ballscrew|servo|bearing|encoder|guide|cnc|vmc|hmc/i.test(item.desc) || /BRG|SER|BAL|ENC/i.test(item.partId);
+      const dailyBleed = isShielded ? 0 : item.bookValue * dailyRate;
+
+      let routing = "Vendor Credit Swap";
+      if (isShielded) {
+        routing = "LOCKED SAFE — CNC SPARE";
+      } else if (/rev-a|ecn|orphan|cover|housing/i.test(item.desc)) {
+        routing = "OEM ECN Claim";
+      } else if (/blank|shaft|forging|gear/i.test(item.desc)) {
+        routing = "Alternate BOM Re-Machine";
+      } else if (item.daysIdle > 365) {
+        routing = "Grade-Sorted Alloy Auction";
+      }
+
+      return {
+        ...item,
+        dailyBleed,
+        routing,
+        isShielded
+      };
+    }).sort((a, b) => (b.dailyBleed || 0) - (a.dailyBleed || 0));
+  }, [skuList, bankRate, decayRate]);
+
+  const totalBookValue = useMemo(() => processedSkus.reduce((sum, s) => sum + s.bookValue, 0), [processedSkus]);
+  const totalDailyBleed = useMemo(() => processedSkus.reduce((sum, s) => sum + (s.dailyBleed || 0), 0), [processedSkus]);
+  const shieldedValue = useMemo(() => processedSkus.filter(s => s.isShielded).reduce((sum, s) => sum + s.bookValue, 0), [processedSkus]);
 
   return (
-    <div className="min-h-screen bg-[#0B0F19] text-[#F1F5F9] font-sans antialiased selection:bg-[#F59E0B] selection:text-[#0B0F19]">
-      {/* Header */}
-      <header className="sticky top-0 z-50 border-b border-[#1E293B] bg-[#0B0F19]/90 backdrop-blur-md">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center space-x-3 cursor-pointer" onClick={() => setActiveRoom("home")}>
-            <div className="w-9 h-9 rounded bg-[#F59E0B] text-[#0B0F19] font-black text-xl flex items-center justify-center tracking-tighter shadow-lg shadow-[#F59E0B]/20">
-              OP
-            </div>
-            <div>
-              <span className="text-lg font-bold tracking-tight text-[#F1F5F9]">Operationalyst</span>
-              <span className="hidden sm:inline-block ml-2 text-xs font-mono text-[#F59E0B] px-2 py-0.5 rounded bg-[#F59E0B]/10 border border-[#F59E0B]/20">
-                A Snowin Ventures Platform
-              </span>
-            </div>
+    <div className="min-h-screen bg-[#0B1120] text-slate-100 font-sans flex flex-col justify-between selection:bg-amber-500 selection:text-slate-900">
+      <header className="bg-[#070B16] border-b border-slate-800/80 px-4 py-2 text-xs text-slate-400">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-2 text-center md:text-left">
+          <div className="flex items-center gap-2 font-medium text-slate-300">
+            <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
+            <span>OPERATIONALYST INSTITUTIONAL V2</span>
+            <span className="hidden md:inline text-slate-600">|</span>
+            <span className="text-amber-400 font-mono text-[11px]">GOVT MSME UDYAM-TN-02-0444630</span>
           </div>
-
-          <nav className="flex items-center space-x-1 sm:space-x-4 text-xs sm:text-sm font-medium">
-            <button
-              onClick={() => setActiveRoom("home")}
-              className={`px-3 py-1.5 rounded-md transition ${activeRoom === "home" ? "bg-[#1E293B] text-[#F59E0B]" : "text-[#94A3B8] hover:text-[#F1F5F9]"}`}
-            >
-              Overview & Benchmark
-            </button>
-            <button
-              onClick={() => setActiveRoom("sandbox")}
-              className={`px-3 py-1.5 rounded-md transition ${activeRoom === "sandbox" ? "bg-[#1E293B] text-[#F59E0B]" : "text-[#94A3B8] hover:text-[#F1F5F9]"}`}
-            >
-              CSV Sandbox
-            </button>
-            <button
-              onClick={() => setActiveRoom("sample")}
-              className={`px-3 py-1.5 rounded-md transition ${activeRoom === "sample" ? "bg-[#1E293B] text-[#F59E0B]" : "text-[#94A3B8] hover:text-[#F1F5F9]"}`}
-            >
-              Sample 2-Page A4 Brief
-            </button>
-            <button
-              onClick={() => setActiveRoom("pricing")}
-              className={`px-3 py-1.5 rounded-md transition ${activeRoom === "pricing" ? "bg-[#1E293B] text-[#F59E0B]" : "text-[#94A3B8] hover:text-[#F1F5F9]"}`}
-            >
-              Pricing & Rules
-            </button>
-          </nav>
+          <div className="text-[11px] text-slate-400 truncate max-w-3xl">
+            {HEADER_FOOTER_CREDENTIALS}
+          </div>
         </div>
       </header>
 
-      {/* Main Section */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <nav className="bg-[#0F172A]/90 backdrop-blur border-b border-slate-800 sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            <div className="flex items-center gap-3 cursor-pointer" onClick={() => setActiveTab('overview')}>
+              <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-amber-500 to-amber-700 flex items-center justify-center font-bold text-slate-950 text-xl shadow-lg shadow-amber-500/20">
+                O
+              </div>
+              <div>
+                <span className="font-bold text-lg tracking-tight text-white block leading-none">OPERATIONALYST</span>
+                <span className="text-[10px] text-amber-400 font-mono tracking-widest uppercase">Institutional Working Capital Audit</span>
+              </div>
+            </div>
 
-        {/* Founding Pilot Banner */}
-        <div className="mb-8 rounded-lg border border-[#F59E0B]/30 bg-[#F59E0B]/10 p-4 text-sm text-[#F59E0B] flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="flex items-center space-x-3">
-            <span className="font-mono px-2 py-0.5 rounded bg-[#F59E0B] text-[#0B0F19] text-xs font-bold uppercase">
-              Founding Pilot
-            </span>
-            <span>
-              <strong>Stage 2 Pilot Slot Available (2 Slots Only):</strong> ₹0 Fee exclusively for discrete manufacturers in Chennai / Ambattur / Sriperumbudur / Oragadam / Hosur holding ₹5 Cr+ book stock.
-            </span>
+            <div className="flex space-x-1 md:space-x-2">
+              <button
+                onClick={() => setActiveTab('overview')}
+                className={`px-3 py-2 rounded-md text-xs sm:text-sm font-medium transition-all ${
+                  activeTab === 'overview'
+                    ? 'bg-amber-500 text-slate-950 font-semibold shadow-md shadow-amber-500/20'
+                    : 'text-slate-300 hover:text-white hover:bg-slate-800'
+                }`}
+              >
+                Overview &amp; Benchmark
+              </button>
+
+              <button
+                onClick={() => setActiveTab('sandbox')}
+                className={`px-3 py-2 rounded-md text-xs sm:text-sm font-medium transition-all ${
+                  activeTab === 'sandbox'
+                    ? 'bg-amber-500 text-slate-950 font-semibold shadow-md shadow-amber-500/20'
+                    : 'text-slate-300 hover:text-white hover:bg-slate-800'
+                }`}
+              >
+                Air-Gapped CSV Sandbox
+              </button>
+
+              <button
+                onClick={() => setActiveTab('brief')}
+                className={`px-3 py-2 rounded-md text-xs sm:text-sm font-medium transition-all ${
+                  activeTab === 'brief'
+                    ? 'bg-amber-500 text-slate-950 font-semibold shadow-md shadow-amber-500/20'
+                    : 'text-slate-300 hover:text-white hover:bg-slate-800'
+                }`}
+              >
+                2-Page A4 MD Brief
+              </button>
+
+              <button
+                onClick={() => setActiveTab('pricing')}
+                className={`px-3 py-2 rounded-md text-xs sm:text-sm font-medium transition-all ${
+                  activeTab === 'pricing'
+                    ? 'bg-amber-500 text-slate-950 font-semibold shadow-md shadow-amber-500/20'
+                    : 'text-slate-300 hover:text-white hover:bg-slate-800'
+                }`}
+              >
+                Pricing &amp; 10x Guarantee
+              </button>
+            </div>
           </div>
-          <button
-            onClick={() => setActiveRoom("pricing")}
-            className="whitespace-nowrap px-4 py-1.5 rounded bg-[#F59E0B] text-[#0B0F19] font-bold text-xs hover:bg-[#D97706] transition"
-          >
-            Claim ₹0 Reference Slot →
-          </button>
         </div>
+      </nav>
 
-        {/* VIEW 1: HOME */}
-        {activeRoom === "home" && (
-          <div className="space-y-12">
-            {/* Hero Section */}
-            <section className="text-center space-y-6 max-w-4xl mx-auto pt-4">
-              <div className="inline-block px-3 py-1 rounded-full text-xs font-mono bg-[#1E293B] border border-[#334155] text-[#94A3B8]">
-                Tally Prime · SAP · Busy · Excel — Zero ERP Login · Client-Side SHA-256 Vendor Stripping
+      <main className="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {activeTab === 'overview' && (
+          <div className="space-[#0B1120] space-y-10">
+            <div className="text-center space-y-6 max-w-4xl mx-auto pt-4">
+              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-slate-900 border border-slate-700/80 text-xs sm:text-sm text-slate-300 shadow-inner">
+                <Lock className="w-4 h-4 text-emerald-400 shrink-0" />
+                <span>Tally Prime · SAP B1/S4 · Busy · Oracle · CSV — 100% Air-Gapped Zero-ERP-Login Protocol</span>
               </div>
 
-              <h1 className="text-3xl sm:text-5xl font-black tracking-tight text-[#F1F5F9] leading-tight">
-                Unlock ₹50L–₹1.5Cr trapped in factory stock & freight leaks in 48 hours.
+              <h1 className="text-3xl sm:text-5xl font-extrabold text-white tracking-tight leading-tight">
+                Release <span className="text-amber-400">₹25L–₹1.5Cr</span> in trapped factory cash in 48 hours—with zero CNC downtime risk.
               </h1>
 
-              <p className="text-base sm:text-lg text-[#94A3B8] leading-relaxed">
-                Export 6 standard columns from Tally Prime, SAP, or Busy — zero ERP login, zero vendor names shared. Receive an 8-Sheet Statutory & Cash-Release Workbook and a 2-Page Printable Boardroom MD/CFO Brief isolating 180+ day cash traps, Bank Drawing Power (DP) risks, and freight overbilling while shielding critical CNC/VMC breakdown spares.
+              <p className="text-base sm:text-lg text-slate-300 leading-relaxed font-normal max-w-3xl mx-auto">
+                Share 5 anonymized stock columns with vendor names stripped. Receive an AS-2 &amp; CARO 3(ii) compliant 8-sheet Excel capital workbook and 2-page printable MD execution dossier isolating non-linear Cash Credit (OD) bleed, orphaned ECNs, and Sec 143 job-work risks—while mathematically locking critical CNC breakdown spares safe.
               </p>
 
-              <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-2">
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 pt-4">
+                <div className="p-4 rounded-xl bg-slate-900/90 border border-slate-800 text-left">
+                  <div className="text-2xl font-bold text-amber-400 font-mono">5 Columns</div>
+                  <div className="text-xs text-slate-400 mt-1">100% supplier-anonymized CSV</div>
+                </div>
+                <div className="p-4 rounded-xl bg-slate-900/90 border border-slate-800 text-left">
+                  <div className="text-2xl font-bold text-amber-400 font-mono">Compounded OD</div>
+                  <div className="text-xs text-slate-400 mt-1">CC interest + rack + alloy decay</div>
+                </div>
+                <div className="p-4 rounded-xl bg-slate-900/90 border border-slate-800 text-left">
+                  <div className="text-2xl font-bold text-emerald-400 font-mono">Zero DP Shock</div>
+                  <div className="text-xs text-slate-400 mt-1">Protects bank Cash Credit limits</div>
+                </div>
+                <div className="p-4 rounded-xl bg-slate-900/90 border border-slate-800 text-left">
+                  <div className="text-2xl font-bold text-amber-400 font-mono">₹10,00,000+</div>
+                  <div className="text-xs text-slate-400 mt-1">10x fee leak guarantee (&gt;₹5Cr plants)</div>
+                </div>
+              </div>
+
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
                 <button
-                  onClick={() => setActiveRoom("pricing")}
-                  className="w-full sm:w-auto px-6 py-3 rounded-lg bg-[#F59E0B] hover:bg-[#D97706] text-[#0B0F19] font-extrabold text-sm tracking-wide shadow-lg shadow-[#F59E0B]/20 transition"
+                  onClick={() => setActiveTab('sandbox')}
+                  className="w-full sm:w-auto px-8 py-3.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-base transition-all shadow-xl shadow-amber-500/20 flex items-center justify-center gap-2"
                 >
-                  Request 48-Hr Audit (₹0 Teaser First) →
+                  <Calculator className="w-5 h-5" />
+                  Launch Air-Gapped CSV Sandbox
                 </button>
                 <button
-                  onClick={handleDownloadXlsx}
-                  className="w-full sm:w-auto px-6 py-3 rounded-lg bg-[#1E293B] hover:bg-[#334155] text-[#F1F5F9] border border-[#334155] font-bold text-sm transition"
+                  onClick={generateInstitutionalXLSX}
+                  className="w-full sm:w-auto px-8 py-3.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-white font-semibold text-base transition-all border border-slate-700 flex items-center justify-center gap-2"
                 >
-                  Download Sample 8-Sheet .XLSX ↓
+                  <FileSpreadsheet className="w-5 h-5 text-emerald-400" />
+                  Download 8-Sheet XLSX Pack
                 </button>
               </div>
-
-              {/* 3-Pillar Proof Bar */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-6 text-left">
-                <div className="p-4 rounded-lg bg-[#111827] border border-[#1E293B]">
-                  <div className="text-xs font-mono text-[#F59E0B] font-bold">Zero-ERP Schema</div>
-                  <div className="text-sm text-[#E2E8F0] font-semibold mt-1">Client-side SHA-256 vendor stripping</div>
-                </div>
-                <div className="p-4 rounded-lg bg-[#111827] border border-[#1E293B]">
-                  <div className="text-xs font-mono text-[#F59E0B] font-bold">22% / Yr Burn</div>
-                  <div className="text-sm text-[#E2E8F0] font-semibold mt-1">CC/OD interest + rack space quantified</div>
-                </div>
-                <div className="p-4 rounded-lg bg-[#111827] border border-[#1E293B]">
-                  <div className="text-xs font-mono text-[#F59E0B] font-bold">₹10,00,000 SLA</div>
-                  <div className="text-sm text-[#E2E8F0] font-semibold mt-1">Verifiable leak on ₹5 Cr+ stock or ₹0 fee</div>
-                </div>
-              </div>
-            </section>
-
-            {/* Benchmark Section */}
-            <section className="space-y-6">
-              <div className="border-t border-[#1E293B] pt-8">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-2">
-                  <div>
-                    <span className="text-xs font-mono uppercase text-[#F59E0B] tracking-wider">Statutory & Operational Benchmark</span>
-                    <h2 className="text-xl font-extrabold text-[#F1F5F9]">
-                      8-Sheet .XLSX + 2-Page A4 PDF ENGINEERING BENCHMARK · 1,420-SKU CHENNAI–ORAGADAM–HOSUR CNC REGISTER
-                    </h2>
-                  </div>
-                  <span className="text-xs text-[#94A3B8] font-mono">Verified by C.JONES SNOWIN</span>
-                </div>
-              </div>
-
-              {/* Top KPI Strip */}
-              <div className="grid grid-cols-2 lg:grid-cols-7 gap-3">
-                <div className="p-3 rounded bg-[#1E293B]/60 border border-[#334155]">
-                  <div className="text-[10px] text-[#94A3B8] uppercase font-mono">Reconciled Book Stock</div>
-                  <div className="text-base font-bold text-[#F1F5F9] mt-1">₹6,85,00,000</div>
-                  <div className="text-[10px] text-[#64748B]">1,420 SKUs (RM/WIP/FG/MRO)</div>
-                </div>
-                <div className="p-3 rounded bg-[#1E293B]/60 border border-[#334155]">
-                  <div className="text-[10px] text-[#94A3B8] uppercase font-mono">Gross Idle (&gt;180d)</div>
-                  <div className="text-base font-bold text-[#EF4444] mt-1">₹1,42,50,000</div>
-                  <div className="text-[10px] text-[#64748B]">20.8% of book stock</div>
-                </div>
-                <div className="p-3 rounded bg-[#1E293B]/60 border border-[#334155]">
-                  <div className="text-[10px] text-[#94A3B8] uppercase font-mono">Shielded CNC Spares</div>
-                  <div className="text-base font-bold text-[#10B981] mt-1">₹24,50,000</div>
-                  <div className="text-[10px] text-[#64748B]">18 Critical Spares Protected</div>
-                </div>
-                <div className="p-3 rounded bg-[#1E293B]/60 border border-[#334155]">
-                  <div className="text-[10px] text-[#94A3B8] uppercase font-mono">Actionable Cash Trap</div>
-                  <div className="text-base font-bold text-[#F59E0B] mt-1">₹1,18,00,000</div>
-                  <div className="text-[10px] text-[#64748B]">₹74.35L NRV Floor</div>
-                </div>
-                <div className="p-3 rounded bg-[#1E293B]/60 border border-[#334155]">
-                  <div className="text-[10px] text-[#94A3B8] uppercase font-mono">Annual OD Burn (22%)</div>
-                  <div className="text-base font-bold text-[#F59E0B] mt-1">₹25,96,000/yr</div>
-                  <div className="text-[10px] text-[#64748B]">₹2.16L/mo silent bleed</div>
-                </div>
-                <div className="p-3 rounded bg-[#1E293B]/60 border border-[#334155]">
-                  <div className="text-[10px] text-[#94A3B8] uppercase font-mono">Bank DP Haircut Risk</div>
-                  <div className="text-base font-bold text-[#EF4444] mt-1">₹88,50,000</div>
-                  <div className="text-[10px] text-[#64748B]">CARO 3(ii)(b) 75% Adv</div>
-                </div>
-                <div className="p-3 rounded bg-[#1E293B]/60 border border-[#334155] col-span-2 lg:col-span-1">
-                  <div className="text-[10px] text-[#94A3B8] uppercase font-mono">90-Day Freight Leak</div>
-                  <div className="text-base font-bold text-[#F59E0B] mt-1">₹9,40,000/yr</div>
-                  <div className="text-[10px] text-[#64748B]">Inbound & Shuttle</div>
-                </div>
-              </div>
-
-              {/* 8 Sequential Workbook Interactive Tabs Bar */}
-              <div className="flex flex-wrap gap-1 border-b border-[#1E293B] pb-2">
-                {[
-                  { id: "01_Exec_Health", label: "01_Exec_Health" },
-                  { id: "02_Idle_180d_Hitlist", label: "02_Idle_180d_Hitlist" },
-                  { id: "03_CARO_Bank_DP", label: "03_CARO_Bank_DP" },
-                  { id: "04_AS2_NRV_Ageing", label: "04_AS2_NRV_Ageing" },
-                  { id: "05_Freight_Audit", label: "05_Freight_Audit" },
-                  { id: "06_Spares_Guard", label: "06_Spares_Guard" },
-                  { id: "07_Reorder_Cap", label: "07_Reorder_Cap" },
-                  { id: "08_Audit_Trail", label: "08_Audit_Trail" },
-                ].map((tab) => (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id as TabId)}
-                    className={`px-3 py-2 text-xs font-mono rounded-t-md transition ${
-                      activeTab === tab.id
-                        ? "bg-[#1E293B] text-[#F59E0B] font-bold border-t-2 border-[#F59E0B]"
-                        : "text-[#94A3B8] hover:text-[#F1F5F9] bg-[#0B0F19]"
-                    }`}
-                  >
-                    {tab.label}
-                  </button>
-                ))}
-              </div>
-
-              {/* Tab Display */}
-              <div className="bg-[#111827] border border-[#1E293B] rounded-lg p-6 min-h-[350px]">
-                {activeTab === "01_Exec_Health" && (
-                  <div className="space-y-4">
-                    <h3 className="text-base font-bold text-[#F1F5F9] font-mono">01_Exec_Health: CFO Command Dashboard</h3>
-                    <p className="text-sm text-[#94A3B8]">
-                      Comprehensive factory health overview across ₹6.85 Cr reconciled book stock. Quantifies actionable cash traps, bank credit protection under CARO 2020 Clause 3(ii), and carrying interest burn.
-                    </p>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
-                      <div className="p-4 rounded bg-[#1E293B]/40 border border-[#334155] space-y-2">
-                        <div className="text-xs text-[#94A3B8]">Reconciled Book Stock</div>
-                        <div className="text-2xl font-black text-[#F1F5F9]">₹6,85,00,000</div>
-                        <div className="text-xs text-[#64748B]">1,420 SKUs across Raw Material, WIP, Finished Goods & MRO</div>
-                      </div>
-                      <div className="p-4 rounded bg-[#1E293B]/40 border border-[#334155] space-y-2">
-                        <div className="text-xs text-[#94A3B8]">Actionable Cash-Release Stock</div>
-                        <div className="text-2xl font-black text-[#F59E0B]">₹1,18,00,000</div>
-                        <div className="text-xs text-[#64748B]">Immediate NRV Liquidation / Mill Credit Swap Floor: ₹74,35,000</div>
-                      </div>
-                      <div className="p-4 rounded bg-[#1E293B]/40 border border-[#334155] space-y-2">
-                        <div className="text-xs text-[#94A3B8]">Annual OD/CC Interest Burn (22%/Yr)</div>
-                        <div className="text-2xl font-black text-[#EF4444]">₹25,96,000/yr</div>
-                        <div className="text-xs text-[#64748B]">Calculated at ₹2.16L/mo silent cash bleed</div>
-                      </div>
-                      <div className="p-4 rounded bg-[#1E293B]/40 border border-[#334155] space-y-2">
-                        <div className="text-xs text-[#94A3B8]">Bank DP Haircut & Freight Leaks</div>
-                        <div className="text-2xl font-black text-[#10B981]">₹88.50L DP Shield | ₹9.40L Freight</div>
-                        <div className="text-xs text-[#64748B]">CARO 3(ii)(b) quarterly DP audit & 90-day freight overbilling reset</div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {activeTab === "02_Idle_180d_Hitlist" && (
-                  <div className="space-y-4">
-                    <h3 className="text-base font-bold text-[#F1F5F9] font-mono">02_Idle_180d_Hitlist: Ranked SKU Cash-Release Queue</h3>
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-left text-xs font-mono">
-                        <thead className="bg-[#1E293B] text-[#94A3B8]">
-                          <tr>
-                            <th className="p-2">SKU Code</th>
-                            <th className="p-2">Description</th>
-                            <th className="p-2">Days Idle</th>
-                            <th className="p-2">Book Value (₹)</th>
-                            <th className="p-2">NRV Floor (₹)</th>
-                            <th className="p-2">Action Recommendation</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-[#1E293B] text-[#E2E8F0]">
-                          <tr>
-                            <td className="p-2 text-[#F59E0B]">RM-SS316-FLG-4402</td>
-                            <td className="p-2">Forged Flange Blank SS316 (RM)</td>
-                            <td className="p-2">384d</td>
-                            <td className="p-2">₹14,80,000</td>
-                            <td className="p-2 text-[#10B981]">₹11,40,000</td>
-                            <td className="p-2">Mill Credit Swap (Q3 PO)</td>
-                          </tr>
-                          <tr>
-                            <td className="p-2 text-[#F59E0B]">RM-EN353-CRB-112</td>
-                            <td className="p-2">Case-Hardening Alloy Bar 65mm (RM)</td>
-                            <td className="p-2">342d</td>
-                            <td className="p-2">₹12,90,000</td>
-                            <td className="p-2 text-[#10B981]">₹10,20,000</td>
-                            <td className="p-2">Dealer Buyback / Inter-Plant Transfer</td>
-                          </tr>
-                          <tr>
-                            <td className="p-2 text-[#F59E0B]">RM-CUETP-BUS-309</td>
-                            <td className="p-2">Electrolytic Copper Busbar Strip (RM)</td>
-                            <td className="p-2">229d</td>
-                            <td className="p-2">₹11,85,000</td>
-                            <td className="p-2 text-[#10B981]">₹10,90,000</td>
-                            <td className="p-2">Spot Metal Index Liquidation</td>
-                          </tr>
-                          <tr>
-                            <td className="p-2 text-[#F59E0B]">FG-ALU-HSG-910A</td>
-                            <td className="p-2">Die-Cast Gearbox Cover Rev-A (FG)</td>
-                            <td className="p-2">276d</td>
-                            <td className="p-2">₹9,60,000</td>
-                            <td className="p-2 text-[#10B981]">₹3,85,000</td>
-                            <td className="p-2">OEM ECN Obsolescence Claim + Remelt</td>
-                          </tr>
-                          <tr>
-                            <td className="p-2 text-[#F59E0B]">WIP-EN24-SHF-208</td>
-                            <td className="p-2">Turned Drive Shaft Batch #14 (WIP)</td>
-                            <td className="p-2">412d</td>
-                            <td className="p-2">₹6,45,000</td>
-                            <td className="p-2 text-[#10B981]">₹5,97,000</td>
-                            <td className="p-2">Re-Machine OD to Rev-B Active SKU</td>
-                          </tr>
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                )}
-
-                {activeTab === "03_CARO_Bank_DP" && (
-                  <div className="space-y-4">
-                    <h3 className="text-base font-bold text-[#F1F5F9] font-mono">03_CARO_Bank_DP: Statutory Audit & Drawing Power Engine</h3>
-                    <p className="text-sm text-[#94A3B8]">
-                      CARO 2020 Clause 3(ii)(a) 10% class-wise discrepancy engine & Clause 3(ii)(b) quarterly bank Drawing Power (DP) reconciliation for ₹5 Cr+ working capital limits.
-                    </p>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="p-4 rounded bg-[#1E293B]/40 border border-[#334155] space-y-2">
-                        <div className="text-xs font-bold text-[#F59E0B]">CARO 2020 Clause 3(ii)(a) Class Discrepancy</div>
-                        <ul className="text-xs text-[#E2E8F0] space-y-1 font-mono">
-                          <li>Raw Material (RM): 2.55% (&lt;10% Compliant)</li>
-                          <li>Work-in-Progress (WIP): 3.04% (&lt;10% Compliant)</li>
-                          <li>Finished Goods (FG): 1.91% (&lt;10% Compliant)</li>
-                          <li>Spares & MRO: 1.62% (&lt;10% Compliant)</li>
-                        </ul>
-                      </div>
-                      <div className="p-4 rounded bg-[#1E293B]/40 border border-[#334155] space-y-2">
-                        <div className="text-xs font-bold text-[#F59E0B]">CARO 2020 Clause 3(ii)(b) Bank DP Shield</div>
-                        <div className="text-sm text-[#E2E8F0]">
-                          Quarterly stock statement submission audit flags <strong>₹88,50,000 Bank DP Haircut Risk</strong> at 75% advance rate under statutory bank audit guidelines.
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {activeTab === "04_AS2_NRV_Ageing" && (
-                  <div className="space-y-4">
-                    <h3 className="text-base font-bold text-[#F1F5F9] font-mono">04_AS2_NRV_Ageing: Ind AS 2 Item-by-Item Valuation Schedule</h3>
-                    <p className="text-sm text-[#94A3B8]">
-                      Ind AS 2 / AS-2 Lower of Cost or Net Realizable Value (NRV) ageing schedule. Zero blanket percentage write-downs.
-                    </p>
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-left text-xs font-mono">
-                        <thead className="bg-[#1E293B] text-[#94A3B8]">
-                          <tr>
-                            <th className="p-2">Ageing Bracket</th>
-                            <th className="p-2">Book Value (₹)</th>
-                            <th className="p-2">AS-2 Write-Down (₹)</th>
-                            <th className="p-2">Status / Protection</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-[#1E293B] text-[#E2E8F0]">
-                          <tr>
-                            <td className="p-2">0–90 Days (Active)</td>
-                            <td className="p-2">₹4,18,00,000</td>
-                            <td className="p-2">₹0</td>
-                            <td className="p-2 text-[#10B981]">100% Active Production</td>
-                          </tr>
-                          <tr>
-                            <td className="p-2">91–180 Days (Slow-Moving)</td>
-                            <td className="p-2">₹1,24,50,000</td>
-                            <td className="p-2">₹0</td>
-                            <td className="p-2 text-[#F59E0B]">Monitored for Re-order Block</td>
-                          </tr>
-                          <tr>
-                            <td className="p-2">181–365 Days (Non-Moving)</td>
-                            <td className="p-2">₹86,50,000</td>
-                            <td className="p-2">₹17,45,000</td>
-                            <td className="p-2 text-[#F59E0B]">NRV Provisioned Item-by-Item</td>
-                          </tr>
-                          <tr>
-                            <td className="p-2">365+ Days (Obsolete Stock)</td>
-                            <td className="p-2">₹31,50,000</td>
-                            <td className="p-2">₹31,50,000</td>
-                            <td className="p-2 text-[#EF4444]">Full Write-Down to NRV Floor</td>
-                          </tr>
-                          <tr className="bg-[#1E293B]/40 font-bold">
-                            <td className="p-2 text-[#10B981]">365+ Days (Shielded Spares)</td>
-                            <td className="p-2">₹24,50,000</td>
-                            <td className="p-2">₹0</td>
-                            <td className="p-2 text-[#10B981]">Quarantined Breakdown Spares (No Scrap)</td>
-                          </tr>
-                          <tr className="bg-[#1E293B] font-bold">
-                            <td className="p-2">Total AS-2 Net Write-Down</td>
-                            <td className="p-2">₹6,85,00,000</td>
-                            <td className="p-2 text-[#F59E0B]">₹48,95,000</td>
-                            <td className="p-2 text-[#10B981]">100% Statutorily Compliant</td>
-                          </tr>
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                )}
-
-                {activeTab === "05_Freight_Audit" && (
-                  <div className="space-y-4">
-                    <h3 className="text-base font-bold text-[#F1F5F9] font-mono">05_Freight_Audit: Corridor Freight & Detention Schedule</h3>
-                    <p className="text-sm text-[#94A3B8]">
-                      90-day logistics corridor audit isolating <strong>₹9,40,000/yr in freight & detention overbilling</strong> across key industrial routes.
-                    </p>
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-left text-xs font-mono">
-                        <thead className="bg-[#1E293B] text-[#94A3B8]">
-                          <tr>
-                            <th className="p-2">Logistics Corridor ID</th>
-                            <th className="p-2">Route Description</th>
-                            <th className="p-2">90d Billed (₹)</th>
-                            <th className="p-2">Annualized Leak (₹)</th>
-                            <th className="p-2">Actionable Resolution</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-[#1E293B] text-[#E2E8F0]">
-                          <tr>
-                            <td className="p-2 text-[#F59E0B]">FRT-HOS-ORG-L04</td>
-                            <td className="p-2">Hosur → Oragadam Inbound Milk-Run (9T FTL)</td>
-                            <td className="p-2">₹18,20,000</td>
-                            <td className="p-2 text-[#EF4444]">₹2,35,000</td>
-                            <td className="p-2">Reset 9T FTL Slab + 6-Hr Halting Cap</td>
-                          </tr>
-                          <tr>
-                            <td className="p-2 text-[#F59E0B]">FRT-PUN-CHN-L09</td>
-                            <td className="p-2">Chakan (Pune) → Chennai Inbound Corridor</td>
-                            <td className="p-2">₹16,40,000</td>
-                            <td className="p-2 text-[#EF4444]">₹3,02,000</td>
-                            <td className="p-2">Match Billing to E-Way Bill Net Weight</td>
-                          </tr>
-                          <tr>
-                            <td className="p-2 text-[#F59E0B]">FRT-AMB-SRP-L01</td>
-                            <td className="p-2">Ambattur → Sriperumbudur Shuttle</td>
-                            <td className="p-2">₹9,40,000</td>
-                            <td className="p-2 text-[#EF4444]">₹2,16,000</td>
-                            <td className="p-2">Eliminate Empty-Return Trip Billing</td>
-                          </tr>
-                          <tr>
-                            <td className="p-2 text-[#F59E0B]">FRT-ORG-PRT-L12</td>
-                            <td className="p-2">Oragadam → Ennore Port Shuttle</td>
-                            <td className="p-2">₹8,90,000</td>
-                            <td className="p-2 text-[#EF4444]">₹1,87,000</td>
-                            <td className="p-2">Recover Pre-Cutoff Weekend Detention</td>
-                          </tr>
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                )}
-
-                {activeTab === "06_Spares_Guard" && (
-                  <div className="space-y-4">
-                    <h3 className="text-base font-bold text-[#F1F5F9] font-mono">06_Spares_Guard: Critical CNC/VMC Breakdown Spares Protection</h3>
-                    <p className="text-sm text-[#94A3B8]">
-                      Critical CNC/VMC breakdown spares quarantined from scrap. Prevents costly plant shutdown risks while cleaning stock registers.
-                    </p>
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-left text-xs font-mono">
-                        <thead className="bg-[#1E293B] text-[#94A3B8]">
-                          <tr>
-                            <th className="p-2">Spare SKU Code</th>
-                            <th className="p-2">Description</th>
-                            <th className="p-2">Days Idle</th>
-                            <th className="p-2">Value (₹)</th>
-                            <th className="p-2">Lead Time</th>
-                            <th className="p-2">Guard Status</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-[#1E293B] text-[#E2E8F0]">
-                          <tr className="bg-[#10B981]/10">
-                            <td className="p-2 text-[#10B981]">MRO-SIEM-PLC-840D</td>
-                            <td className="p-2">Sinumerik 840D sl NCU Control Card</td>
-                            <td className="p-2">610d</td>
-                            <td className="p-2">₹5,40,000</td>
-                            <td className="p-2">16w Import</td>
-                            <td className="p-2 font-bold text-[#10B981]">SHIELDED — DO NOT SCRAP (₹4.5L/day loss avoided)</td>
-                          </tr>
-                          <tr className="bg-[#10B981]/10">
-                            <td className="p-2 text-[#10B981]">MRO-FANUC-SRV-09</td>
-                            <td className="p-2">CNC Alpha Spindle Drive Module</td>
-                            <td className="p-2">518d</td>
-                            <td className="p-2">₹4,85,000</td>
-                            <td className="p-2">14w Import</td>
-                            <td className="p-2 font-bold text-[#10B981]">SHIELDED — DO NOT SCRAP (₹4.2L/day loss avoided)</td>
-                          </tr>
-                          <tr className="bg-[#10B981]/10">
-                            <td className="p-2 text-[#10B981]">MRO-INDUCT-SCR-12</td>
-                            <td className="p-2">Induction Hardening Thyristor Stack</td>
-                            <td className="p-2">475d</td>
-                            <td className="p-2">₹3,12,000</td>
-                            <td className="p-2">10w Lead</td>
-                            <td className="p-2 font-bold text-[#10B981]">SHIELDED — DO NOT SCRAP</td>
-                          </tr>
-                          <tr className="bg-[#10B981]/10">
-                            <td className="p-2 text-[#10B981]">MRO-NSK-7018-CTY</td>
-                            <td className="p-2">Matched Angular Spindle Bearing Pair</td>
-                            <td className="p-2">392d</td>
-                            <td className="p-2">₹2,18,000</td>
-                            <td className="p-2">8w Lead</td>
-                            <td className="p-2 font-bold text-[#10B981]">SHIELDED — DO NOT SCRAP</td>
-                          </tr>
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                )}
-
-                {activeTab === "07_Reorder_Cap" && (
-                  <div className="space-y-4">
-                    <h3 className="text-base font-bold text-[#F1F5F9] font-mono">07_Reorder_Cap: ERP Min-Max & EOQ Reset Rules</h3>
-                    <p className="text-sm text-[#94A3B8]">
-                      Blocks automatic reordering for slow and non-moving items in ERP systems (Tally Prime, SAP, Busy).
-                    </p>
-                    <div className="p-4 rounded bg-[#1E293B]/40 border border-[#334155] space-y-2">
-                      <div className="text-sm font-bold text-[#F59E0B]">Blocked Purchase Orders: ₹19,50,000</div>
-                      <p className="text-xs text-[#E2E8F0]">
-                        ERP Min-Max & EOQ reset rules implemented in Tally Prime / SAP to freeze auto-replenishment purchase orders for 64 slow-moving and dead SKUs, preventing unnecessary cash lockup.
-                      </p>
-                    </div>
-                  </div>
-                )}
-
-                {activeTab === "08_Audit_Trail" && (
-                  <div className="space-y-4">
-                    <h3 className="text-base font-bold text-[#F1F5F9] font-mono">08_Audit_Trail: SHA-256 Vendor Stripping & Governance SLA</h3>
-                    <p className="text-sm text-[#94A3B8]">
-                      Client-side SHA-256 vendor/GSTIN stripping verification, deduplication logs, and cryptographic data purge SLA.
-                    </p>
-                    <div className="p-4 rounded bg-[#1E293B]/40 border border-[#334155] space-y-2 text-xs font-mono">
-                      <div className="text-[#10B981] font-bold">✔ SHA-256 Client-Side Anonymization Active</div>
-                      <div>• 1,420 SKUs Processed (48 Duplicate SKU merges resolved)</div>
-                      <div>• Ind AS 2 Idle-Shift Overhead Exclusions Applied</div>
-                      <div>• 7-Day Cryptographic Data Purge SLA Guaranteed</div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </section>
-          </div>
-        )}
-
-        {/* VIEW 2: CSV SANDBOX */}
-        {activeRoom === "sandbox" && (
-          <div className="space-y-6">
-            <div>
-              <h2 className="text-2xl font-bold text-[#F1F5F9]">Instant In-Browser CSV Diagnostic Sandbox</h2>
-              <p className="text-sm text-[#94A3B8]">
-                Test client-side SHA-256 vendor stripping and 6-column inventory analysis. Zero data leaves your browser.
-              </p>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div className="space-y-3">
-                <label className="block text-xs font-mono text-[#F59E0B]">
-                  Input 6-Column CSV Data (Tally / SAP / Busy / Excel)
-                </label>
-                <textarea
-                  value={sandboxCsvText}
-                  onChange={(e) => setSandboxCsvText(e.target.value)}
-                  className="w-full h-80 p-3 bg-[#111827] border border-[#1E293B] rounded text-xs font-mono text-[#F1F5F9] focus:outline-none focus:border-[#F59E0B]"
-                />
-                <button
-                  onClick={() => setStrippedVendorCount(1420)}
-                  className="px-4 py-2 bg-[#F59E0B] text-[#0B0F19] text-xs font-bold rounded hover:bg-[#D97706] transition"
-                >
-                  Run Client-Side SHA-256 Stripping Audit
-                </button>
-              </div>
-
-              <div className="p-4 bg-[#111827] border border-[#1E293B] rounded-lg space-y-4">
-                <div className="text-xs font-mono text-[#10B981] font-bold uppercase">
-                  Client-Side SHA-256 Diagnostic Log
-                </div>
-                <div className="space-y-2 text-xs font-mono text-[#E2E8F0]">
-                  <div className="p-2 rounded bg-[#1E293B]">
-                    <strong>Schema Status:</strong> 6-Column Zero-ERP Schema Matched
-                  </div>
-                  <div className="p-2 rounded bg-[#1E293B]">
-                    <strong>Vendor Anonymization:</strong> {strippedVendorCount} vendor & GSTIN records stripped via SHA-256
-                  </div>
-                  <div className="p-2 rounded bg-[#1E293B]">
-                    <strong>Annual Carrying Interest Burn:</strong> Calculated at 22%/yr CC/OD rate
-                  </div>
-                  <div className="p-2 rounded bg-[#1E293B]">
-                    <strong>Spares Guard:</strong> CNC/VMC keywords detected & quarantined (No scrap)
-                  </div>
-                  <div className="p-2 rounded bg-[#1E293B]">
-                    <strong>Bank DP Haircut Indicator:</strong> Flagged under CARO 2020 Clause 3(ii)(b)
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* VIEW 3: SAMPLE 2-PAGE A4 BRIEF */}
-        {activeRoom === "sample" && (
-          <div className="space-y-6">
-            <div className="flex justify-between items-center">
+            <div className="p-5 rounded-xl bg-gradient-to-r from-amber-950/40 via-slate-900 to-slate-900 border border-amber-500/40 text-amber-200 text-sm leading-relaxed shadow-lg flex items-start gap-3">
+              <Award className="w-6 h-6 text-amber-400 shrink-0 mt-0.5" />
               <div>
-                <h2 className="text-2xl font-bold text-[#F1F5F9]">Sample 2-Page A4 Boardroom MD/CFO Executive Brief</h2>
-                <p className="text-sm text-[#94A3B8]">
-                  Print-ready boardroom memorandum summarizing ₹6.85 Cr stock register audit.
+                <strong className="text-white font-semibold">Founding Institutional Reference Program (2 Corridor Slots Open):</strong> Qualifying discrete manufacturers (&gt;₹5 Cr book stock) receive the full 8-sheet audit at ₹0 upfront fee in exchange for a signed 2-line Plant Head or CFO verification note once ₹10,00,000+ in verifiable stock, ECN, or job-work leaks are isolated.
+              </div>
+            </div>
+
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-6 shadow-2xl">
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-slate-800 pb-5">
+                <div>
+                  <div className="inline-block px-3 py-1 rounded bg-amber-500/10 border border-amber-500/30 text-amber-400 font-mono text-xs mb-2 font-semibold">
+                    REAL BENCHMARK REGISTER
+                  </div>
+                  <h2 className="text-xl sm:text-2xl font-bold text-white">
+                    8-Sheet .XLSX + 2-Page A4 PDF Institutional Benchmark · 420-SKU Oragadam / Hosur Register
+                  </h2>
+                </div>
+                <button
+                  onClick={generateInstitutionalXLSX}
+                  className="px-4 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-xs sm:text-sm flex items-center gap-2 self-start lg:self-auto transition-all shadow-md"
+                >
+                  <Download className="w-4 h-4" />
+                  Download Full 8-Sheet .XLSX
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="bg-slate-950/80 p-4 rounded-xl border border-slate-800">
+                  <div className="text-xs text-slate-400 font-medium">Reconciled Plant Stock</div>
+                  <div className="text-xl font-bold text-white mt-1 font-mono">₹6,42,80,000</div>
+                  <div className="text-[11px] text-slate-400 mt-0.5">420 SKUs · Variance &lt; 0.8%</div>
+                </div>
+                <div className="bg-slate-950/80 p-4 rounded-xl border border-slate-800">
+                  <div className="text-xs text-slate-400 font-medium">Actionable Dead (&gt;180d)</div>
+                  <div className="text-xl font-bold text-amber-400 mt-1 font-mono">₹1,06,60,000</div>
+                  <div className="text-[11px] text-slate-400 mt-0.5">54 SKUs · ₹7,820/day OD bleed</div>
+                </div>
+                <div className="bg-slate-950/80 p-4 rounded-xl border border-slate-800">
+                  <div className="text-xs text-slate-400 font-medium">CNC Spares Shielded</div>
+                  <div className="text-xl font-bold text-emerald-400 mt-1 font-mono">47 SKUs (₹41,60,000)</div>
+                  <div className="text-[11px] text-slate-400 mt-0.5">Saves ₹18,000/hr VMC outages</div>
+                </div>
+                <div className="bg-slate-950/80 p-4 rounded-xl border border-slate-800">
+                  <div className="text-xs text-slate-400 font-medium">30-Day Cash Recovery Hitlist</div>
+                  <div className="text-xl font-bold text-cyan-400 mt-1 font-mono">₹68,40,000</div>
+                  <div className="text-[11px] text-slate-400 mt-0.5">Zero reduction in Bank DP limit</div>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div className="flex flex-wrap gap-2 border-b border-slate-800 pb-2">
+                  {[
+                    { id: '02_Idle_Hitlist', label: '02_Idle_Hitlist' },
+                    { id: '01_Exec_Bridge', label: '01_Exec_Bridge' },
+                    { id: '04_AS2_&_Bank_DP', label: '04_AS2_&_Bank_DP' },
+                    { id: '06_CNC_Spares_Vault', label: '06_CNC_Spares_Vault' },
+                    { id: '07_Subcontract_GST', label: '07_Subcontract_GST' }
+                  ].map(tab => (
+                    <button
+                      key={tab.id}
+                      onClick={() => setActiveBenchmarkTab(tab.id)}
+                      className={`px-3 py-1.5 rounded text-xs font-mono transition-all ${
+                        activeBenchmarkTab === tab.id
+                          ? 'bg-amber-500 text-slate-950 font-bold'
+                          : 'bg-slate-800/80 text-slate-300 hover:bg-slate-800 hover:text-white'
+                      }`}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="overflow-x-auto rounded-xl border border-slate-800 bg-slate-950">
+                  <table className="w-full text-left text-xs sm:text-sm">
+                    <thead className="bg-slate-900 text-slate-400 font-mono text-[11px] uppercase border-b border-slate-800">
+                      <tr>
+                        <th className="p-3">Part ID</th>
+                        <th className="p-3">Item Description</th>
+                        <th className="p-3">Days Idle</th>
+                        <th className="p-3">Book Value</th>
+                        <th className="p-3">Bleed / Day</th>
+                        <th className="p-3">Action Routing</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-800/60 font-sans">
+                      {BENCHMARK_ITEMS.map((item, idx) => (
+                        <tr key={idx} className={item.type === 'shielded' ? 'bg-emerald-950/20' : 'hover:bg-slate-900/50'}>
+                          <td className="p-3 font-mono font-semibold text-amber-400">{item.partId}</td>
+                          <td className="p-3 text-slate-200">{item.desc}</td>
+                          <td className="p-3 font-mono text-slate-300">{item.daysIdle}d</td>
+                          <td className="p-3 font-mono font-semibold text-white">{item.value}</td>
+                          <td className="p-3 font-mono">
+                            {item.type === 'shielded' ? (
+                              <span className="inline-flex items-center gap-1 text-emerald-400 font-bold px-2 py-0.5 rounded bg-emerald-950/60 border border-emerald-800/60">
+                                <Lock className="w-3 h-3" /> {item.bleed}
+                              </span>
+                            ) : (
+                              <span className="text-amber-400 font-medium">{item.bleed}</span>
+                            )}
+                          </td>
+                          <td className="p-3">
+                            {item.type === 'shielded' ? (
+                              <span className="text-emerald-300 font-semibold">{item.action}</span>
+                            ) : (
+                              <span className="text-slate-300">{item.action}</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'sandbox' && (
+          <div className="space-y-8">
+            <div className="bg-slate-900 p-6 rounded-2xl border border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-mono text-xs mb-2">
+                  <Lock className="w-3.5 h-3.5" /> 100% IN-BROWSER CLIENT-SIDE PARSER — NO DATA TRANSMITTED
+                </div>
+                <h2 className="text-2xl font-bold text-white">Air-Gapped CSV Stock Diagnostic Sandbox</h2>
+                <p className="text-xs sm:text-sm text-slate-400 mt-1">
+                  Upload or paste your 5-column stock export: <code className="text-amber-400 font-mono">Part_ID, Description, Days_Idle, Qty, Unit_Cost</code>
                 </p>
+              </div>
+
+              <div className="flex flex-wrap gap-3">
+                <button
+                  onClick={downloadSampleCsv}
+                  className="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 flex items-center gap-2 transition-all"
+                >
+                  <Download className="w-4 h-4 text-amber-400" />
+                  Download Sample 5-Col CSV
+                </button>
+
+                <label className="px-4 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold flex items-center gap-2 cursor-pointer transition-all">
+                  <Upload className="w-4 h-4" />
+                  Upload CSV File
+                  <input type="file" accept=".csv,.txt" onChange={handleFileUpload} className="hidden" />
+                </label>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-slate-900/80 p-6 rounded-2xl border border-slate-800">
+              <div className="space-y-3">
+                <div className="flex justify-between items-center">
+                  <label className="text-sm font-semibold text-slate-200 flex items-center gap-2">
+                    <DollarSign className="w-4 h-4 text-amber-400" />
+                    Bank CC / OD Interest Rate: <span className="text-amber-400 font-mono text-base">{bankRate.toFixed(1)}%</span>
+                  </label>
+                  <span className="text-xs text-slate-400">Range: 9.0% – 20.0%</span>
+                </div>
+                <input
+                  type="range"
+                  min="9"
+                  max="20"
+                  step="0.5"
+                  value={bankRate}
+                  onChange={(e) => setBankRate(parseFloat(e.target.value))}
+                  className="w-full accent-amber-500 cursor-pointer"
+                />
+              </div>
+
+              <div className="space-y-3">
+                <div className="flex justify-between items-center">
+                  <label className="text-sm font-semibold text-slate-200 flex items-center gap-2">
+                    <TrendingDown className="w-4 h-4 text-amber-400" />
+                    Industrial Rack + Alloy Decay Rate: <span className="text-amber-400 font-mono text-base">{decayRate.toFixed(1)}%</span>
+                  </label>
+                  <span className="text-xs text-slate-400">Range: 4.0% – 16.0%</span>
+                </div>
+                <input
+                  type="range"
+                  min="4"
+                  max="16"
+                  step="0.5"
+                  value={decayRate}
+                  onChange={(e) => setDecayRate(parseFloat(e.target.value))}
+                  className="w-full accent-amber-500 cursor-pointer"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="bg-slate-900 p-5 rounded-xl border border-slate-800">
+                <div className="text-xs text-slate-400 font-medium">Total Evaluated Stock Value</div>
+                <div className="text-2xl font-bold text-white mt-1 font-mono">₹{totalBookValue.toLocaleString('en-IN')}</div>
+                <div className="text-[11px] text-slate-400 mt-1">{processedSkus.length} SKUs loaded in memory</div>
+              </div>
+
+              <div className="bg-slate-900 p-5 rounded-xl border border-slate-800">
+                <div className="text-xs text-slate-400 font-medium">Daily Compounded Rupee Bleed</div>
+                <div className="text-2xl font-bold text-amber-400 mt-1 font-mono">₹{Math.round(totalDailyBleed).toLocaleString('en-IN')}/day</div>
+                <div className="text-[11px] text-slate-400 mt-1">Total OD + Rack Decay compounding</div>
+              </div>
+
+              <div className="bg-slate-900 p-5 rounded-xl border border-emerald-900/60 bg-emerald-950/10">
+                <div className="text-xs text-slate-400 font-medium">CNC Spares Shielded (Locked Safe)</div>
+                <div className="text-2xl font-bold text-emerald-400 mt-1 font-mono">₹{shieldedValue.toLocaleString('en-IN')}</div>
+                <div className="text-[11px] text-slate-400 mt-1">Exempt from liquidations &amp; AS-2 haircuts</div>
+              </div>
+            </div>
+
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
+              <div className="flex justify-between items-center">
+                <h3 className="text-lg font-bold text-white">Live Evaluated Stock Register</h3>
+                <span className="text-xs text-slate-400 font-mono">Sorted by Daily Bleed (Highest First)</span>
+              </div>
+
+              <div className="overflow-x-auto rounded-xl border border-slate-800 bg-slate-950">
+                <table className="w-full text-left text-xs sm:text-sm">
+                  <thead className="bg-slate-900 text-slate-400 font-mono text-[11px] uppercase border-b border-slate-800">
+                    <tr>
+                      <th className="p-3">Part ID</th>
+                      <th className="p-3">Description</th>
+                      <th className="p-3">Days Idle</th>
+                      <th className="p-3">Qty</th>
+                      <th className="p-3">Unit Cost</th>
+                      <th className="p-3">Book Value</th>
+                      <th className="p-3">Daily Bleed</th>
+                      <th className="p-3">Action Routing</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800/60">
+                    {processedSkus.map((sku, idx) => (
+                      <tr key={idx} className={sku.isShielded ? 'bg-emerald-950/20' : 'hover:bg-slate-900/50'}>
+                        <td className="p-3 font-mono font-semibold text-amber-400">{sku.partId}</td>
+                        <td className="p-3 text-slate-200">{sku.desc}</td>
+                        <td className="p-3 font-mono text-slate-300">{sku.daysIdle}d</td>
+                        <td className="p-3 font-mono text-slate-300">{sku.qty}</td>
+                        <td className="p-3 font-mono text-slate-300">₹{sku.unitCost.toLocaleString('en-IN')}</td>
+                        <td className="p-3 font-mono font-semibold text-white">₹{sku.bookValue.toLocaleString('en-IN')}</td>
+                        <td className="p-3 font-mono">
+                          {sku.isShielded ? (
+                            <span className="inline-flex items-center gap-1 text-emerald-400 font-bold px-2 py-0.5 rounded bg-emerald-950/60 border border-emerald-800/60 text-[11px]">
+                              <Lock className="w-3 h-3" /> SHIELDED
+                            </span>
+                          ) : (
+                            <span className="text-amber-400 font-semibold">₹{Math.round(sku.dailyBleed || 0).toLocaleString('en-IN')}/d</span>
+                          )}
+                        </td>
+                        <td className="p-3">
+                          {sku.isShielded ? (
+                            <span className="text-emerald-400 font-bold text-xs">{sku.routing}</span>
+                          ) : (
+                            <span className="text-slate-300 text-xs">{sku.routing}</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'brief' && (
+          <div className="space-y-6">
+            <div className="flex justify-between items-center bg-slate-900 p-4 rounded-xl border border-slate-800">
+              <div className="text-sm text-slate-300 font-medium">
+                Boardroom Printable 2-Page Executive Dossier (Ref: <span className="text-amber-400 font-mono font-bold">OP-2026-ORG-420</span>)
               </div>
               <button
                 onClick={() => window.print()}
-                className="px-4 py-2 bg-[#F59E0B] text-[#0B0F19] font-bold text-xs rounded hover:bg-[#D97706] transition"
+                className="px-5 py-2.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-sm flex items-center gap-2 shadow-lg shadow-amber-500/20 transition-all"
               >
-                Print / Save A4 PDF
+                <Printer className="w-4 h-4" />
+                Print / Save 2-Page A4 PDF
               </button>
             </div>
 
-            {/* A4 Brief Container */}
-            <div className="bg-[#FFFDF9] text-[#0B0F19] p-8 sm:p-12 rounded-lg shadow-2xl max-w-4xl mx-auto space-y-8 border border-[#E2E8F0]">
-              <div className="border-b-2 border-[#0B0F19] pb-4 flex justify-between items-end">
+            <div className="bg-[#F2EFE9] text-slate-900 p-8 sm:p-12 rounded-xl shadow-2xl space-y-8 font-serif leading-relaxed border border-amber-900/20 max-w-4xl mx-auto print:max-w-none print:p-0 print:shadow-none print:bg-white">
+              <div className="border-b-2 border-slate-900 pb-6 flex justify-between items-end">
                 <div>
-                  <div className="text-2xl font-black tracking-tight text-[#0B0F19]">OPERATIONALYST</div>
-                  <div className="text-xs font-bold text-[#475569]">A SNOWIN VENTURES PLATFORM · CHENNAI, TAMIL NADU</div>
+                  <div className="text-xs font-mono tracking-widest text-slate-600 uppercase font-bold">OPERATIONALYST INSTITUTIONAL DOSSIER</div>
+                  <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-1">MD &amp; CFO EXECUTION BRIEF</h1>
+                  <div className="text-xs text-slate-700 mt-1 font-sans">
+                    Ref: <strong className="font-mono">OP-2026-ORG-420</strong> · Plant Cluster: <strong>Oragadam / Hosur</strong> · Date: <strong>November 2026</strong>
+                  </div>
                 </div>
-                <div className="text-right text-xs font-mono text-[#475569]">
-                  <div>BOARDROOM MEMORANDUM</div>
-                  <div>DATE: NOVEMBER 2026</div>
+                <div className="text-right text-[11px] font-sans text-slate-600">
+                  <div>Govt. MSME: UDYAM-TN-02-0444630</div>
+                  <div>0% GST MSME Bill of Supply</div>
+                  <div className="font-bold text-slate-900">Zero ERP Login Protocol</div>
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <h1 className="text-xl font-black text-[#0B0F19]">
-                  EXECUTIVE STOCK REGISTER & LOGISTICS CORRIDOR AUDIT (₹6.85 CR REGISTER)
-                </h1>
-                <p className="text-xs text-[#334155] leading-relaxed">
-                  Confidential MD/CFO brief isolating ₹1.425 Cr gross idle stock, ₹1.18 Cr actionable cash trap, ₹88.50L Bank Drawing Power risk under CARO 2020 3(ii), and ₹9.40L/yr freight overbilling.
+              <div className="space-y-3 font-sans">
+                <h2 className="text-lg font-bold text-slate-900 border-b border-slate-300 pb-1 flex items-center gap-2">
+                  1. Executive Capital Bridge (₹6,42,80,000 Reconciled Stock)
+                </h2>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
+                  <div className="bg-slate-200/80 p-3 rounded border border-slate-300">
+                    <div className="text-[11px] text-slate-600">Reconciled Stock</div>
+                    <div className="text-base font-bold text-slate-900 font-mono">₹6,42,80,000</div>
+                  </div>
+                  <div className="bg-amber-100 p-3 rounded border border-amber-300">
+                    <div className="text-[11px] text-amber-900">Actionable Dead (&gt;180d)</div>
+                    <div className="text-base font-bold text-amber-900 font-mono">₹1,06,60,000</div>
+                  </div>
+                  <div className="bg-emerald-100 p-3 rounded border border-emerald-300">
+                    <div className="text-[11px] text-emerald-900">CNC Spares Shielded</div>
+                    <div className="text-base font-bold text-emerald-900 font-mono">₹41,60,000</div>
+                  </div>
+                  <div className="bg-cyan-100 p-3 rounded border border-cyan-300">
+                    <div className="text-[11px] text-cyan-900">30-Day Recovery Target</div>
+                    <div className="text-base font-bold text-cyan-900 font-mono">₹68,40,000</div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-2 font-sans bg-slate-100 p-4 rounded-lg border border-slate-300">
+                <h2 className="text-sm font-bold text-slate-900">2. Non-Linear Carrying Cost Compounding Formula</h2>
+                <div className="font-mono text-xs bg-slate-900 text-amber-400 p-2.5 rounded">
+                  C_hold(t) = V0[(1 + r_OD/12)^t - 1] + A_rack*c_sqft*t + V0(1 - e^-lambda*t)
+                </div>
+                <p className="text-xs text-slate-700 leading-snug">
+                  Evaluates the non-linear compounding of Cash Credit interest (r_OD = 14.5%), physical rack storage footprint costs, and metallurgical alloy degradation over time t.
                 </p>
               </div>
 
-              <div className="grid grid-cols-3 gap-4 border p-4 bg-[#F8FAFC]">
-                <div>
-                  <div className="text-[10px] font-bold uppercase text-[#64748B]">Reconciled Book Stock</div>
-                  <div className="text-lg font-black text-[#0B0F19]">₹6,85,00,000</div>
+              <div className="space-y-3 font-sans">
+                <h2 className="text-lg font-bold text-slate-900 border-b border-slate-300 pb-1">
+                  3. Priority Monday-Morning SKU Hitlist
+                </h2>
+                <table className="w-full text-left text-xs border border-slate-300">
+                  <thead className="bg-slate-200 text-slate-800 font-bold">
+                    <tr>
+                      <th className="p-2 border-b border-slate-300">Part ID</th>
+                      <th className="p-2 border-b border-slate-300">Description</th>
+                      <th className="p-2 border-b border-slate-300">Idle</th>
+                      <th className="p-2 border-b border-slate-300">Value</th>
+                      <th className="p-2 border-b border-slate-300">Action Routing</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-300">
+                    <tr>
+                      <td className="p-2 font-mono font-bold">PRG-4402-SS</td>
+                      <td className="p-2">Flange Housing SS316L</td>
+                      <td className="p-2 font-mono">378d</td>
+                      <td className="p-2 font-mono font-bold">₹18,48,000</td>
+                      <td className="p-2 text-slate-800">Vendor Credit Swap (82% PO Offset)</td>
+                    </tr>
+                    <tr>
+                      <td className="p-2 font-mono font-bold">HSG-910-ALU</td>
+                      <td className="p-2">Die-Cast Transmission Cover Rev-A</td>
+                      <td className="p-2 font-mono">294d</td>
+                      <td className="p-2 font-mono font-bold">₹14,62,000</td>
+                      <td className="p-2 text-slate-800">OEM ECN Obsolescence Claim</td>
+                    </tr>
+                    <tr>
+                      <td className="p-2 font-mono font-bold">SHF-208-EN24</td>
+                      <td className="p-2">Induction Hardened Drive Shaft Blank</td>
+                      <td className="p-2 font-mono">431d</td>
+                      <td className="p-2 font-mono font-bold">₹11,93,500</td>
+                      <td className="p-2 text-slate-800">Alternate BOM Turn-Down Re-Machine</td>
+                    </tr>
+                    <tr className="bg-emerald-50">
+                      <td className="p-2 font-mono font-bold text-emerald-900">BRG-6209-ZZ-P4</td>
+                      <td className="p-2 text-emerald-900 font-medium">Mazak 5-Axis VMC Spindle Bearing</td>
+                      <td className="p-2 font-mono text-emerald-900">356d</td>
+                      <td className="p-2 font-mono font-bold text-emerald-900">₹1,44,000</td>
+                      <td className="p-2 font-bold text-emerald-900">LOCKED SAFE — Saves ₹40.3L VMC Outage</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 font-sans text-xs">
+                <div className="p-3.5 rounded border border-amber-300 bg-amber-50 space-y-1.5">
+                  <h3 className="font-bold text-amber-900 text-sm">4. Zero Bank Drawing Power (DP) Shock</h3>
+                  <p className="text-amber-950 leading-snug">
+                    AS-2 / CARO 2020 Clause 3(ii) NRV schedule applies a <strong className="font-mono">₹34.47L</strong> provision across non-moving stock while 47 critical breakdown spares are exempt under AS-10. Working capital liquidations are paired with vendor credit offsets to ensure bank DP limit is unaffected.
+                  </p>
                 </div>
-                <div>
-                  <div className="text-[10px] font-bold uppercase text-[#64748B]">Actionable Cash Floor</div>
-                  <div className="text-lg font-black text-[#D97706]">₹74,35,000</div>
-                </div>
-                <div>
-                  <div className="text-[10px] font-bold uppercase text-[#64748B]">Annual OD Interest Burn</div>
-                  <div className="text-lg font-black text-[#DC2626]">₹25,96,000/yr</div>
+
+                <div className="p-3.5 rounded border border-red-300 bg-red-50 space-y-1.5">
+                  <h3 className="font-bold text-red-900 text-sm">5. Sec 143 CGST Job-Work Cliff</h3>
+                  <p className="text-red-950 leading-snug">
+                    Isolated <strong className="font-mono">₹11.25L</strong> in material across overdue challans <code className="font-mono bg-red-100 px-1">JW-AMB-2419</code> and <code className="font-mono bg-red-100 px-1">JW-HOS-1882</code> exceeding 365 days, exposing <strong className="font-mono">₹2,36,250</strong> in immediate GST tax liability if not recalled within 14 days.
+                  </p>
                 </div>
               </div>
 
-              <div className="space-y-4 text-xs leading-relaxed text-[#1E293B]">
-                <h3 className="font-extrabold text-sm border-b pb-1">1. Statutory CARO 2020 & Ind AS 2 Compliance</h3>
-                <p>
-                  • <strong>Clause 3(ii)(a):</strong> Stock discrepancies across RM (2.55%), WIP (3.04%), FG (1.91%), and MRO (1.62%) are all within the 10% statutory reporting threshold.<br/>
-                  • <strong>Clause 3(ii)(b):</strong> Quarterly stock statements submitted to working capital lenders flag <strong>₹88,50,000 Bank DP Haircut Risk</strong> at 75% advance rate.<br/>
-                  • <strong>Ind AS 2 Lower of Cost or NRV:</strong> Item-by-item valuation schedule establishes ₹48,95,000 net write-down without blanket percentage penalties.
-                </p>
+              <div className="pt-4 border-t border-slate-300 flex flex-col md:flex-row justify-between items-end gap-6 font-sans">
+                <div className="space-y-1 text-xs text-slate-700">
+                  <div className="font-bold text-slate-900 text-sm">30-Day Floor Execution Roadmap</div>
+                  <div>Days 1–7: Spares Locking &amp; Top-5 Vendor Credit Swap Setup</div>
+                  <div>Days 8–15: OEM ECN Obsolescence Recovery Submissions</div>
+                  <div>Days 16–24: In-House Alternate BOM Re-Machining</div>
+                  <div>Days 25–30: Grade-Sorted Alloy Auction &amp; Bank DP Audit</div>
+                </div>
 
-                <h3 className="font-extrabold text-sm border-b pb-1">2. Critical CNC/VMC Spares Protection</h3>
-                <p>
-                  Quarantined <strong>₹24,50,000 in critical CNC/VMC breakdown spares</strong> (including Sinumerik 840D NCU control cards and Fanuc spindle drives). Recommended strictly against scrap to avoid ₹4.5L/day line-stop losses.
-                </p>
-
-                <h3 className="font-extrabold text-sm border-b pb-1">3. 90-Day Corridor Freight Audit</h3>
-                <p>
-                  Identified <strong>₹9,40,000/yr in freight & detention overbilling</strong> across key industrial routes (Hosur-Oragadam milk-runs, Chakan-Chennai inbound, Ambattur-Sriperumbudur shuttles).
-                </p>
-              </div>
-
-              <div className="pt-6 border-t-2 border-[#0B0F19] text-xs font-mono text-[#334155] leading-relaxed">
-                {founderSignOffText}
+                <div className="text-right border-t md:border-t-0 md:border-l border-slate-300 pt-3 md:pt-0 md:pl-6 text-xs text-slate-700 space-y-1 shrink-0">
+                  <div className="font-bold text-slate-900 text-sm font-serif italic">C. Jones Snowin</div>
+                  <div>Founder, Operationalyst (Snowin Ventures)</div>
+                  <div>B.Com (Loyola) · MBA (Supply Chain &amp; Finance)</div>
+                  <div>Govt. MSME: UDYAM-TN-02-0444630</div>
+                </div>
               </div>
             </div>
           </div>
         )}
 
-        {/* VIEW 4: PRICING */}
-        {activeRoom === "pricing" && (
-          <div className="space-y-8">
-            <div className="text-center space-y-2 max-w-2xl mx-auto">
-              <h2 className="text-3xl font-black text-[#F1F5F9]">4-Stage Commercial Ladder & Ironclad SLA</h2>
-              <p className="text-sm text-[#94A3B8]">
-                Transparent MSME pricing with 10x Leak Identification Guarantee. 0% GST Bill of Supply.
+        {activeTab === 'pricing' && (
+          <div className="space-y-10">
+            <div className="text-center space-y-3 max-w-3xl mx-auto">
+              <div className="inline-block px-3 py-1 rounded bg-amber-500/10 border border-amber-500/30 text-amber-400 font-mono text-xs font-semibold uppercase">
+                COMMERCIAL TIERS &amp; GUARANTEE
+              </div>
+              <h2 className="text-3xl font-extrabold text-white">Institutional Engagement Tiers</h2>
+              <p className="text-slate-300 text-sm">
+                0% GST MSME Bill of Supply · 100% Client-Side Confidentiality · 10x Minimum Cash Recovery Guarantee
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <div className="p-6 rounded-lg bg-[#111827] border border-[#1E293B] space-y-4 flex flex-col justify-between">
-                <div className="space-y-3">
-                  <div className="text-xs font-mono text-[#F59E0B] font-bold">Stage 1</div>
-                  <h3 className="text-lg font-bold text-[#F1F5F9]">Instant In-Browser CSV Diagnostic</h3>
-                  <div className="text-2xl font-black text-[#F1F5F9]">₹0</div>
-                  <p className="text-xs text-[#94A3B8]">
-                    Up to 500 anonymized rows processed instantly in your browser with client-side SHA-256 vendor stripping.
-                  </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl mx-auto">
+              <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8 space-y-6 flex flex-col justify-between shadow-xl">
+                <div className="space-y-4">
+                  <div className="inline-block px-3 py-1 rounded bg-slate-800 text-amber-400 font-mono text-xs font-bold">
+                    TIER 1 · SINGLE-PLANT DIAGNOSTIC
+                  </div>
+                  <div>
+                    <div className="text-3xl font-extrabold text-white font-mono">
+                      ₹0 Teaser <span className="text-lg font-normal text-slate-400">→</span> ₹35,000 Fixed
+                    </div>
+                    <div className="text-xs text-slate-400 mt-1">For plants with ₹2 Cr – ₹8 Cr book inventory stock</div>
+                  </div>
+                  <ul className="space-y-3 text-xs sm:text-sm text-slate-300">
+                    <li className="flex items-start gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                      <span>Free 24-Hour Top-5 Bleed SKU Teaser Analysis</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                      <span>Full 8-Sheet Institutional XLSX Workbook in 48 Hours</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                      <span>2-Page Boardroom MD &amp; CFO Printable Brief</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                      <span>0% GST MSME Bill of Supply (UDYAM-TN-02-0444630)</span>
+                    </li>
+                  </ul>
                 </div>
-                <button
-                  onClick={() => setActiveRoom("sandbox")}
-                  className="w-full py-2 bg-[#1E293B] text-[#F1F5F9] text-xs font-bold rounded hover:bg-[#334155] transition"
-                >
-                  Run In-Browser Sandbox →
-                </button>
+
+                <div className="pt-4 border-t border-slate-800 bg-amber-950/20 p-4 rounded-xl border border-amber-500/30">
+                  <div className="text-xs font-bold text-amber-400 uppercase font-mono">10x Fee Guarantee:</div>
+                  <div className="text-xs text-slate-300 mt-1">
+                    Minimum <strong className="text-white">₹3,50,000+</strong> verifiable leaks isolated or 100% fee refund.
+                  </div>
+                </div>
               </div>
 
-              <div className="p-6 rounded-lg bg-[#111827] border-2 border-[#F59E0B] space-y-4 flex flex-col justify-between shadow-lg shadow-[#F59E0B]/10">
-                <div className="space-y-3">
-                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#F59E0B] text-[#0B0F19] font-bold uppercase">
-                    2 Slots Only
-                  </span>
-                  <div className="text-xs font-mono text-[#F59E0B] font-bold">Stage 2</div>
-                  <h3 className="text-lg font-bold text-[#F1F5F9]">Founding Plant Reference Slot</h3>
-                  <div className="text-2xl font-black text-[#F59E0B]">₹0 Fee</div>
-                  <p className="text-xs text-[#94A3B8]">
-                    Exclusively for discrete manufacturers in Chennai / Ambattur / Sriperumbudur / Oragadam / Hosur holding ₹5 Cr+ book stock, in exchange for a signed 3-line CFO / Plant Head benchmark quote once ₹10,00,000+ in leaks are verified.
-                  </p>
+              <div className="bg-slate-900 border-2 border-amber-500/80 rounded-2xl p-8 space-y-6 flex flex-col justify-between shadow-2xl relative">
+                <div className="absolute -top-3.5 right-6 px-3 py-1 bg-amber-500 text-slate-950 font-bold font-mono text-[11px] rounded-full uppercase">
+                  ENTERPRISE CHOICE
                 </div>
-                <a
-                  href="mailto:jonessnowin@operationalyst.com?subject=Founding%20Pilot%20Application"
-                  className="w-full text-center py-2 bg-[#F59E0B] text-[#0B0F19] text-xs font-bold rounded hover:bg-[#D97706] transition"
-                >
-                  Apply for Reference Slot →
-                </a>
-              </div>
 
-              <div className="p-6 rounded-lg bg-[#111827] border border-[#1E293B] space-y-4 flex flex-col justify-between">
-                <div className="space-y-3">
-                  <div className="text-xs font-mono text-[#F59E0B] font-bold">Stage 3</div>
-                  <h3 className="text-lg font-bold text-[#F1F5F9]">Core 48-Hr Factory Stock & Freight Audit</h3>
-                  <div className="text-2xl font-black text-[#F1F5F9]">₹45,000 Fixed</div>
-                  <div className="text-[10px] text-[#F59E0B] font-mono">0% GST MSME Bill of Supply</div>
-                  <p className="text-xs text-[#94A3B8]">
-                    Backed by the 10x Leak Identification Guarantee (at least ₹5,00,000–₹10,00,000 in verifiable dead-stock recovery, OD savings, or freight overbilling isolated, or ₹0 fee).
-                  </p>
+                <div className="space-y-4">
+                  <div className="inline-block px-3 py-1 rounded bg-amber-500/10 text-amber-400 font-mono text-xs font-bold">
+                    TIER 2 · MULTI-PLANT / ENTERPRISE
+                  </div>
+                  <div>
+                    <div className="text-3xl font-extrabold text-white font-mono">₹75,000 Fixed</div>
+                    <div className="text-xs text-slate-400 mt-1">For plant clusters with ₹8 Cr – ₹50 Cr+ stock</div>
+                  </div>
+                  <ul className="space-y-3 text-xs sm:text-sm text-slate-300">
+                    <li className="flex items-start gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                      <span>Includes all Tier-1 Diagnostic Features</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                      <span>BOM ECN Orphan Cross-Match &amp; Whiplash Audit</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                      <span>Sec 143 CGST Job-Work Overdue Challan Review</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                      <span>Custom Bank Drawing Power (DP) CFO Protection Bridge</span>
+                    </li>
+                  </ul>
                 </div>
-                <a
-                  href="mailto:jonessnowin@operationalyst.com?subject=48-Hr%20Audit%20Request"
-                  className="w-full text-center py-2 bg-[#1E293B] text-[#F1F5F9] text-xs font-bold rounded hover:bg-[#334155] transition"
-                >
-                  Request 48-Hr Audit →
-                </a>
-              </div>
 
-              <div className="p-6 rounded-lg bg-[#111827] border border-[#1E293B] space-y-4 flex flex-col justify-between">
-                <div className="space-y-3">
-                  <div className="text-xs font-mono text-[#F59E0B] font-bold">Stage 4</div>
-                  <h3 className="text-lg font-bold text-[#F1F5F9]">Quarterly Bank DP & Stock Hygiene Retainer</h3>
-                  <div className="text-2xl font-black text-[#F1F5F9]">₹18,000 / Qtr</div>
-                  <p className="text-xs text-[#94A3B8]">
-                    Pre-audits stock registers ahead of quarterly CARO 3(ii)(b) bank stock statement filings to protect Drawing Power.
-                  </p>
+                <div className="pt-4 border-t border-slate-800 bg-amber-950/20 p-4 rounded-xl border border-amber-500/30">
+                  <div className="text-xs font-bold text-amber-400 uppercase font-mono">10x Fee Guarantee:</div>
+                  <div className="text-xs text-slate-300 mt-1">
+                    Minimum <strong className="text-white">₹10,00,000+</strong> verifiable cash/burn isolated or 100% fee refund.
+                  </div>
                 </div>
-                <a
-                  href="mailto:jonessnowin@operationalyst.com?subject=Quarterly%20Retainer%20Inquiry"
-                  className="w-full text-center py-2 bg-[#1E293B] text-[#F1F5F9] text-xs font-bold rounded hover:bg-[#334155] transition"
-                >
-                  Inquire Retainer →
-                </a>
               </div>
+            </div>
+
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8 max-w-4xl mx-auto text-center space-y-4">
+              <h3 className="text-xl font-bold text-white">Download Institutional 8-Sheet Excel Pack</h3>
+              <p className="text-xs sm:text-sm text-slate-300 max-w-2xl mx-auto">
+                Generate and download the full 8-sheet benchmark workbook directly in your browser matching the ₹6.428 Cr Oragadam / Hosur enterprise register.
+              </p>
+              <button
+                onClick={generateInstitutionalXLSX}
+                className="px-8 py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm inline-flex items-center gap-3 transition-all shadow-xl shadow-emerald-900/30"
+              >
+                <Download className="w-5 h-5" />
+                Download 8-Sheet Institutional Benchmark (.XLSX)
+              </button>
             </div>
           </div>
         )}
-
       </main>
 
-      {/* Footer */}
-      <footer className="border-t border-[#1E293B] bg-[#0B0F19] py-8 text-xs text-[#64748B] mt-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-4 text-center">
-          <div className="font-mono text-[#94A3B8] leading-relaxed">
-            {founderSignOffText}
+      <footer className="bg-[#070B16] border-t border-slate-800/80 px-4 py-6 text-xs text-slate-400">
+        <div className="max-w-7xl mx-auto space-y-4">
+          <div className="flex flex-col md:flex-row justify-between items-center gap-4 text-center md:text-left">
+            <div>
+              <div className="font-bold text-slate-200 text-sm">OPERATIONALYST INSTITUTIONAL V2</div>
+              <div className="text-slate-400 text-[11px] mt-0.5">Snowin Ventures · Chennai, Tamil Nadu, India</div>
+            </div>
+            <div className="flex flex-wrap items-center justify-center gap-4 text-[11px] text-slate-300 font-mono">
+              <span>Govt. MSME: UDYAM-TN-02-0444630</span>
+              <span>•</span>
+              <span>0% GST Bill of Supply</span>
+              <span>•</span>
+              <a href="mailto:jonessnowin@operationalyst.com" className="text-amber-400 hover:underline">jonessnowin@operationalyst.com</a>
+              <span>•</span>
+              <a href="tel:+919080540047" className="text-amber-400 hover:underline">+91 90805 40047</a>
+            </div>
           </div>
-          <div className="text-[11px]">
-            Operationalyst © 2026 · A Snowin Ventures Platform, Chennai · All rights reserved.
+          <div className="border-t border-slate-800/60 pt-3 text-[11px] text-slate-500 text-center leading-relaxed">
+            {HEADER_FOOTER_CREDENTIALS}
           </div>
         </div>
       </footer>
